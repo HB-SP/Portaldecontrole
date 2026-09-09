@@ -29,6 +29,7 @@ montam a estrutura; sem o `seguranca.sql` rodado depois, o banco fica fechado
 | 8 | `supabase_atividades.sql` | Histórico de "quem alterou o quê" |
 | — | `supabase_cadastrar_fornecedor.sql`, `supabase_renomear_fornecedor.sql` | Utilitários, rode quando precisar |
 | — | `supabase_paulistao_a1_perifericos.sql` | Importa o histórico de periféricos do Paulistão A1 26 (74 jogos). Cria o campeonato pelo modelo dinâmico; não toca em nenhuma tabela existente e pode ser rodado de novo sem duplicar. Gerado por `scripts/gerar_import_a1_perifericos.mjs`, conferido por `scripts/conferir_import_a1_perifericos.mjs` |
+| — | `supabase_escala_camps.sql` | Liga cada campeonato aos nomes que ele usa na Escala Geral (`competitions.escala_camps`). Sem isso, ligar campeonato novo exigia editar `src/lib/escalaLink.js` e publicar o site. Seguro rodar antes ou depois do deploy |
 
 Depois de terminar, confirme com:
 

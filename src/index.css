@@ -3988,3 +3988,11 @@ body {
   background: var(--lm-green-bg); border: 1px solid var(--lm-green);
   color: var(--lm-green-dim);
 }
+
+/* Valor que não é Sim nem Não numa célula simnao (importação trouxe
+   "Aguardando OK", "Parcial"...). Antes ficava invisível. */
+.simnao-outro {
+  align-self: center; margin: 0 6px 0 4px;
+  color: var(--amber); font-size: 11px; font-weight: 700;
+  white-space: nowrap; cursor: help;
+}

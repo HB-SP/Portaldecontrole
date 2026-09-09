@@ -178,8 +178,17 @@ export default function DataTable({ data, columns, loading, accentColor, onEdit,
                   } else if (col.type === 'simnao') {
                     const isSim = value === 'Sim'
                     const isNao = value === 'Não' || value === 'Nao'
+                    // Valor que não é Sim nem Não (importação trouxe "Aguardando
+                    // OK", "Parcial"...) ficava INVISÍVEL: nenhum botão acendia e
+                    // o texto não era mostrado em lugar nenhum. Agora aparece do
+                    // lado, e o clique nos botões segue trocando.
+                    const outro = value && String(value).trim() && !isSim && !isNao
+                      ? String(value).trim() : null
                     content = (
                       <div className="simnao-cell" onClick={e => e.stopPropagation()}>
+                        {outro && (
+                          <span className="simnao-outro" title={`Valor gravado: ${outro}`}>{outro}</span>
+                        )}
                         <button
                           type="button"
                           className={`simnao-btn${isSim ? ' active sim' : ''}`}

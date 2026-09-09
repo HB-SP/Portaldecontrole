@@ -46,12 +46,21 @@ const normCamp = s => String(s || '')
 // O banco foi padronizado em 12/08/2026 (BR26→Brasileirão 26, PFem 26→
 // Paulistão F 26), mas os nomes antigos ficam como proteção caso uma
 // reimportação da planilha os reintroduza.
+//
+// Este mapa é só o FALLBACK. A fonte preferida é competitions.escala_camps,
+// que chega aqui via config.escalaCamps: sem isso, ligar um campeonato novo à
+// Escala Geral exigia editar este arquivo e publicar o site — foi o que
+// aconteceu com o Paulistão A1 26, cujos jogos estão na escala_geral como
+// "Paulistão 26" e por isso não eram encontrados.
 const CAMP_ALIAS = {
   brasileirao26: ['Brasileirão 26', 'BR26'],
   paulistaofem26: ['Paulistão F 26', 'PFem 26'],
 }
 
-export function escalaCampeonatosDe(label) {
+export function escalaCampeonatosDe(label, camps) {
+  // Nomes vindos do banco ganham do mapa fixo e do próprio label.
+  const doBanco = (Array.isArray(camps) ? camps : []).filter(c => c && String(c).trim())
+  if (doBanco.length) return doBanco
   if (!label) return []
   return CAMP_ALIAS[normCamp(label)] || [label]
 }

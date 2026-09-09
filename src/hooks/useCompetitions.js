@@ -76,6 +76,7 @@ function configForRow(row, columnsByCompId) {
       competitionId: row.id,
       isLegacy: true,
       sectionKind: row.section_kind || null,
+      escalaCamps: row.escala_camps || null,
       tableName: row.legacy_table || baseConfig.tableName,
     }
   }
@@ -108,6 +109,8 @@ function configForRow(row, columnsByCompId) {
     competitionId: row.id,
     isLegacy: false,
     sectionKind: row.section_kind || null,
+    // Com quais nomes este campeonato aparece na escala_geral (ver lib/escalaLink)
+    escalaCamps: row.escala_camps || null,
     columns: cols,
   }
 }

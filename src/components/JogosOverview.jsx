@@ -280,7 +280,7 @@ export default function JogosOverview({ config, accentColor }) {
   const legacy = useTableData(config.isLegacy ? config.tableName : null)
   const dynamic = useCompetitionEvents(config.isLegacy ? null : config.competitionId)
   const { data, loading, addRow, updateRow } = config.isLegacy ? legacy : dynamic
-  const { indice: indiceEscala, confirmacoes, temEscala } = useEscalaGeral(config.label)
+  const { indice: indiceEscala, confirmacoes, temEscala } = useEscalaGeral(config.label, config.escalaCamps)
   const [search, setSearch] = useState('')
   const [filtroRod, setFiltroRod] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('')

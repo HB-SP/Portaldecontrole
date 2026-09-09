@@ -5,11 +5,18 @@ import { escalaCampeonatosDe, criarIndiceEscala } from '../lib/escalaLink'
 // Escala Geral filtrada para os campeonatos equivalentes ao do Portal, com
 // realtime — edições feitas na aba Escala Geral aparecem na Visão Geral ao vivo.
 // Só leitura: a Visão Geral nunca escreve na escala_geral.
-export function useEscalaGeral(label) {
+// `escalaCamps` vem de competitions.escala_camps (config.escalaCamps) e diz com
+// quais nomes este campeonato aparece na escala_geral. Sem ele, cai no mapa
+// fixo do escalaLink.
+export function useEscalaGeral(label, escalaCamps) {
   const [rows, setRows] = useState([])
   const [confirmacoes, setConfirmacoes] = useState(() => new Map())
 
-  const camps = useMemo(() => escalaCampeonatosDe(label), [label])
+  const campsDep = (Array.isArray(escalaCamps) ? escalaCamps : []).join('|')
+  const camps = useMemo(
+    () => escalaCampeonatosDe(label, escalaCamps),
+    [label, campsDep], // eslint-disable-line react-hooks/exhaustive-deps
+  )
   const campsKey = camps.join('|')
 
   useEffect(() => {
