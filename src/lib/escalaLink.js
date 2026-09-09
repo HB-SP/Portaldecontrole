@@ -31,6 +31,10 @@ const TIME_ALIAS = {
   ecprimavera: 'primavera',
 }
 
+// Exportado para o pareamento Controle × Periférico (usePerifericoIrmao), que
+// precisa da MESMA normalização e da mesma tabela de apelidos.
+export function normalizarTime(s) { return normTime(s) }
+
 function normTime(s) {
   const n = String(s || '')
     .toLowerCase()

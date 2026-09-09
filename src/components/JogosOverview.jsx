@@ -2,39 +2,36 @@ import { useState, useMemo } from 'react'
 import { useTableData } from '../hooks/useTableData'
 import { useCompetitionEvents } from '../hooks/useCompetitionEvents'
 import { useEscalaGeral } from '../hooks/useEscalaGeral'
+import { usePerifericoIrmao } from '../hooks/usePerifericoIrmao'
 import { getEscudoUrl } from '../lib/escudos'
 import { getStatusClass } from '../config/tables'
 import { FUNCOES_ESCALA, naoTemFuncao, semEscala, acharEscala } from '../lib/escalaLink'
 import GameModal from './GameModal'
 
 const GRUPO_ESCALA = 'Escala Geral'
+// Quando a config traz um grupo 'Pessoal', as funções da Escala Geral entram
+// DENTRO dele em vez de virar um painel próprio — foi o pedido: um bloco só
+// com todas as pessoas (Coordenador, Produtor, Supervisor, DTV, Vmix, Áudio).
+// Sem esse grupo (Brasileirão, Paulistão Fem.) nada muda: o painel separado
+// continua como antes.
+const GRUPO_PESSOAL = 'Pessoal'
+const GRUPO_PERIF = 'Periférico'
 
-// Coluna só-leitura com a escala do jogo (planilha de planejamento, outra
-// responsável). Edição fica na aba Escala Geral — aqui é consulta.
-function EscalaCol({ escalaInfo, confirmacoes, accentColor }) {
+// As linhas de função da Escala Geral, sem o painel em volta — para servirem
+// tanto ao painel próprio quanto ao topo do bloco Pessoal.
+function EscalaLinhas({ escalaInfo, confirmacoes }) {
   const eg = escalaInfo?.escala
   const mudo = eg && semEscala(eg)
-  const ativas = eg ? FUNCOES_ESCALA.filter(fn => !naoTemFuncao(eg[fn.key])) : []
-  const preenchidas = ativas.filter(fn => eg[fn.key] && String(eg[fn.key]).trim())
-
-  return (
-    <div className="overview-col">
-      <div className="overview-col-head">
-        <span className="overview-col-label">{GRUPO_ESCALA}</span>
-        {eg && !mudo && (
-          <span className="overview-col-count" style={{ color: preenchidas.length > 0 ? accentColor : undefined }}>
-            {preenchidas.length}/{ativas.length}
-          </span>
-        )}
+  if (!eg) {
+    return (
+      <div className="overview-row empty">
+        <span className="overview-row-label">Vínculo</span>
+        <span className="overview-row-value"><span className="overview-field-empty">sem jogo correspondente na Escala Geral</span></span>
       </div>
-      <div className="overview-col-body">
-        {!eg ? (
-          <div className="overview-row empty">
-            <span className="overview-row-label">Vínculo</span>
-            <span className="overview-row-value"><span className="overview-field-empty">sem jogo correspondente na Escala Geral</span></span>
-          </div>
-        ) : (
-          <>
+    )
+  }
+  return (
+    <>
             {FUNCOES_ESCALA.map(fn => {
               const v = eg[fn.key]
               const off = naoTemFuncao(v)
@@ -79,8 +76,34 @@ function EscalaCol({ escalaInfo, confirmacoes, accentColor }) {
                 </span>
               </div>
             )}
-          </>
+    </>
+  )
+}
+
+// Contagem "preenchidas/ativas" das funções da Escala Geral
+function contaEscala(escalaInfo) {
+  const eg = escalaInfo?.escala
+  if (!eg || semEscala(eg)) return null
+  const ativas = FUNCOES_ESCALA.filter(fn => !naoTemFuncao(eg[fn.key]))
+  const cheias = ativas.filter(fn => eg[fn.key] && String(eg[fn.key]).trim())
+  return { total: ativas.length, filled: cheias.length }
+}
+
+// Painel próprio da Escala Geral — usado quando a config NÃO tem grupo 'Pessoal'
+function EscalaCol({ escalaInfo, confirmacoes, accentColor }) {
+  const c = contaEscala(escalaInfo)
+  return (
+    <div className="overview-col">
+      <div className="overview-col-head">
+        <span className="overview-col-label">{GRUPO_ESCALA}</span>
+        {c && (
+          <span className="overview-col-count" style={{ color: c.filled > 0 ? accentColor : undefined }}>
+            {c.filled}/{c.total}
+          </span>
         )}
+      </div>
+      <div className="overview-col-body">
+        <EscalaLinhas escalaInfo={escalaInfo} confirmacoes={confirmacoes} />
       </div>
     </div>
   )
@@ -108,11 +131,56 @@ function fieldDisplay(col, value) {
   return String(value)
 }
 
-function GameCard({ row, config, onEdit, accentColor, defaultOpen, temEscala, escalaInfo, confirmacoes }) {
+// Coluna só-leitura com os periféricos do mesmo jogo — os dados vivem na seção
+// irmã (linhas próprias), por isso vêm do usePerifericoIrmao. Edição continua
+// na aba Periférico.
+function PerifCol({ perifRow, perifColunas, accentColor }) {
+  const cols = (perifColunas || []).filter(c => !HUB_FIELDS.has(c.key))
+  const cheias = perifRow
+    ? cols.filter(c => { const v = perifRow[c.key]; return v !== null && v !== undefined && String(v).trim() !== '' }).length
+    : 0
+  return (
+    <div className="overview-col">
+      <div className="overview-col-head">
+        <span className="overview-col-label">{GRUPO_PERIF}</span>
+        {perifRow && (
+          <span className="overview-col-count" style={{ color: cheias > 0 ? accentColor : undefined }}>
+            {cheias}/{cols.length}
+          </span>
+        )}
+      </div>
+      <div className="overview-col-body">
+        {!perifRow ? (
+          <div className="overview-row empty">
+            <span className="overview-row-label">Vínculo</span>
+            <span className="overview-row-value"><span className="overview-field-empty">sem linha correspondente na aba Periférico</span></span>
+          </div>
+        ) : cols.map(col => {
+          const display = fieldDisplay(col, perifRow[col.key])
+          return (
+            <div key={col.key} className={`overview-row${display === null ? ' empty' : ''}`}>
+              <span className="overview-row-label">{col.label}</span>
+              <span className="overview-row-value">
+                {display === null ? <span className="overview-field-empty">—</span> : display}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function GameCard({ row, config, onEdit, accentColor, defaultOpen, temEscala, escalaInfo, confirmacoes,
+  perifRow, perifColunas, temPeriferico }) {
   const [open, setOpen] = useState(!!defaultOpen)
   const [hiddenGroups, setHiddenGroups] = useState(() => new Set())
 
   const groups = useMemo(() => uniqueGroups(config.columns), [config.columns])
+  // Com grupo 'Pessoal' na config, as funções da Escala Geral entram nele; sem
+  // ele, seguem como painel próprio.
+  const escalaNoPessoal = temEscala && groups.includes(GRUPO_PESSOAL)
+  const escalaSeparada = temEscala && !escalaNoPessoal
 
   const fillByGroup = useMemo(() => {
     const map = {}
@@ -185,11 +253,9 @@ function GameCard({ row, config, onEdit, accentColor, defaultOpen, temEscala, es
       {open && (
         <>
           <div className="overview-group-tabs" onClick={e => e.stopPropagation()}>
-            {temEscala && (() => {
-              const eg = escalaInfo?.escala
+            {escalaSeparada && (() => {
               const isHidden = hiddenGroups.has(GRUPO_ESCALA)
-              const ativas = eg ? FUNCOES_ESCALA.filter(fn => !naoTemFuncao(eg[fn.key])) : []
-              const cheias = ativas.filter(fn => eg[fn.key] && String(eg[fn.key]).trim())
+              const c = contaEscala(escalaInfo)
               return (
                 <button
                   type="button"
@@ -200,7 +266,7 @@ function GameCard({ row, config, onEdit, accentColor, defaultOpen, temEscala, es
                 >
                   <span>{GRUPO_ESCALA}</span>
                   <span className="tab-toggle-count">
-                    {eg ? (<><span className="filled">{cheias.length}</span>/<span>{ativas.length}</span></>) : '—'}
+                    {c ? (<><span className="filled">{c.filled}</span>/<span>{c.total}</span></>) : '—'}
                   </span>
                 </button>
               )
@@ -209,7 +275,12 @@ function GameCard({ row, config, onEdit, accentColor, defaultOpen, temEscala, es
               const cols = config.columns.filter(c => c.group === group && !HUB_FIELDS.has(c.key))
               if (!cols.length) return null
               const isHidden = hiddenGroups.has(group)
-              const fill = fillByGroup[group] || { total: 0, filled: 0 }
+              let fill = fillByGroup[group] || { total: 0, filled: 0 }
+              // As funções da Escala Geral contam junto no Pessoal
+              if (group === GRUPO_PESSOAL && escalaNoPessoal) {
+                const c = contaEscala(escalaInfo)
+                if (c) fill = { total: fill.total + c.total, filled: fill.filled + c.filled }
+              }
               return (
                 <button
                   key={group}
@@ -226,17 +297,43 @@ function GameCard({ row, config, onEdit, accentColor, defaultOpen, temEscala, es
                 </button>
               )
             })}
+            {temPeriferico && (() => {
+              const isHidden = hiddenGroups.has(GRUPO_PERIF)
+              const cols = (perifColunas || []).filter(c => !HUB_FIELDS.has(c.key))
+              const cheias = perifRow
+                ? cols.filter(c => { const v = perifRow[c.key]; return v !== null && v !== undefined && String(v).trim() !== '' }).length
+                : 0
+              return (
+                <button
+                  type="button"
+                  className={`overview-tab-toggle${isHidden ? ' hidden' : ' active'}`}
+                  onClick={() => toggleGroup(GRUPO_PERIF)}
+                  title={isHidden ? 'Mostrar' : 'Esconder'}
+                  style={!isHidden ? { borderColor: accentColor, color: accentColor } : {}}
+                >
+                  <span>{GRUPO_PERIF}</span>
+                  <span className="tab-toggle-count">
+                    {perifRow ? (<><span className="filled">{cheias}</span>/<span>{cols.length}</span></>) : '—'}
+                  </span>
+                </button>
+              )
+            })()}
           </div>
 
           <div className="overview-body" onClick={e => e.stopPropagation()}>
-            {temEscala && !hiddenGroups.has(GRUPO_ESCALA) && (
+            {escalaSeparada && !hiddenGroups.has(GRUPO_ESCALA) && (
               <EscalaCol escalaInfo={escalaInfo} confirmacoes={confirmacoes} accentColor={accentColor} />
             )}
             {groups.map(group => {
               const cols = config.columns.filter(c => c.group === group && !HUB_FIELDS.has(c.key))
               if (!cols.length) return null
               if (hiddenGroups.has(group)) return null
-              const fill = fillByGroup[group] || { total: 0, filled: 0 }
+              let fill = fillByGroup[group] || { total: 0, filled: 0 }
+              const comEscala = group === GRUPO_PESSOAL && escalaNoPessoal
+              if (comEscala) {
+                const c = contaEscala(escalaInfo)
+                if (c) fill = { total: fill.total + c.total, filled: fill.filled + c.filled }
+              }
               return (
                 <div key={group} className="overview-col">
                   <div className="overview-col-head">
@@ -246,6 +343,7 @@ function GameCard({ row, config, onEdit, accentColor, defaultOpen, temEscala, es
                     </span>
                   </div>
                   <div className="overview-col-body">
+                    {comEscala && <EscalaLinhas escalaInfo={escalaInfo} confirmacoes={confirmacoes} />}
                     {cols.map(col => {
                       const display = fieldDisplay(col, row[col.key])
                       const empty = !display
@@ -269,6 +367,9 @@ function GameCard({ row, config, onEdit, accentColor, defaultOpen, temEscala, es
                 </div>
               )
             })}
+            {temPeriferico && !hiddenGroups.has(GRUPO_PERIF) && (
+              <PerifCol perifRow={perifRow} perifColunas={perifColunas} accentColor={accentColor} />
+            )}
           </div>
         </>
       )}
@@ -281,6 +382,8 @@ export default function JogosOverview({ config, accentColor }) {
   const dynamic = useCompetitionEvents(config.isLegacy ? null : config.competitionId)
   const { data, loading, addRow, updateRow } = config.isLegacy ? legacy : dynamic
   const { indice: indiceEscala, confirmacoes, temEscala } = useEscalaGeral(config.label, config.escalaCamps)
+  // Periféricos do mesmo jogo, buscados na seção irmã (linhas próprias)
+  const { colunas: perifColunas, acharPeriferico, temPeriferico } = usePerifericoIrmao(config)
   const [search, setSearch] = useState('')
   const [filtroRod, setFiltroRod] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('')
@@ -359,6 +462,9 @@ export default function JogosOverview({ config, accentColor }) {
               temEscala={temEscala}
               escalaInfo={acharEscala(row, indiceEscala)}
               confirmacoes={confirmacoes}
+              temPeriferico={temPeriferico}
+              perifColunas={perifColunas}
+              perifRow={acharPeriferico(row)}
               onEdit={r => setModal({ mode: 'edit', row: r })}
             />
           ))}
