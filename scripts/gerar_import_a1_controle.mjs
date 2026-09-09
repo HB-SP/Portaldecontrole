@@ -28,9 +28,20 @@ const PADROES = ['B1', 'B2', 'B2 +', 'B3', 'FeedB']
 const DETENTORES = ['HBO MAX', 'HBO/TNT', 'YTCazeTV/Record/HBO', 'Todos']
 
 // [indiceNoCSV, chave, rotulo, tipo, opcoes, largura, grupo, fixa, corDeStatus]
+//
 // MAPEADO POR INDICE, nao por nome: a planilha repete cinco cabecalhos
 // (Reserva, Status, Transponder, Uplink, Downlink) nos dois blocos de satelite.
+//
+// GRUPOS E ORDEM COPIADOS DO BRASILEIRAO (brasileiraoRawColumns em
+// src/config/tables.js): Jogo -> Equipe Tecnica -> Transmissao -> (2o
+// satelite) -> Tecnico. Sao esses grupos que a Visao Geral vira painel, e o
+// pedido foi "tudo no mesmo padrao". O 2o bloco de satelite do Brasileirao se
+// chama "Globo"; no A1 e o "FEED B", mas ocupa o mesmo lugar com os mesmos
+// seis campos, na mesma ordem.
+// 'Jogo' inteiro nao aparece como painel: HUB_FIELDS filtra essas chaves
+// (JogosOverview) porque elas ja estao no cabecalho do card.
 const COLS = [
+  // ── Jogo (10, igual ao Brasileirao) ──
   [0, 'rod', 'Rod', 'text', [], 50, 'Jogo', true, false],
   [2, 'data', 'Data', 'text', [], 62, 'Jogo', true, false],
   [4, 'mandante', 'Mandante', 'text', [], 120, 'Jogo', true, false],
@@ -41,8 +52,8 @@ const COLS = [
   [8, 'cidade', 'Cidade', 'text', [], 120, 'Jogo', false, false],
   [9, 'padrao', 'Padrão', 'select', PADROES, 72, 'Jogo', false, false],
   [10, 'detentor', 'Detentor', 'select', DETENTORES, 165, 'Jogo', false, false],
-  [32, 'status', 'Status', 'select', STATUS, 110, 'Jogo', false, true],
 
+  // ── Equipe Técnica (13) ──
   [11, 'um', 'UM', 'text', [], 130, 'Equipe Técnica', false, false],
   [12, 'nome_numero', 'Nome/N°', 'text', [], 110, 'Equipe Técnica', false, false],
   [13, 'sng', 'SNG', 'text', [], 110, 'Equipe Técnica', false, false],
@@ -55,29 +66,32 @@ const COLS = [
   [20, 'dtv', 'DTV', 'text', [], 130, 'Equipe Técnica', false, false],
   [21, 'op_vmix', 'Op. Vmix', 'text', [], 155, 'Equipe Técnica', false, false],
   [22, 'op_audio', 'Op. Áudio', 'text', [], 140, 'Equipe Técnica', false, false],
-  [23, 'teleporto', 'Teleporto', 'text', [], 100, 'Equipe Técnica', false, false],
   [49, 'um_by', 'UM By', 'simnao', SN, 88, 'Equipe Técnica', false, false],
 
-  [24, 'service_start_gmt', 'Service Start (GMT)', 'text', [], 125, 'Horários', false, false],
-  [25, 'abertura_brt', 'Abertura (BRT)', 'text', [], 115, 'Horários', false, false],
-  [26, 'service_end_gmt', 'Service End (GMT)', 'text', [], 125, 'Horários', false, false],
-  [27, 'fechamento_brt', 'Fechamento (BRT)', 'text', [], 125, 'Horários', false, false],
-  [28, 'total_horas', 'Total de horas', 'text', [], 105, 'Horários', false, false],
+  // ── Transmissão (13) — mesma ordem do Brasileirão, horários incluídos ──
+  [23, 'teleporto', 'Teleporto', 'text', [], 100, 'Transmissão', false, false],
+  [30, 'satelite', 'Satélite', 'text', [], 95, 'Transmissão', false, false],
+  [24, 'service_start_gmt', 'Service Start (GMT)', 'text', [], 125, 'Transmissão', false, false],
+  [25, 'abertura_brt', 'Abertura (BRT)', 'text', [], 115, 'Transmissão', false, false],
+  [26, 'service_end_gmt', 'Service End (GMT)', 'text', [], 125, 'Transmissão', false, false],
+  [27, 'fechamento_brt', 'Fechamento (BRT)', 'text', [], 125, 'Transmissão', false, false],
+  [28, 'total_horas', 'Total de horas', 'text', [], 105, 'Transmissão', false, false],
+  [29, 'banda', 'Banda', 'text', [], 80, 'Transmissão', false, false],
+  [32, 'status', 'Status', 'select', STATUS, 110, 'Transmissão', false, true],
+  [31, 'reserva', 'Reserva', 'text', [], 95, 'Transmissão', false, false],
+  [33, 'transponder', 'Transponder', 'text', [], 170, 'Transmissão', false, false],
+  [34, 'uplink', 'Uplink', 'text', [], 110, 'Transmissão', false, false],
+  [35, 'downlink', 'Downlink', 'text', [], 110, 'Transmissão', false, false],
 
-  [30, 'satelite', 'Satélite', 'text', [], 95, 'Satélite', false, false],
-  [29, 'banda', 'Banda', 'text', [], 80, 'Satélite', false, false],
-  [31, 'reserva', 'Reserva', 'text', [], 95, 'Satélite', false, false],
-  [33, 'transponder', 'Transponder', 'text', [], 170, 'Satélite', false, false],
-  [34, 'uplink', 'Uplink', 'text', [], 110, 'Satélite', false, false],
-  [35, 'downlink', 'Downlink', 'text', [], 110, 'Satélite', false, false],
-
+  // ── FEED B (6) — o lugar do grupo "Globo" no Brasileirão, mesmos campos ──
   [36, 'satelite_feedb', 'Satélite FEED B', 'text', [], 115, 'FEED B', false, false],
-  [37, 'reserva_feedb', 'Reserva FEED B', 'text', [], 115, 'FEED B', false, false],
   [38, 'status_feedb', 'Status FEED B', 'select', STATUS, 115, 'FEED B', false, false],
+  [37, 'reserva_feedb', 'Reserva FEED B', 'text', [], 115, 'FEED B', false, false],
   [39, 'transponder_feedb', 'Transponder FEED B', 'text', [], 170, 'FEED B', false, false],
   [40, 'uplink_feedb', 'Uplink FEED B', 'text', [], 120, 'FEED B', false, false],
   [41, 'downlink_feedb', 'Downlink FEED B', 'text', [], 120, 'FEED B', false, false],
 
+  // ── Técnico (7) — igual ao Brasileirão (menos ficha_jogo, que o A1 não tem) ──
   [42, 'aspecto', 'Aspecto', 'text', [], 80, 'Técnico', false, false],
   [43, 'compressao', 'Compressão', 'text', [], 105, 'Técnico', false, false],
   [44, 'transmissao', 'Transmissão', 'text', [], 105, 'Técnico', false, false],
@@ -118,6 +132,24 @@ L.push('-- ============================================================')
 L.push('')
 L.push('BEGIN;')
 L.push('')
+L.push('-- ── 0) Ligacao com a Escala Geral ────────────────────────────────────')
+L.push('--    A Visao Geral mostra o painel ESCALA GERAL (Coordenador UM,')
+L.push('--    Produtor UM, Produtor Campo, Monitoracao) casando pelo NOME do')
+L.push('--    campeonato em escala_geral.campeonato. O nome vivia num mapa fixo')
+L.push('--    no codigo com duas entradas, por isso o A1 nao achava a escala.')
+L.push('--    Agora o nome mora aqui, junto do campeonato.')
+L.push('ALTER TABLE competitions ADD COLUMN IF NOT EXISTS escala_camps TEXT[];')
+L.push('')
+L.push('COMMENT ON COLUMN competitions.escala_camps IS')
+L.push("  'Nomes com que este campeonato aparece em escala_geral.campeonato. '")
+L.push("  'Vazio = o codigo cai no mapa fixo de src/lib/escalaLink.js.';")
+L.push('')
+L.push("UPDATE competitions SET escala_camps = ARRAY['Paulistão 26'] WHERE slug = 'paulistao-a1';")
+L.push("UPDATE competitions SET escala_camps = ARRAY['Brasileirão 26', 'BR26']")
+L.push("WHERE slug = 'brasileirao' AND escala_camps IS NULL;")
+L.push("UPDATE competitions SET escala_camps = ARRAY['Paulistão F 26', 'PFem 26']")
+L.push("WHERE slug = 'paulistao-fem' AND escala_camps IS NULL;")
+L.push('')
 L.push('-- ── 1) A secao Periferico (filha do Paulistao A1) ────────────────────')
 L.push('INSERT INTO competitions (slug, label, accent_color, accent_bg, template_key, section_kind, sort_order, parent_competition_id)')
 L.push(`SELECT '${FILHO}', 'Periférico A1 26', '#B91C1C', '#1a0606', 'dynamic', 'periferico', 31, p.id`)
@@ -136,6 +168,16 @@ L.push("             'fornecedor_golcam','earcam','fornecedor_earcam','ultracam'
 L.push("             'grua','fornecedor_grua','carrinho','fornecedor_carrinho','klover',")
 L.push("             'fornecedor_klover','micros_especiais','fornecedor_micros','internet_led',")
 L.push("             'fornecedor_internet_led','assinatura_craque','cadeirao','fornecedor_cadeirao');")
+L.push('')
+L.push('-- ── 2b) Equipamentos do Periferico com botoes Sim/Nao ────────────────')
+L.push("--    A tela de perifericos descobre o que e equipamento pelo tipo")
+L.push("--    'simnao' (ver src/config/equipamentos.js). Sem isto, os 13 tipos")
+L.push('--    do A1 nao apareceriam como slots na aba Periferico.')
+L.push('UPDATE competition_columns SET type = \'simnao\'')
+L.push(`WHERE competition_id = (SELECT id FROM competitions WHERE slug = '${FILHO}')`)
+L.push("  AND key IN ('drone','minidrone','dslr','golcam','earcam','ultracam','grua',")
+L.push("             'carrinho','klover','micros_especiais','internet_led',")
+L.push("             'assinatura_craque','cadeirao');")
 L.push('')
 L.push('-- ── 3) Move os 74 jogos de periferico para a secao nova ──────────────')
 L.push(`UPDATE competition_events SET competition_id = (SELECT id FROM competitions WHERE slug = '${FILHO}')`)
@@ -164,7 +206,13 @@ L.push(COLS.map(([, k, lab, tipo, ops, w, g, fix, sc], i) =>
 ).join(',\n'))
 L.push(') AS v(key, label, type, options, width, col_group, sticky, status_color, sort_order)')
 L.push(`WHERE c.slug = '${PAI}'`)
-L.push('ON CONFLICT (competition_id, key) DO NOTHING;')
+L.push('-- DO UPDATE, nao DO NOTHING: se uma versao anterior deste arquivo ja')
+L.push('-- criou as colunas com outros grupos, esta rodada CORRIGE em vez de')
+L.push('-- ignorar. E o que alinha o A1 aos grupos do Brasileirao.')
+L.push('ON CONFLICT (competition_id, key) DO UPDATE SET')
+L.push('  label = EXCLUDED.label, type = EXCLUDED.type, options = EXCLUDED.options,')
+L.push('  width = EXCLUDED.width, col_group = EXCLUDED.col_group, sticky = EXCLUDED.sticky,')
+L.push('  status_color = EXCLUDED.status_color, sort_order = EXCLUDED.sort_order;')
 L.push('')
 L.push(`-- ── 6) Os ${jogos.length} jogos do Controle ─────────────────────────────────────`)
 L.push('--    status vai na COLUNA status (nao no JSONB): useCompetitionEvents')
@@ -190,12 +238,22 @@ L.push('')
 L.push('COMMIT;')
 L.push('')
 L.push('-- ── Conferencia ──────────────────────────────────────────────────────')
-L.push(`-- Esperado: Controle = ${jogos.length} jogos / ${COLS.length} colunas`)
+L.push(`-- Esperado: Controle = ${jogos.length} jogos / ${COLS.length} colunas / escala_camps {Paulistão 26}`)
 L.push('--           Periferico = 74 jogos / 37 colunas')
-L.push('SELECT c.label, c.section_kind,')
+L.push('SELECT c.label, c.section_kind, c.escala_camps,')
 L.push('       (SELECT count(*) FROM competition_events e WHERE e.competition_id = c.id) AS jogos,')
 L.push('       (SELECT count(*) FROM competition_columns k WHERE k.competition_id = c.id) AS colunas')
 L.push(`FROM competitions c WHERE c.slug IN ('${PAI}', '${FILHO}') ORDER BY c.sort_order;`)
+L.push('')
+L.push('-- Os grupos do Controle do A1 devem ficar IGUAIS aos do Brasileirao:')
+L.push('-- Jogo 10 · Equipe Técnica 13 · Transmissão 13 · FEED B 6 · Técnico 7')
+L.push('SELECT col_group, count(*) AS colunas FROM competition_columns')
+L.push(`WHERE competition_id = (SELECT id FROM competitions WHERE slug = '${PAI}')`)
+L.push('GROUP BY col_group ORDER BY min(sort_order);')
+L.push('')
+L.push('-- Quantos jogos do A1 a Visao Geral vai achar na Escala Geral')
+L.push('-- (0 aqui = o nome do campeonato na escala_geral e diferente)')
+L.push("SELECT count(*) AS jogos_do_a1_na_escala_geral FROM escala_geral WHERE campeonato = 'Paulistão 26';")
 L.push('')
 L.push('-- Nenhum resultado aqui = a renomeacao do fornecedor de micros terminou')
 L.push("SELECT count(*) AS sobrou_fornecedor_micros FROM competition_events")
