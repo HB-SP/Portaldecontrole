@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase, isConfigured } from '../lib/supabase'
 import { PAR_PERIFERICO, PERIFERICO_BR_CONFIG, PERIFERICO_PF_CONFIG } from '../config/tables'
 import { normalizarTime } from '../lib/escalaLink'
+import { parseData } from '../lib/datas'
 
 // No legado as colunas da irmã vivem no config hardcoded, não no banco.
 const COLUNAS_LEGADO = {
@@ -29,19 +30,24 @@ const COLUNAS_LEGADO = {
 // fora de propósito: a planilha de periféricos chama a final de 08/03 de "F" e
 // a operacional de "FA".
 //
-// Também não há tolerância de ±1 dia: quando o Controle tem um jogo que a
-// planilha de periféricos não tem (o Mirassol × Novorizontino aparece no
-// Controle em 01/02 e 02/02, e nos periféricos só em 01/02), é melhor a tela
-// dizer "sem linha correspondente" do que mostrar o equipamento de outro dia.
+// A tolerância de ±1 dia existe (as duas tabelas divergem na data do mesmo
+// jogo — no Paulistão Fem. o Controle tem 11/08 e 13/08 onde o Periférico tem
+// 12/08), mas em SEGUNDA PASSADA e só sobre linha ainda não reivindicada:
+//
+//   1ª passada — casamento exato (data + times + é-Feed-B)
+//   2ª passada — para o que sobrou, mesma dupla e mesmo sinal a ±1 dia,
+//                aceitando só se houver UM candidato livre
+//
+// Sem a segunda condição, o Mirassol × Novorizontino do A1 (que está no
+// Controle em 01/02 e 02/02 e no Periférico só em 01/02) fazia as duas linhas
+// apontarem para a mesma — o de 02/02 roubava por aproximação a linha que já
+// era do de 01/02. Agora ele fica honestamente sem par.
 const ehFeedB = r => /feed\s*b/i.test(String(r?.padrao || '')) || /^fb$/i.test(String(r?.rod || '').trim())
-const chaveJogo = r => [
-  String(r?.data || '').trim(),
-  normalizarTime(r?.mandante),
-  normalizarTime(r?.visitante),
-  ehFeedB(r) ? 'B' : 'A',
-].join('|')
+const dupla = r => `${normalizarTime(r?.mandante)}|${normalizarTime(r?.visitante)}|${ehFeedB(r) ? 'B' : 'A'}`
+const chaveJogo = r => `${String(r?.data || '').trim()}|${dupla(r)}`
+const UM_DIA = 86400000
 
-export function usePerifericoIrmao(config) {
+export function usePerifericoIrmao(config, jogos) {
   const [linhas, setLinhas] = useState([])
   const [colunas, setColunas] = useState([])
 
@@ -92,19 +98,48 @@ export function usePerifericoIrmao(config) {
     return () => { supabase.removeChannel(canal) }
   }, [carregar, legacyTabela, competitionId])
 
-  // Confronto repetido na mesma chave só pode acontecer se a planilha tiver
-   // linha duplicada de verdade; nesse caso a primeira ganha e o aviso fica no
-  // console, em vez de a tela escolher em silêncio.
-  const indice = useMemo(() => {
-    const m = new Map()
-    for (const r of linhas) {
-      if (!r?.mandante || !r?.visitante) continue
+  // Atribuicao GLOBAL, nao busca por linha: a 2a passada precisa saber o que a
+  // 1a ja reivindicou. Resultado chaveado pelo id do jogo do Controle.
+  const jogosKey = (jogos || []).map(j => j?.id).join(',')
+  const porJogo = useMemo(() => {
+    const validas = linhas.filter(r => r?.mandante && r?.visitante)
+    const exato = new Map()
+    for (const r of validas) {
       const k = chaveJogo(r)
-      if (m.has(k)) { console.warn('[periferico] duas linhas para o mesmo jogo:', k); continue }
-      m.set(k, r)
+      // Chave repetida so acontece com linha duplicada de verdade na planilha:
+      // a primeira fica e o aviso vai ao console, em vez de a tela escolher em
+      // silencio.
+      if (exato.has(k)) { console.warn('[periferico] duas linhas para o mesmo jogo:', k); continue }
+      exato.set(k, r)
     }
-    return m
-  }, [linhas])
+
+    const resultado = new Map()
+    const usadas = new Set()
+    const sobraram = []
+
+    // 1a passada: casamento exato
+    for (const j of jogos || []) {
+      if (!j?.mandante || !j?.visitante) continue
+      const hit = exato.get(chaveJogo(j))
+      if (hit && !usadas.has(hit)) { resultado.set(j.id, hit); usadas.add(hit) }
+      else sobraram.push(j)
+    }
+
+    // 2a passada: +-1 dia, mesma dupla e mesmo sinal, so sobre linha livre e
+    // so quando o candidato e UNICO
+    for (const j of sobraram) {
+      const d = parseData(j.data)
+      if (!d) continue
+      const cands = validas.filter(r => {
+        if (usadas.has(r)) return false
+        if (dupla(r) !== dupla(j)) return false
+        const rd = parseData(r.data)
+        return rd && Math.abs(rd - d) <= UM_DIA
+      })
+      if (cands.length === 1) { resultado.set(j.id, cands[0]); usadas.add(cands[0]) }
+    }
+    return resultado
+  }, [linhas, jogosKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Colunas do legado saem do config hardcoded da irmã; do dinâmico, do banco.
   const colunasFinais = useMemo(() => {
@@ -112,7 +147,7 @@ export function usePerifericoIrmao(config) {
     return COLUNAS_LEGADO[legacyTabela]?.columns || []
   }, [legacyTabela, colunas])
 
-  const acharPeriferico = useCallback(jogo => indice.get(chaveJogo(jogo)) || null, [indice])
+  const acharPeriferico = useCallback(jogo => (jogo?.id ? porJogo.get(jogo.id) || null : null), [porJogo])
 
   return {
     colunas: colunasFinais,

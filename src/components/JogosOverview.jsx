@@ -383,7 +383,7 @@ export default function JogosOverview({ config, accentColor }) {
   const { data, loading, addRow, updateRow } = config.isLegacy ? legacy : dynamic
   const { indice: indiceEscala, confirmacoes, temEscala } = useEscalaGeral(config.label, config.escalaCamps)
   // Periféricos do mesmo jogo, buscados na seção irmã (linhas próprias)
-  const { colunas: perifColunas, acharPeriferico, temPeriferico } = usePerifericoIrmao(config)
+  const { colunas: perifColunas, acharPeriferico, temPeriferico } = usePerifericoIrmao(config, data)
   const [search, setSearch] = useState('')
   const [filtroRod, setFiltroRod] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('')

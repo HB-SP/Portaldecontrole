@@ -27,6 +27,39 @@ export function getStatusClass(s) {
   return map[s] || 'status-default'
 }
 
+// ─── AGRUPAMENTO DOS PAINÉIS ─────────────────────────────────────────────────
+// Os grupos das colunas são o que a Visão Geral transforma em painel. O padrão
+// pedido separa PESSOAL (quem) de OPERAÇÕES (o que), com TRANSMISSÃO levando
+// satélite, horários e o bloco técnico. Os PERIFÉRICOS entram como coluna
+// própria, vinda da seção irmã (ver usePerifericoIrmao) — não saem daqui.
+//
+// aplicarPlano só REAGRUPA e REORDENA: cada coluna mantém tipo, opções,
+// largura, sticky e linkedTo exatamente como definida abaixo. Assim o padrão
+// dos painéis muda sem risco de mexer no comportamento de nenhum campo.
+//
+// Coluna fora do plano continua funcionando (mantém o grupo original e vai
+// para o fim) e avisa no console. De propósito não lança erro: isto roda no
+// import do módulo, e uma exceção aqui daria tela branca antes de o
+// ErrorBoundary existir. O script scripts/conferir_planos_colunas.mjs falha
+// se sobrar alguma.
+function aplicarPlano(columns, plano, nome) {
+  const porChave = new Map(columns.map(c => [c.key, c]))
+  const out = []
+  for (const [grupo, chaves] of plano) {
+    for (const k of chaves) {
+      const c = porChave.get(k)
+      if (!c) { console.warn(`[tables:${nome}] plano cita coluna inexistente: ${k}`); continue }
+      out.push({ ...c, group: grupo })
+      porChave.delete(k)
+    }
+  }
+  if (porChave.size) {
+    console.warn(`[tables:${nome}] colunas fora do plano (grupo original mantido): ${[...porChave.keys()].join(', ')}`)
+    out.push(...porChave.values())
+  }
+  return out
+}
+
 // Helper to compute stickyLeft offsets for sticky columns
 function computeStickyOffsets(columns) {
   let offset = 0
@@ -121,13 +154,29 @@ const brasileiraoRawColumns = [
   { key: 'ficha_jogo', label: 'FICHA_JOGO', type: 'url', width: 130, group: 'Técnico' },
 ]
 
+// Supervisores, LiveU, DTV, Vmix e Áudio guardam NOMES de gente (ver os
+// valores em dropdown_options: "Rafael Gusmão / 21 98038-6887") — por isso vão
+// para Pessoal. UM, SNG e Gerador guardam empresa/equipamento: Operações.
+// PPV ("Premiere") é o produto da transmissão, não pessoa nem equipamento.
+const BRASILEIRAO_PLANO = [
+  ['Jogo', ['eu', 'dia', 'data', 'hora_brt', 'mandante', 'visitante', 'estadio', 'cidade', 'padrao', 'detentor']],
+  ['Pessoal', ['supervisores_1', 'liveu_1', 'supervisores_2', 'liveu_2', 'dtv', 'op_vmix', 'op_audio']],
+  ['Operações', ['um', 'nome_numero', 'sng_premiere', 'sng_host', 'gerador']],
+  ['Transmissão', [
+    'ppv', 'teleporto', 'satelite', 'banda', 'status', 'reserva', 'transponder', 'uplink', 'downlink',
+    'service_start_gmt', 'abertura_brt', 'service_end_gmt', 'fechamento_brt', 'total_horas',
+    'satelite_globo', 'status_g', 'reserva_g', 'transponder_g', 'uplink_g', 'downlink_g',
+    'aspecto', 'compressao', 'transmissao', 'modulacao', 'sr', 'fec', 'biss_code', 'ficha_jogo',
+  ]],
+]
+
 export const BRASILEIRAO_CONFIG = {
   id: 'brasileirao',
   tableName: 'brasileirao_jogos',
   label: 'Brasileirão 26',
   accentColor: '#65B32E',
   accentBg: '#0d1a06',
-  columns: computeStickyOffsets(brasileiraoRawColumns),
+  columns: computeStickyOffsets(aplicarPlano(brasileiraoRawColumns, BRASILEIRAO_PLANO, 'brasileirao')),
 }
 
 // ============================================================
@@ -235,13 +284,27 @@ const paulistaoFemRawColumns = [
   { key: 'total_horas', label: 'Total de Horas', type: 'text', width: 135, group: 'Horários' },
 ]
 
+// Este Controle já traz equipamento nas colunas próprias (dslr, refcam, drone,
+// minidrone, grua) — vão para Operações. São campos DESTA tabela, distintos da
+// aba Periférico, que continua sendo seção à parte e aparece em coluna própria.
+const PAULISTAO_FEM_PLANO = [
+  ['Jogo', ['rod', 'dia', 'data', 'hora_brt', 'mandante', 'visitante', 'cidade', 'estadio', 'padrao', 'detentor']],
+  ['Pessoal', ['coordenador', 'supervisor_um_host', 'dtv', 'op_vmix']],
+  ['Operações', ['um', 'sng', 'gerador', 'dslr', 'refcam', 'drone', 'minidrone', 'grua']],
+  ['Transmissão', [
+    'teleporto', 'satelite', 'banda', 'status', 'reserva', 'transponder', 'uplink', 'downlink',
+    'service_start_gmt', 'abertura_brt', 'service_end_gmt', 'fechamento_brt', 'total_horas',
+    'aspecto', 'compressao', 'transmissao', 'modulacao', 'sr', 'fec', 'audio_1_2', 'audio_3_4', 'biss_code',
+  ]],
+]
+
 export const PAULISTAO_FEM_CONFIG = {
   id: 'paulistao-fem',
   tableName: 'paulistao_feminino_jogos',
   label: 'Paulistão Fem. 26',
   accentColor: '#ec4899',
   accentBg: '#1a0a14',
-  columns: computeStickyOffsets(paulistaoFemRawColumns),
+  columns: computeStickyOffsets(aplicarPlano(paulistaoFemRawColumns, PAULISTAO_FEM_PLANO, 'paulistao-fem')),
 }
 
 // ============================================================
