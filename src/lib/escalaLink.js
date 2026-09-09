@@ -24,6 +24,11 @@ const TIME_ALIAS = {
   athleticopr: 'athletico',
   redbullbragantino: 'bragantino',
   rbbragantino: 'bragantino',
+  // Paulistão A1: o Controle usa a sigla do clube, a planilha de
+  // planejamento não. Sem estes dois, 15 dos 75 jogos do A1 não achavam a
+  // escala — todos os que envolvem um destes times.
+  ecnoroeste: 'noroeste',
+  ecprimavera: 'primavera',
 }
 
 function normTime(s) {
