@@ -2,23 +2,18 @@ import { useEffect, useState } from 'react'
 import { getEscudoUrl } from '../lib/escudos'
 import { useHubFornecedores, getColumnPredicate } from '../hooks/useHubFornecedores'
 import FornecedorPicker from './FornecedorPicker'
+import { equipamentosDaConfig } from '../config/equipamentos'
 
-const EQUIPAMENTOS = [
-  { key: 'drone',     label: 'Drone',     fornecedor: 'fornecedor_drone' },
-  { key: 'minidrone', label: 'MiniDrone', fornecedor: 'fornecedor_minidrone' },
-  { key: 'dslr',      label: 'DSLR',      fornecedor: 'fornecedor_dslr', qtde: 'qtde' },
-  { key: 'grua',      label: 'Grua',      fornecedor: 'fornecedor_grua' },
-  { key: 'goalcam',   label: 'GoalCam',   fornecedor: 'fornecedor_goalcam' },
-  { key: 'trilho',    label: 'Trilho',    fornecedor: 'fornecedor_trilho' },
-  { key: 'carrinho',  label: 'Carrinho',  fornecedor: 'fornecedor_carrinho' },
-  { key: 'clipcam',   label: 'ClipCam',   fornecedor: 'fornecedor_clipcam' },
-]
+// A lista vinha HARDCODED aqui e — igual — no PerifericosCards. Agora vem de
+// ../config/equipamentos, derivada das colunas quando o campeonato é dinâmico.
 
-export default function PerifericoModal({ row, mode, accentColor, onClose, onSave }) {
+export default function PerifericoModal({ row, mode, config, accentColor, onClose, onSave }) {
   const [data, setData] = useState({})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const { fornecedores: hubFornecedores } = useHubFornecedores()
+  // Sem config (chamada antiga) cai na lista fixa do legado.
+  const EQUIPAMENTOS = equipamentosDaConfig(config)
 
   useEffect(() => {
     setData(mode === 'edit' && row ? { ...row } : {})
@@ -32,7 +27,7 @@ export default function PerifericoModal({ row, mode, accentColor, onClose, onSav
       const next = { ...prev, [eq.key]: valor }
       // Limpa fornecedor/qtde se desmarcou
       if (valor === 'Não') {
-        next[eq.fornecedor] = ''
+        if (eq.fornecedor) next[eq.fornecedor] = ''
         if (eq.qtde) next[eq.qtde] = ''
       }
       return next
@@ -135,15 +130,17 @@ export default function PerifericoModal({ row, mode, accentColor, onClose, onSav
                             placeholder="Qtde."
                           />
                         )}
-                        <div className="pm-forn">
-                          <FornecedorPicker
-                            value={data[eq.fornecedor] || ''}
-                            onChange={v => set(eq.fornecedor, v)}
-                            colKey={eq.fornecedor}
-                            fornecedores={hubFornecedores}
-                            placeholder="Fornecedor"
-                          />
-                        </div>
+                        {eq.fornecedor && (
+                          <div className="pm-forn">
+                            <FornecedorPicker
+                              value={data[eq.fornecedor] || ''}
+                              onChange={v => set(eq.fornecedor, v)}
+                              colKey={eq.fornecedor}
+                              fornecedores={hubFornecedores}
+                              placeholder="Fornecedor"
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

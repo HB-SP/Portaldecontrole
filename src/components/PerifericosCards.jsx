@@ -7,6 +7,7 @@ import { getEscudoUrl } from '../lib/escudos'
 import { compararPorData, rodadaAtual } from '../lib/datas'
 import { useHubFornecedores } from '../hooks/useHubFornecedores'
 import FornecedorPicker from './FornecedorPicker'
+import { equipamentosDaConfig, equipamentoOk } from '../config/equipamentos'
 
 // ─── PERIFÉRICOS — mesma estrutura da visão Escala do Controle ───────────────
 // Cards por jogo agrupados por rodada (abre na rodada atual), slots de
@@ -14,16 +15,9 @@ import FornecedorPicker from './FornecedorPicker'
 //   Não → slot apagado · Sim sem fornecedor → pendência (âmbar) ·
 //   Sim com fornecedor → preenchido.
 
-const EQUIPAMENTOS = [
-  { key: 'drone',     label: 'Drone',     fornecedor: 'fornecedor_drone' },
-  { key: 'minidrone', label: 'MiniDrone', fornecedor: 'fornecedor_minidrone' },
-  { key: 'dslr',      label: 'DSLR',      fornecedor: 'fornecedor_dslr', qtde: 'qtde' },
-  { key: 'grua',      label: 'Grua',      fornecedor: 'fornecedor_grua' },
-  { key: 'goalcam',   label: 'GoalCam',   fornecedor: 'fornecedor_goalcam' },
-  { key: 'trilho',    label: 'Trilho',    fornecedor: 'fornecedor_trilho' },
-  { key: 'carrinho',  label: 'Carrinho',  fornecedor: 'fornecedor_carrinho' },
-  { key: 'clipcam',   label: 'ClipCam',   fornecedor: 'fornecedor_clipcam' },
-]
+// A lista de equipamentos agora vem de ../config/equipamentos: fixa para o
+// legado (Brasileirão e Paulistão Fem., que têm essas colunas na tabela
+// física) e derivada das colunas do campeonato quando ele é dinâmico.
 
 function Escudo({ nome, size = 26 }) {
   const url = getEscudoUrl(nome)
@@ -49,18 +43,22 @@ function SlotEquip({ row, eq, destaque, fornecedores, onSave }) {
   }, [aberto])
 
   const ativo = row[eq.key] === 'Sim'
-  const fornecedor = row[eq.fornecedor]
-  const pendente = ativo && (!fornecedor || !String(fornecedor).trim())
+  const fornecedor = eq.fornecedor ? row[eq.fornecedor] : ''
+  // Equipamento sem coluna de fornecedor (ex.: Assinatura Craque) fica pronto
+  // só com o "Sim" — sem este guard ele viveria marcado como pendência.
+  const pendente = ativo && !!eq.fornecedor && (!fornecedor || !String(fornecedor).trim())
   const abrir = () => { setForn(fornecedor || ''); setQtde(eq.qtde ? (row[eq.qtde] || '') : ''); setAberto(a => !a) }
 
   const salvarSim = () => {
-    const payload = { [eq.key]: 'Sim', [eq.fornecedor]: forn.trim() }
+    const payload = { [eq.key]: 'Sim' }
+    if (eq.fornecedor) payload[eq.fornecedor] = forn.trim()
     if (eq.qtde) payload[eq.qtde] = qtde.trim()
     onSave(row.id, payload)
     setAberto(false)
   }
   const salvarNao = () => {
-    const payload = { [eq.key]: 'Não', [eq.fornecedor]: '' }
+    const payload = { [eq.key]: 'Não' }
+    if (eq.fornecedor) payload[eq.fornecedor] = ''
     if (eq.qtde) payload[eq.qtde] = ''
     onSave(row.id, payload)
     setAberto(false)
@@ -82,14 +80,16 @@ function SlotEquip({ row, eq, destaque, fornecedores, onSave }) {
             <button className={!ativo ? 'is-on is-off' : ''} onClick={salvarNao}>Não</button>
           </div>
           <div className="esc-slot-livre">
-            <FornecedorPicker
-              value={forn}
-              onChange={setForn}
-              colKey={eq.fornecedor}
-              fornecedores={fornecedores}
-              autoFocus compact
-              onEnter={salvarSim}
-            />
+            {eq.fornecedor && (
+              <FornecedorPicker
+                value={forn}
+                onChange={setForn}
+                colKey={eq.fornecedor}
+                fornecedores={fornecedores}
+                autoFocus compact
+                onEnter={salvarSim}
+              />
+            )}
             {eq.qtde && (
               <input
                 value={qtde}
@@ -116,6 +116,8 @@ export default function PerifericosCards({ config, novoJogoPedido = false, onNov
   const { data, loading, error, addRow, updateRow, deleteRow } = config.isLegacy === false ? dynamic : legacy
   const { fornecedores: hubFornecedores } = useHubFornecedores()
   const accent = config.accentColor
+  // Lista fixa no legado; derivada das colunas 'simnao' no campeonato dinâmico.
+  const EQUIPAMENTOS = useMemo(() => equipamentosDaConfig(config), [config])
 
   const [busca, setBusca] = useState('')
   const [fRodada, setFRodada] = useState('')
@@ -132,24 +134,26 @@ export default function PerifericosCards({ config, novoJogoPedido = false, onNov
 
   const fornecedores = useMemo(() => {
     const set = new Set()
-    jogos.forEach(r => EQUIPAMENTOS.forEach(eq => { const v = r[eq.fornecedor]; if (v && String(v).trim()) set.add(String(v).trim()) }))
+    jogos.forEach(r => EQUIPAMENTOS.forEach(eq => { const v = eq.fornecedor ? r[eq.fornecedor] : null; if (v && String(v).trim()) set.add(String(v).trim()) }))
     return [...set].sort((a, b) => a.localeCompare(b))
-  }, [jogos])
+  }, [jogos, EQUIPAMENTOS])
 
   const norm = s => String(s || '').toLowerCase()
-  const pendenteEm = (r, eq) => r[eq.key] === 'Sim' && (!r[eq.fornecedor] || !String(r[eq.fornecedor]).trim())
+  // Sem coluna de fornecedor não há o que pendenciar: o "Sim" já basta.
+  const pendenteEm = (r, eq) => r[eq.key] === 'Sim' && !!eq.fornecedor
+    && (!r[eq.fornecedor] || !String(r[eq.fornecedor]).trim())
 
   const filtrados = useMemo(() => jogos.filter(r => {
     if (busca && !(norm(r.mandante).includes(norm(busca)) || norm(r.visitante).includes(norm(busca)))) return false
     if (fRodada && String(r.rod) !== fRodada) return false
     if (fEquip && r[fEquip] !== 'Sim') return false
-    if (fFornecedor && !EQUIPAMENTOS.some(eq => norm(r[eq.fornecedor]).includes(norm(fFornecedor)))) return false
+    if (fFornecedor && !EQUIPAMENTOS.some(eq => eq.fornecedor && norm(r[eq.fornecedor]).includes(norm(fFornecedor)))) return false
     if (soPendencias) {
       const alvo = fEquip ? EQUIPAMENTOS.filter(eq => eq.key === fEquip) : EQUIPAMENTOS
       if (!alvo.some(eq => pendenteEm(r, eq))) return false
     }
     return true
-  }), [jogos, busca, fRodada, fEquip, fFornecedor, soPendencias])
+  }), [jogos, busca, fRodada, fEquip, fFornecedor, soPendencias, EQUIPAMENTOS])
 
   const porRodada = useMemo(() => {
     const map = new Map()
@@ -199,7 +203,8 @@ export default function PerifericosCards({ config, novoJogoPedido = false, onNov
   }
 
   const ativosDe = r => EQUIPAMENTOS.filter(eq => r[eq.key] === 'Sim')
-  const okDe = r => EQUIPAMENTOS.filter(eq => r[eq.key] === 'Sim' && r[eq.fornecedor] && String(r[eq.fornecedor]).trim())
+  // equipamentoOk trata o caso sem coluna de fornecedor (só o "Sim" completa)
+  const okDe = r => EQUIPAMENTOS.filter(eq => equipamentoOk(r, eq))
 
   const totAtivos = filtrados.reduce((s, r) => s + ativosDe(r).length, 0)
   const totOk = filtrados.reduce((s, r) => s + okDe(r).length, 0)
@@ -340,6 +345,7 @@ export default function PerifericosCards({ config, novoJogoPedido = false, onNov
         <PerifericoModal
           mode={modal.mode}
           row={modal.row}
+          config={config}
           accentColor={accent}
           onClose={() => setModal({ open: false, mode: 'add', row: null })}
           onSave={handleSave}
