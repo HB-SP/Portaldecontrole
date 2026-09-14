@@ -39,22 +39,8 @@ function formatDateKey(key) {
   return `${String(d).padStart(2,'0')}/${String(mo+1).padStart(2,'0')}/${y}`
 }
 
-function countdownLabel(ts) {
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-  const days = Math.floor((ts - today) / (1000 * 60 * 60 * 24))
-  if (days < 0) return null
-  if (days === 0) return 'Hoje'
-  if (days === 1) return 'Amanhã'
-  return `Em ${days} dias`
-}
-
-function formatNextTs(ts) {
-  const d = new Date(ts)
-  const dia = DIAS[d.getDay()]
-  const dayStr = dia[0] + dia.slice(1).toLowerCase()
-  return `${dayStr} ${d.getDate()} ${MESES[d.getMonth()].slice(0, 3)}`
-}
+// countdownLabel e formatNextTs saíram junto com o destaque da lateral: só
+// ele usava. A data do jogo agora vem formatada no próprio card.
 
 export default function HomeView({ competitions, onCompSelect }) {
   // "Hoje" como estado que acompanha a virada do dia — memoizar uma vez
@@ -78,9 +64,6 @@ export default function HomeView({ competitions, onCompSelect }) {
   const [selectedKey,    setSelectedKey]    = useState(null)
   const [calKey,         setCalKey]         = useState(0)
   const [calDir,         setCalDir]         = useState(null)
-  const [spotlightIdx,   setSpotlightIdx]   = useState(0)
-  const [spotlightDir,   setSpotlightDir]   = useState(null)
-  const [spotlightKey,   setSpotlightKey]   = useState(0)
   const [showUpcoming,   setShowUpcoming]   = useState(true)
   const [viewMode,       setViewMode]       = useState('split')
   const [mounted,       setMounted]       = useState(false)
@@ -237,26 +220,6 @@ export default function HomeView({ competitions, onCompSelect }) {
     return result
   }, [matchesByDate, todayTs])
 
-  // Agrupa todos os jogos do próximo dia num spotlight unificado
-  const spotlightTs    = upcoming[0]?.ts ?? null
-  const spotlightGames = spotlightTs != null ? upcoming.filter(m => m.ts === spotlightTs) : []
-  const restGames      = spotlightTs != null ? upcoming.filter(m => m.ts !== spotlightTs).slice(0, 8) : []
-  const cdLabel        = spotlightTs != null ? countdownLabel(spotlightTs) : null
-  const isToday        = cdLabel === 'Hoje'
-
-  // Reseta índice quando o grupo de jogos mudar
-  useEffect(() => { setSpotlightIdx(0) }, [spotlightTs])
-
-  const safeIdx = Math.min(spotlightIdx, Math.max(0, spotlightGames.length - 1))
-  const currentGame = spotlightGames[safeIdx] ?? null
-
-  function navigateSpotlight(dir) {
-    const next = safeIdx + dir
-    if (next < 0 || next >= spotlightGames.length) return
-    setSpotlightDir(dir > 0 ? 'right' : 'left')
-    setSpotlightKey(k => k + 1)
-    setSpotlightIdx(next)
-  }
 
   return (
     <div className={`hv-root${mounted ? ' hv-mounted' : ''}`}>
@@ -282,17 +245,10 @@ export default function HomeView({ competitions, onCompSelect }) {
             <span className="hv-kpi-value hv-kpi-done">{kpi.done}</span>
             <span className="hv-kpi-label">realizados</span>
           </div>
-          {spotlightGames.length > 0 && cdLabel && (
-            <>
-              <div className="hv-kpi-sep" />
-              <div className="hv-kpi-item">
-                <span className="hv-kpi-value" style={{ color: spotlightGames[0].accentColor }}>
-                  {cdLabel}
-                </span>
-                <span className="hv-kpi-label">próximo{spotlightGames.length > 1 ? ` · ${spotlightGames.length} jogos` : ' jogo'}</span>
-              </div>
-            </>
-          )}
+          {/* O "Em 5 dias · próximo jogo" saiu: o card de Próxima Rodada logo
+              abaixo já traz a data do jogo, e dizer a mesma coisa em três
+              lugares (faixa, card e lateral) era o que deixava a tela
+              repetitiva. */}
         </div>
       )}
 
@@ -554,127 +510,22 @@ export default function HomeView({ competitions, onCompSelect }) {
             </div>
           ) : (
             <div className="hv-panel-inner hv-panel-anim" key="default">
-              {currentGame ? (
-                <div
-                  className="hv-spotlight"
-                  style={{
-                    '--c': currentGame.accentColor,
-                    background: `linear-gradient(160deg, #ffffff 50%, ${currentGame.accentColor}10 100%)`
-                  }}
-                >
-                  {/* Header: badge + navegação */}
-                  <div className="hv-spotlight-header">
-                    <div
-                      className={`hv-spotlight-badge${isToday ? ' hv-spotlight-badge-live' : ''}`}
-                      style={{ background: currentGame.accentColor + '18', color: currentGame.accentColor }}
-                    >
-                      {isToday ? '● AO VIVO EM BREVE' : '◉ PRÓXIMO JOGO'}
-                    </div>
-                    <span className="hv-spotlight-comp">{cleanComp(currentGame.competitionLabel)}</span>
-                    {spotlightGames.length > 1 && (
-                      <div className="hv-sp-nav">
-                        <button
-                          className="hv-sp-nav-btn"
-                          disabled={safeIdx === 0}
-                          onClick={() => navigateSpotlight(-1)}
-                        >
-                          <svg viewBox="0 0 16 16" fill="none" width="12" height="12">
-                            <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        </button>
-                        <span className="hv-sp-nav-count">{safeIdx + 1}/{spotlightGames.length}</span>
-                        <button
-                          className="hv-sp-nav-btn"
-                          disabled={safeIdx === spotlightGames.length - 1}
-                          onClick={() => navigateSpotlight(1)}
-                        >
-                          <svg viewBox="0 0 16 16" fill="none" width="12" height="12">
-                            <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        </button>
-                      </div>
-                    )}
-                  </div>
+              {/* O destaque do próximo jogo saiu daqui: virou os cards de
+                  Próxima Rodada no topo, que mostram o mesmo jogo COM a
+                  escala. Manter os dois era dizer a mesma coisa duas vezes,
+                  e a versão de cá era a pior. */}
 
-                  {/* Conteúdo do jogo com transição direcional */}
-                  <div
-                    key={spotlightKey}
-                    className={`hv-sp-slide${spotlightDir === 'right' ? ' hv-sp-slide-right' : spotlightDir === 'left' ? ' hv-sp-slide-left' : ''}`}
-                  >
-                    <div className="hv-spotlight-teams">
-                      <div className="hv-spotlight-team">
-                        {getEscudoUrl(currentGame.mandante)
-                          ? <img src={getEscudoUrl(currentGame.mandante)} className="hv-spotlight-shield" alt={currentGame.mandante} />
-                          : <div className="hv-spotlight-shield-fb" style={{ background: currentGame.accentColor + '28' }} />
-                        }
-                        <span className="hv-spotlight-tname">{currentGame.mandante}</span>
-                      </div>
-                      <span className="hv-spotlight-vs">×</span>
-                      <div className="hv-spotlight-team">
-                        {getEscudoUrl(currentGame.visitante)
-                          ? <img src={getEscudoUrl(currentGame.visitante)} className="hv-spotlight-shield" alt={currentGame.visitante} />
-                          : <div className="hv-spotlight-shield-fb" style={{ background: currentGame.accentColor + '28' }} />
-                        }
-                        <span className="hv-spotlight-tname">{currentGame.visitante}</span>
-                      </div>
-                    </div>
-
-                    <div className="hv-spotlight-chips">
-                      {currentGame.rawDate  && <span className="hv-sp-chip">{currentGame.rawDate}</span>}
-                      {currentGame.hora_brt && <span className="hv-sp-chip hv-sp-chip-em">{currentGame.hora_brt} BRT</span>}
-                      {currentGame.rod      && <span className="hv-sp-chip">Rod. {currentGame.rod}</span>}
-                      {currentGame.detentor && <span className="hv-sp-chip">{currentGame.detentor}</span>}
-                    </div>
-
-                    <div className="hv-spotlight-status" style={{ color: statusColor(currentGame.status) }}>
-                      <span className="hv-spotlight-sdot" style={{ background: statusColor(currentGame.status) }} />
-                      {currentGame.status || 'Pendente'}
-                    </div>
-                  </div>
-
-                  {/* Dots indicadores */}
-                  {spotlightGames.length > 1 && (
-                    <div className="hv-sp-dots">
-                      {spotlightGames.map((_, i) => (
-                        <button
-                          key={i}
-                          className={`hv-sp-dot${i === safeIdx ? ' hv-sp-dot-on' : ''}`}
-                          style={i === safeIdx ? { background: currentGame.accentColor } : {}}
-                          onClick={() => {
-                            const dir = i > safeIdx ? 1 : -1
-                            setSpotlightDir(dir > 0 ? 'right' : 'left')
-                            setSpotlightKey(k => k + 1)
-                            setSpotlightIdx(i)
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  <button
-                    className="hv-spotlight-cta"
-                    style={{ background: currentGame.accentColor, borderColor: currentGame.accentColor }}
-                    onClick={() => onCompSelect(currentGame.competitionId)}
-                  >
-                    Ver campeonato
-                    <svg viewBox="0 0 16 16" fill="none" width="13" height="13">
-                      <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </button>
+              {restGames.length === 0 && !loading && (
+                <div className="hv-empty">
+                  <div className="hv-empty-dot" />
+                  <div className="hv-empty-text">Nada além desta rodada</div>
                 </div>
-              ) : (
-                !loading && (
-                  <div className="hv-empty">
-                    <div className="hv-empty-dot" />
-                    <div className="hv-empty-text">Sem jogos futuros</div>
-                  </div>
-                )
               )}
 
               {restGames.length > 0 && (
                 <div className="hv-panel-upcoming">
                   <div className="hv-up-header">
-                    <span className="hv-sec-label">Próximos Jogos</span>
+                    <span className="hv-sec-label">Depois desta rodada</span>
                     <button className="hv-up-toggle" onClick={() => setShowUpcoming(v => !v)}>
                       {showUpcoming ? 'Ocultar' : `Ver ${restGames.length}`}
                     </button>
