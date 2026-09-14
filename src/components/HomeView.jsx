@@ -206,6 +206,18 @@ export default function HomeView({ competitions, onCompSelect }) {
       .sort((a, b) => a.ts !== b.ts ? a.ts - b.ts : (a.hora_brt || '').localeCompare(b.hora_brt || ''))
   }, [matchesByDate, passFilter, todayTs])
 
+  // A lateral mostra o que vem DEPOIS da rodada em destaque: os jogos que já
+  // estão nos cards do topo saem daqui, senão a tela diria a mesma coisa duas
+  // vezes.
+  const idsNoDestaque = useMemo(
+    () => new Set(jogosDaRodada.map(j => `${j.dateKey}|${j.mandante}|${j.visitante}`)),
+    [jogosDaRodada],
+  )
+  const restGames = useMemo(
+    () => upcoming.filter(m => !idsNoDestaque.has(`${m.dateKey}|${m.mandante}|${m.visitante}`)).slice(0, 10),
+    [upcoming, idsNoDestaque],
+  )
+
   const nextByComp = useMemo(() => {
     const result = {}
     for (const [key, matches] of matchesByDate.entries()) {
