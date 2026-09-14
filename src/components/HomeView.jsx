@@ -1,6 +1,9 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useHomeData } from '../hooks/useHomeData'
 import { getEscudoUrl } from '../lib/escudos'
+import { selecionarProximaRodada } from '../lib/proximaRodada'
+import { resumoDoJogo } from '../lib/resumoJogo'
+import ProximaRodada from './ProximaRodada'
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
@@ -53,24 +56,6 @@ function formatNextTs(ts) {
   return `${dayStr} ${d.getDate()} ${MESES[d.getMonth()].slice(0, 3)}`
 }
 
-function LiveClock() {
-  const [now, setNow] = useState(() => new Date())
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(t)
-  }, [])
-  const hh = String(now.getHours()).padStart(2,'0')
-  const mm = String(now.getMinutes()).padStart(2,'0')
-  const ss = String(now.getSeconds()).padStart(2,'0')
-  return (
-    <div className="hv-clock">
-      <span className="hv-clock-hm">{hh}:{mm}</span>
-      <span className="hv-clock-ss">{ss}</span>
-      <span className="hv-clock-tz">BRT</span>
-    </div>
-  )
-}
-
 export default function HomeView({ competitions, onCompSelect }) {
   // "Hoje" como estado que acompanha a virada do dia — memoizar uma vez
   // deixaria KPIs, célula HOJE e próximos jogos presos no dia da montagem.
@@ -101,6 +86,29 @@ export default function HomeView({ competitions, onCompSelect }) {
   const [mounted,       setMounted]       = useState(false)
 
   const { matchesByDate, totalsByComp, loading } = useHomeData(competitions)
+
+  // Todos os jogos numa lista só, com a data já como Date — é o que a regra da
+  // próxima rodada e a contagem de pendências precisam.
+  const todosOsJogos = useMemo(() => {
+    const out = []
+    for (const [key, arr] of matchesByDate) {
+      const [y, m, dd] = key.split('-').map(Number)
+      if ([y, m, dd].some(n => Number.isNaN(n))) continue
+      const d = new Date(y, m, dd)
+      for (const jogo of arr) out.push({ ...jogo, d, comp: jogo.competitionId, rod: String(jogo.rod || '') })
+    }
+    return out
+  }, [matchesByDate])
+
+  const selecaoProxima = useMemo(() => selecionarProximaRodada(todosOsJogos), [todosOsJogos])
+
+  // Quantos jogos AINDA POR VIR têm algum buraco de escala. Só os futuros:
+  // cobrar escala de jogo que já aconteceu não ajuda ninguém.
+  const aEscalar = useMemo(() => {
+    const h = new Date()
+    const hoje0 = new Date(h.getFullYear(), h.getMonth(), h.getDate())
+    return todosOsJogos.filter(j => j.d >= hoje0 && !resumoDoJogo(j).completo).length
+  }, [todosOsJogos])
 
   useEffect(() => { const t = setTimeout(() => setMounted(true), 40); return () => clearTimeout(t) }, [])
 
@@ -240,18 +248,17 @@ export default function HomeView({ competitions, onCompSelect }) {
     <div className={`hv-root${mounted ? ' hv-mounted' : ''}`}>
       <div className="hv-bg" />
 
-      {/* ── Hero ── */}
-      <div className="hv-hero hv-enter" style={{ '--i': 0 }}>
-        <div className="hv-hero-left">
-          <div className="hv-hero-eyebrow">PORTAL DE CONTROLE</div>
-          <div className="hv-hero-title">Host Broadcast</div>
-        </div>
-        <LiveClock />
-      </div>
-
-      {/* ── KPI Strip ── */}
+      {/* Faixa fina de números. O título "Host Broadcast" e o relógio subiram
+          para o cabeçalho — ocupavam uma faixa inteira para dizer pouco. */}
       {!loading && (
-        <div className="hv-kpi hv-enter" style={{ '--i': 1 }}>
+        <div className="hv-kpi hv-kpi-fina hv-enter" style={{ '--i': 0 }}>
+          {/* Primeiro o número que PEDE AÇÃO: "4 realizados" fala do passado,
+              "escala incompleta" é o que faz alguém abrir o Portal. */}
+          <div className="hv-kpi-item">
+            <span className={`hv-kpi-value${aEscalar > 0 ? ' hv-kpi-pend' : ' hv-kpi-done'}`}>{aEscalar}</span>
+            <span className="hv-kpi-label">{aEscalar === 1 ? 'jogo com escala incompleta' : 'jogos com escala incompleta'}</span>
+          </div>
+          <div className="hv-kpi-sep" />
           <div className="hv-kpi-item">
             <span className="hv-kpi-value">{kpi.total}</span>
             <span className="hv-kpi-label">jogos em {MESES[viewMonth.month]}</span>
@@ -260,11 +267,6 @@ export default function HomeView({ competitions, onCompSelect }) {
           <div className="hv-kpi-item">
             <span className="hv-kpi-value hv-kpi-done">{kpi.done}</span>
             <span className="hv-kpi-label">realizados</span>
-          </div>
-          <div className="hv-kpi-sep" />
-          <div className="hv-kpi-item">
-            <span className="hv-kpi-value hv-kpi-pend">{kpi.pending}</span>
-            <span className="hv-kpi-label">pendentes</span>
           </div>
           {spotlightGames.length > 0 && cdLabel && (
             <>
@@ -277,6 +279,13 @@ export default function HomeView({ competitions, onCompSelect }) {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* ── Próxima rodada, com a escala aberta ── */}
+      {!loading && (
+        <div className="hv-enter" style={{ '--i': 1 }}>
+          <ProximaRodada selecao={selecaoProxima} onAbrir={j => onCompSelect(j.competitionId)} />
         </div>
       )}
 

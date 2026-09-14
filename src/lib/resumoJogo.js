@@ -95,11 +95,15 @@ export function resumoDoJogo({ row, escala, perif, config, perifConfig }) {
   const pessoal = resumoPessoal(row, escala, config)
   const operacoes = resumoOperacoes(row, config)
   const perifericos = resumoPerifericos(perif, perifConfig)
+  // Bloco com total 0 é escondido: o Paulistão Feminino não usa periférico
+  // (confirmado com a equipe em 14/09/2026 — se usar, só na final), e mostrar
+  // "Periféricos —" em todo card daria a impressão de dado faltando.
   const blocos = [
     { chave: 'pessoal', titulo: 'Pessoal', ...pessoal },
     { chave: 'operacoes', titulo: 'Operações', ...operacoes },
     { chave: 'perifericos', titulo: 'Periféricos', ...perifericos },
-  ]
+  ].map(b => ({ ...b, vazio: b.total === 0 }))
+
   const pendentes = blocos.reduce((s, b) => s + (b.total - b.preenchidos), 0)
   return { blocos, pendentes, completo: pendentes === 0 }
 }

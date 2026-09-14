@@ -294,6 +294,7 @@ export default function App() {
         <Header
           activeView="home"
           user={user} userNome={userNome} viewLabel={'Início'}
+          titulo="Host Broadcast" relogio
           onHomeClick={handleHomeClick}
           onFornecedoresClick={handleFornecedoresClick}
           onEscalaGeralClick={() => setActiveView('escala-geral')}

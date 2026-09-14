@@ -1,11 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
 import PresencaBar from './PresencaBar'
 import HistoricoAlteracoes from './HistoricoAlteracoes'
+import LiveClock from './LiveClock'
 
 // Header enxuto: presença + ação principal (Novo Jogo) sempre visíveis; a
 // navegação (Início, Escala Geral, Fornecedores, Links, Usuários, Sair) vive
 // no menu ☰. A preferência "menu fixo aberto" fica no navegador.
-export default function Header({ activeView, onHomeClick, onFornecedoresClick, onEscalaGeralClick, onLinksClick, onUsuariosClick, onSair, onNewCompetition, onNewJogo, accentColor, user, userNome, viewLabel }) {
+// `titulo` e `relogio` são usados pela tela inicial: antes viviam numa faixa
+// própria dentro dela ("PORTAL DE CONTROLE / Host Broadcast" + hora), que
+// gastava uma linha inteira da página para dizer pouco. Subiram para cá.
+export default function Header({ activeView, onHomeClick, onFornecedoresClick, onEscalaGeralClick, onLinksClick, onUsuariosClick, onSair, onNewCompetition, onNewJogo, accentColor, user, userNome, viewLabel, titulo, relogio }) {
   const [expandido, setExpandido] = useState(() => {
     try { return localStorage.getItem('header_expandido') === '1' } catch { return false }
   })
@@ -92,7 +96,15 @@ export default function Header({ activeView, onHomeClick, onFornecedoresClick, o
         </div>
       </div>
 
+      {titulo && (
+        <div className="hd-titulo">
+          <span className="hd-titulo-eyebrow">Portal de Controle</span>
+          <span className="hd-titulo-nome">{titulo}</span>
+        </div>
+      )}
+
       <div className="header-actions">
+        {relogio && <LiveClock />}
         {user && <PresencaBar user={user} nome={userNome} viewLabel={viewLabel} />}
 
         {/* Modo expandido: todos os botões na barra (comportamento antigo) */}
