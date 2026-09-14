@@ -21,29 +21,28 @@ function Escudo({ nome }) {
     : <span className="pr-escudo pr-escudo-fb">{(nome || '?').slice(0, 1)}</span>
 }
 
-function Bloco({ bloco, accentColor }) {
-  const falta = bloco.total - bloco.preenchidos
+// Sem "X a definir": campo vazio não quer dizer pendência. A maioria das
+// colunas do grupo é opcional — um jogo com um supervisor só não tem
+// "Supervisores 2" faltando, ele simplesmente não usa. Tratar tudo como
+// obrigatório inventava pendência que não existe, e o "a definir" ficava
+// ambíguo entre "falta preencher" e "esse jogo não tem esse serviço".
+// O que o card afirma agora é só o que é fato: o que está escalado.
+function Bloco({ bloco }) {
   return (
     <div className="pr-bloco">
       <div className="pr-bloco-head">
         <span className="pr-bloco-titulo">{bloco.titulo}</span>
-        <span className={`pr-bloco-cont${falta ? ' tem-falta' : ''}`}
-          style={!falta ? { color: accentColor } : undefined}>
-          {bloco.preenchidos}/{bloco.total}
-        </span>
       </div>
-      {bloco.itens.map(i => (
+      {bloco.itens.length === 0 ? (
+        <div className="pr-linha pr-linha-nada">
+          <span className="pr-linha-valor">nada escalado ainda</span>
+        </div>
+      ) : bloco.itens.map(i => (
         <div key={i.label} className="pr-linha">
           <span className="pr-linha-label">{i.label}</span>
           <span className="pr-linha-valor">{i.valor}</span>
         </div>
       ))}
-      {falta > 0 && (
-        <div className="pr-linha pr-linha-falta">
-          <span className="pr-linha-label">⚠</span>
-          <span className="pr-linha-valor">{falta} a definir</span>
-        </div>
-      )}
     </div>
   )
 }
@@ -83,13 +82,16 @@ function Card({ jogo, onAbrir }) {
       </div>
 
       <div className="pr-blocos">
-        {blocos.map(b => <Bloco key={b.chave} bloco={b} accentColor={accentColor} />)}
+        {blocos.map(b => <Bloco key={b.chave} bloco={b} />)}
       </div>
 
       <footer className="pr-card-foot">
         <span className="pr-camp">{competitionLabel}</span>
-        <span className={`pr-selo${resumo.completo ? ' ok' : ''}`}>
-          {resumo.completo ? '✓ tudo escalado' : `${resumo.pendentes} a definir`}
+        {/* Contagem do que está escalado — fato verificável, ao contrário de
+            "quanto falta", que dependeria de saber quais serviços este jogo
+            realmente usa. */}
+        <span className="pr-selo">
+          {resumo.escalados === 0 ? 'sem escala' : `${resumo.escalados} escalados`}
         </span>
       </footer>
     </article>

@@ -4140,3 +4140,36 @@ body {
 .hv-kpi.hv-kpi-fina { padding-top: 10px; padding-bottom: 10px; margin-bottom: 18px; }
 .hv-kpi-fina .hv-kpi-value { font-size: 22px; }
 .hv-kpi-fina .hv-kpi-label { font-size: 11px; }
+
+/* ─── TELA INICIAL · centralizar o conteúdo ───────────────────────────────── */
+/* A home era a única tela em largura total (max-width: 100%), enquanto as
+   outras já usam 1500px centralizados. Num monitor largo o conteúdo esticava
+   de ponta a ponta. Agora as faixas ocupam a tela inteira (fundo e divisórias
+   continuam de borda a borda) mas o CONTEÚDO delas fica centrado. */
+.hv-kpi,
+.hv-navgrid,
+.hv-cal-wrap,
+.pr-wrap {
+  max-width: 1360px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+/* A faixa branca dos números continua sangrando; só o miolo centraliza */
+.hv-kpi { max-width: none; }
+.hv-kpi-fina { justify-content: center; gap: 4px; }
+.hv-kpi-fina .hv-kpi-item { padding-left: 18px; padding-right: 18px; }
+
+/* Próxima rodada: respiro igual ao das outras faixas */
+.pr-wrap { padding: 22px 40px 4px; }
+.pr-cards { justify-content: center; }
+/* Com 1 ou 2 jogos os cards ficariam gigantes esticados; segura a largura */
+@media (min-width: 1100px) {
+  .pr-cards { grid-template-columns: repeat(auto-fit, minmax(300px, 420px)); }
+}
+
+/* Bloco sem nada escalado — texto neutro, sem acusar pendência */
+.pr-linha-nada .pr-linha-valor { color: var(--text-dim); font-style: italic; font-weight: 400; }
+.pr-bloco-head { margin-bottom: 5px; }
+/* O selo deixou de ser alerta: vira só a contagem do que está escalado */
+.pr-selo { background: var(--bg-surface2); color: var(--text-muted); }

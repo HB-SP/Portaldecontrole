@@ -102,12 +102,14 @@ export default function HomeView({ competitions, onCompSelect }) {
 
   const selecaoProxima = useMemo(() => selecionarProximaRodada(todosOsJogos), [todosOsJogos])
 
-  // Quantos jogos AINDA POR VIR têm algum buraco de escala. Só os futuros:
-  // cobrar escala de jogo que já aconteceu não ajuda ninguém.
+  // Jogos por vir que não têm NADA escalado. Antes isto contava "escala
+  // incompleta", o que era enganoso: a maioria das colunas do grupo é
+  // opcional, então quase todo jogo parecia incompleto. "Nada escalado" é
+  // afirmação segura — e é o que realmente pede ação.
   const aEscalar = useMemo(() => {
     const h = new Date()
     const hoje0 = new Date(h.getFullYear(), h.getMonth(), h.getDate())
-    return todosOsJogos.filter(j => j.d >= hoje0 && !resumoDoJogo(j).completo).length
+    return todosOsJogos.filter(j => j.d >= hoje0 && resumoDoJogo(j).semEscala).length
   }, [todosOsJogos])
 
   useEffect(() => { const t = setTimeout(() => setMounted(true), 40); return () => clearTimeout(t) }, [])
@@ -256,7 +258,7 @@ export default function HomeView({ competitions, onCompSelect }) {
               "escala incompleta" é o que faz alguém abrir o Portal. */}
           <div className="hv-kpi-item">
             <span className={`hv-kpi-value${aEscalar > 0 ? ' hv-kpi-pend' : ' hv-kpi-done'}`}>{aEscalar}</span>
-            <span className="hv-kpi-label">{aEscalar === 1 ? 'jogo com escala incompleta' : 'jogos com escala incompleta'}</span>
+            <span className="hv-kpi-label">{aEscalar === 1 ? 'jogo sem escala' : 'jogos sem escala'}</span>
           </div>
           <div className="hv-kpi-sep" />
           <div className="hv-kpi-item">
