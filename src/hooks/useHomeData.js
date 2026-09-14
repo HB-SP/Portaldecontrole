@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase, isConfigured } from '../lib/supabase'
 import { MOCK_DATA } from '../data/mockData'
+import { PAR_PERIFERICO } from '../config/tables'
+import { criarIndiceEscala, acharEscala, escalaCampeonatosDe } from '../lib/escalaLink'
+import { parearPerifericos } from '../lib/parearPeriferico'
 
 function parseDate(str) {
   if (!str) return null
@@ -22,9 +25,60 @@ function toDateKey(d) {
 
 // Portal é a matriz da agenda (2026-08): lê direto das tabelas operacionais,
 // que agora carregam jogo + escala completos (sem passar pelo app_state do Hub).
-async function fetchRows(cfg) {
-  const { data } = await supabase.from(cfg.tableName).select('*')
-  return data || []
+//
+// Desde 09/2026 a tela inicial mostra a escala DENTRO do card do jogo, então
+// aqui não basta mais devolver "time, hora e status": cada jogo sai com a
+// linha completa do Controle, a linha irmã de Periféricos e a linha da Escala
+// Geral já casadas. É o mesmo trabalho que a Visão Geral faz por campeonato,
+// só que para todos de uma vez.
+async function carregarCompeticao(comp) {
+  const secaoControle = comp.sections?.find(s => !s.isOverview && !s.isDashboard && s.config?.sectionKind !== 'periferico')
+  const secaoPerif = comp.sections?.find(s => s.config?.sectionKind === 'periferico')
+  const cfg = secaoControle?.config
+  if (!cfg) return null
+
+  // ── jogos do Controle ──
+  let jogos = []
+  if (!isConfigured) {
+    jogos = (MOCK_DATA[cfg.tableName] || []).map((r, i) => ({ id: r.id ?? `mock-${i}`, ...r }))
+  } else if (cfg.tableName) {
+    const { data } = await supabase.from(cfg.tableName).select('*')
+    jogos = data || []
+  } else if (cfg.competitionId) {
+    const { data } = await supabase.from('competition_events').select('id, data, status').eq('competition_id', cfg.competitionId)
+    jogos = (data || []).map(e => ({ ...(e.data && typeof e.data === 'object' ? e.data : {}), id: e.id, status: e.status }))
+  }
+
+  // ── periféricos da seção irmã ──
+  let perifLinhas = []
+  const cfgPerif = secaoPerif?.config
+  if (isConfigured && cfgPerif) {
+    if (cfgPerif.tableName) {
+      const { data } = await supabase.from(cfgPerif.tableName).select('*')
+      perifLinhas = data || []
+    } else if (cfgPerif.competitionId) {
+      const { data } = await supabase.from('competition_events').select('id, data').eq('competition_id', cfgPerif.competitionId)
+      perifLinhas = (data || []).map(e => ({ ...(e.data && typeof e.data === 'object' ? e.data : {}), id: e.id }))
+    }
+  } else if (!isConfigured && cfg.tableName) {
+    const par = PAR_PERIFERICO[cfg.tableName]
+    perifLinhas = par ? (MOCK_DATA[par.tabela] || []) : []
+  }
+
+  // ── escala de produção (planilha de planejamento) ──
+  let escalaLinhas = []
+  if (isConfigured) {
+    const camps = escalaCampeonatosDe(cfg.label, cfg.escalaCamps)
+    if (camps.length) {
+      const { data } = await supabase.from('escala_geral').select('*').in('campeonato', camps)
+      escalaLinhas = data || []
+    }
+  }
+
+  const porPerif = parearPerifericos(jogos, perifLinhas)
+  const idxEscala = criarIndiceEscala(escalaLinhas)
+
+  return { comp, cfg, cfgPerif, jogos, porPerif, idxEscala }
 }
 
 export function useHomeData(competitions) {
@@ -44,30 +98,13 @@ export function useHomeData(competitions) {
     const totals = {}
 
     await Promise.all(competitions.map(async (comp) => {
-      const mainSection = comp.sections?.find(s => !s.isOverview && !s.isDashboard)
-      if (!mainSection?.config) return
-      const cfg = mainSection.config
-
       try {
-        let rows = []
-
-        if (!isConfigured) {
-          rows = MOCK_DATA[cfg.tableName] || []
-        } else if (cfg.tableName) {
-          rows = await fetchRows(cfg)
-        } else if (cfg.competitionId) {
-          const { data: events } = await supabase
-            .from('competition_events')
-            .select('data, status')
-            .eq('competition_id', cfg.competitionId)
-          rows = (events || []).map(e => ({
-            ...(e.data && typeof e.data === 'object' ? e.data : {}),
-            status: e.status,
-          }))
-        }
+        const res = await carregarCompeticao(comp)
+        if (!res) return
+        const { cfg, cfgPerif, jogos, porPerif, idxEscala } = res
 
         const seen = new Set()
-        const valid = rows.filter(r => {
+        const valid = jogos.filter(r => {
           if (!r.mandante || !r.visitante || !r.data) return false
           const key = `${r.mandante}|${r.visitante}|${r.data}`
           if (seen.has(key)) return false
@@ -88,9 +125,18 @@ export function useHomeData(competitions) {
             hora_brt: row.hora_brt || '',
             mandante: row.mandante,
             visitante: row.visitante,
+            estadio:  row.estadio || '',
+            cidade:   row.cidade || '',
+            padrao:   row.padrao || '',
             status:   row.status || 'Pendente',
             detentor: row.detentor || '',
             rod:      row.rod || row.eu || '',
+            // ── o que a tela inicial precisa para montar o resumo da escala ──
+            row,
+            perif:  porPerif.get(row.id) || null,
+            escala: acharEscala(row, idxEscala)?.escala || null,
+            config: cfg,
+            perifConfig: cfgPerif || null,
           })
         }
       } catch (e) {
