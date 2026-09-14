@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useHomeData } from '../hooks/useHomeData'
 import { getEscudoUrl } from '../lib/escudos'
-import { selecionarProximaRodada } from '../lib/proximaRodada'
+import { listarRodadas, indiceDaProxima, jogosVisiveis } from '../lib/proximaRodada'
 import { resumoDoJogo } from '../lib/resumoJogo'
 import ProximaRodada from './ProximaRodada'
 
@@ -100,7 +100,19 @@ export default function HomeView({ competitions, onCompSelect }) {
     return out
   }, [matchesByDate])
 
-  const selecaoProxima = useMemo(() => selecionarProximaRodada(todosOsJogos), [todosOsJogos])
+  // Rodadas em ordem, para as setas navegarem até a 29, a 30... sem sair da
+  // tela inicial. `rodadaIdx` null = seguindo o padrão (a próxima rodada);
+  // assim a tela volta sozinha ao destaque quando o dia vira.
+  const rodadas = useMemo(() => listarRodadas(todosOsJogos), [todosOsJogos])
+  const idxDestaque = useMemo(() => indiceDaProxima(rodadas), [rodadas])
+  const [rodadaIdx, setRodadaIdx] = useState(null)
+  const idxAtual = rodadaIdx ?? idxDestaque
+  const rodadaAtual = idxAtual >= 0 ? rodadas[idxAtual] : null
+  const ehDestaque = idxAtual === idxDestaque
+  const jogosDaRodada = useMemo(
+    () => jogosVisiveis(rodadaAtual, { ehDestaque }),
+    [rodadaAtual, ehDestaque],
+  )
 
   // Jogos por vir que não têm NADA escalado. Antes isto contava "escala
   // incompleta", o que era enganoso: a maioria das colunas do grupo é
@@ -287,7 +299,17 @@ export default function HomeView({ competitions, onCompSelect }) {
       {/* ── Próxima rodada, com a escala aberta ── */}
       {!loading && (
         <div className="hv-enter" style={{ '--i': 1 }}>
-          <ProximaRodada selecao={selecaoProxima} onAbrir={j => onCompSelect(j.competitionId)} />
+          <ProximaRodada
+            rodada={rodadaAtual}
+            jogos={jogosDaRodada}
+            ehDestaque={ehDestaque}
+            podeVoltar={idxAtual > 0}
+            podeAvancar={idxAtual >= 0 && idxAtual < rodadas.length - 1}
+            onVoltar={() => setRodadaIdx(Math.max(0, idxAtual - 1))}
+            onAvancar={() => setRodadaIdx(Math.min(rodadas.length - 1, idxAtual + 1))}
+            onVoltarAoDestaque={() => setRodadaIdx(null)}
+            onAbrirFicha={j => onCompSelect(j.competitionId)}
+          />
         </div>
       )}
 

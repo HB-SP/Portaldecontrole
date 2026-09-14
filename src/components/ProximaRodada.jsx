@@ -1,18 +1,24 @@
-// ─── PRÓXIMA RODADA — o destaque da tela inicial ─────────────────────────────
-// O ponto desta tela, decidido com o usuário: a escala aparece AQUI, sem
-// clique. A queixa que originou tudo foi que o Portal mostrava um calendário
-// (um índice de onde a informação está) enquanto a planilha mostra a própria
-// informação. Então o card traz Pessoal, Operações e Periféricos já abertos;
-// o clique fica para a ficha completa, não para o básico.
+// ─── RODADA EM DESTAQUE — o topo da tela inicial ─────────────────────────────
+// A queixa que originou esta tela: o Portal mostrava um calendário (um índice
+// de ONDE a informação está) enquanto a planilha mostra a própria informação.
+// Por isso a escala vive aqui, e não atrás de uma navegação.
+//
+// Com a escala real preenchida os cards passaram de 15 linhas, e o usuário
+// pediu para recolher. O meio-termo: recolhido continua dizendo o essencial
+// numa linha (quem coordena, qual UM, quantos escalados) — quem bate o olho
+// ainda leva informação, não só um título. A seta abre o resto, e a escolha
+// fica guardada: quem prefere tudo aberto abre uma vez e pronto.
 //
 // Transmissão fica de fora de propósito — importante, mas não é o que se olha
 // ao abrir.
 
+import { useState, useEffect } from 'react'
 import { getEscudoUrl } from '../lib/escudos'
 import { resumoDoJogo } from '../lib/resumoJogo'
 
 const DIAS_SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 const MESES_CURTO = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+const CHAVE_ABERTO = 'home_cards_abertos'
 
 function Escudo({ nome }) {
   const url = getEscudoUrl(nome)
@@ -21,12 +27,6 @@ function Escudo({ nome }) {
     : <span className="pr-escudo pr-escudo-fb">{(nome || '?').slice(0, 1)}</span>
 }
 
-// Sem "X a definir": campo vazio não quer dizer pendência. A maioria das
-// colunas do grupo é opcional — um jogo com um supervisor só não tem
-// "Supervisores 2" faltando, ele simplesmente não usa. Tratar tudo como
-// obrigatório inventava pendência que não existe, e o "a definir" ficava
-// ambíguo entre "falta preencher" e "esse jogo não tem esse serviço".
-// O que o card afirma agora é só o que é fato: o que está escalado.
 function Bloco({ bloco }) {
   return (
     <div className="pr-bloco">
@@ -47,15 +47,24 @@ function Bloco({ bloco }) {
   )
 }
 
-function Card({ jogo, onAbrir }) {
+// A linha que o card recolhido mostra: os dois primeiros nomes de Pessoal e o
+// primeiro de Operações. Sem isso o card fechado seria só um título, e a tela
+// voltaria a ser um índice — exatamente o que motivou a mudança.
+function resumoCurto(resumo) {
+  const pega = chave => resumo.blocos.find(b => b.chave === chave)?.itens || []
+  const partes = [...pega('pessoal').slice(0, 2), ...pega('operacoes').slice(0, 1)]
+  return partes.map(i => i.valor).join(' · ')
+}
+
+function Card({ jogo, aberto, onAlternar, onAbrirFicha }) {
   const { row, d, accentColor, competitionLabel } = jogo
   const resumo = resumoDoJogo(jogo)
   const blocos = resumo.blocos.filter(b => !b.vazio)
   const data = `${DIAS_SEMANA[d.getDay()]}, ${String(d.getDate()).padStart(2, '0')} ${MESES_CURTO[d.getMonth()]}`
+  const curto = resumoCurto(resumo)
 
   return (
-    <article className="pr-card" style={{ '--ac': accentColor }}
-      onClick={() => onAbrir?.(jogo)} title="Abrir a ficha completa deste jogo">
+    <article className={`pr-card${aberto ? ' is-aberto' : ''}`} style={{ '--ac': accentColor }}>
       <header className="pr-card-top">
         <span className="pr-rodada">Rodada {jogo.rod || '—'}</span>
         <span className="pr-data">{data}</span>
@@ -81,25 +90,54 @@ function Card({ jogo, onAbrir }) {
         {row.detentor && <span className="pr-detentor">{row.detentor}</span>}
       </div>
 
-      <div className="pr-blocos">
-        {blocos.map(b => <Bloco key={b.chave} bloco={b} />)}
-      </div>
+      {/* Fechado: uma linha com o essencial. Aberto: a escala inteira. */}
+      {aberto ? (
+        <div className="pr-blocos">
+          {blocos.map(b => <Bloco key={b.chave} bloco={b} />)}
+        </div>
+      ) : (
+        <div className="pr-resumo-curto">
+          {curto || <span className="pr-resumo-vazio">nada escalado ainda</span>}
+        </div>
+      )}
 
       <footer className="pr-card-foot">
-        <span className="pr-camp">{competitionLabel}</span>
-        {/* Contagem do que está escalado — fato verificável, ao contrário de
-            "quanto falta", que dependeria de saber quais serviços este jogo
-            realmente usa. */}
-        <span className="pr-selo">
-          {resumo.escalados === 0 ? 'sem escala' : `${resumo.escalados} escalados`}
-        </span>
+        <button type="button" className="pr-toggle" onClick={onAlternar}
+          aria-expanded={aberto}
+          title={aberto ? 'Recolher a escala' : 'Ver a escala deste jogo'}>
+          <span className={`pr-seta${aberto ? ' is-aberta' : ''}`}>›</span>
+          {aberto ? 'Recolher' : `Ver escala · ${resumo.escalados === 0 ? 'sem escala' : `${resumo.escalados} escalados`}`}
+        </button>
+        <button type="button" className="pr-ficha" onClick={() => onAbrirFicha?.(jogo)}
+          title={`Abrir ${competitionLabel}`}>
+          Ficha →
+        </button>
       </footer>
     </article>
   )
 }
 
-export default function ProximaRodada({ selecao, onAbrir }) {
-  if (!selecao || selecao.vazio || !selecao.cards.length) {
+export default function ProximaRodada({
+  rodada, jogos, ehDestaque, podeVoltar, podeAvancar, onVoltar, onAvancar, onVoltarAoDestaque, onAbrirFicha,
+}) {
+  // Aberto/fechado é preferência da pessoa, não do jogo: quem gosta de ver
+  // tudo abre uma vez e continua assim.
+  const [abertos, setAbertos] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(CHAVE_ABERTO) || '[]')) } catch { return new Set() }
+  })
+  useEffect(() => {
+    try { localStorage.setItem(CHAVE_ABERTO, JSON.stringify([...abertos])) } catch { /* sem storage */ }
+  }, [abertos])
+
+  const alternar = id => setAbertos(prev => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id); else next.add(id)
+    return next
+  })
+
+  const idDo = j => String(j.row?.id ?? `${j.rawDate}-${j.row?.mandante}`)
+
+  if (!rodada || !jogos?.length) {
     return (
       <section className="pr-wrap">
         <div className="pr-vazio">
@@ -112,18 +150,36 @@ export default function ProximaRodada({ selecao, onAbrir }) {
     )
   }
 
-  const sobra = selecao.total - selecao.cards.length
+  const sobra = rodada.jogos.length - jogos.length
   return (
     <section className="pr-wrap">
       <div className="pr-head">
-        <h2 className="pr-titulo">Próxima rodada</h2>
-        <span className="pr-sub">
-          {selecao.comp} · rodada {selecao.rod}
-          {sobra > 0 && ` · +${sobra} ${sobra === 1 ? 'jogo' : 'jogos'} na lista abaixo`}
-        </span>
+        <h2 className="pr-titulo">{ehDestaque ? 'Próxima rodada' : 'Rodada'}</h2>
+        <div className="pr-nav">
+          <button type="button" className="pr-nav-btn" disabled={!podeVoltar}
+            onClick={onVoltar} title="Rodada anterior">‹</button>
+          <span className="pr-nav-atual" style={{ '--ac': rodada.accentColor }}>
+            {rodada.compLabel} · rodada {rodada.rod}
+          </span>
+          <button type="button" className="pr-nav-btn" disabled={!podeAvancar}
+            onClick={onAvancar} title="Próxima rodada">›</button>
+        </div>
+        {!ehDestaque && (
+          <button type="button" className="pr-nav-voltar" onClick={onVoltarAoDestaque}>
+            voltar para a próxima
+          </button>
+        )}
+        {sobra > 0 && <span className="pr-sub">+{sobra} {sobra === 1 ? 'jogo' : 'jogos'} nesta rodada</span>}
       </div>
+
       <div className="pr-cards">
-        {selecao.cards.map(j => <Card key={j.row.id ?? `${j.rawDate}-${j.row.mandante}`} jogo={j} onAbrir={onAbrir} />)}
+        {jogos.map(j => {
+          const id = idDo(j)
+          return (
+            <Card key={id} jogo={j} aberto={abertos.has(id)}
+              onAlternar={() => alternar(id)} onAbrirFicha={onAbrirFicha} />
+          )
+        })}
       </div>
     </section>
   )

@@ -18,6 +18,47 @@
 const DIA = 86400000
 export const TETO_CARDS = 3
 
+// Todas as rodadas, em ordem cronológica. Cada uma agrupa os jogos de um
+// mesmo (campeonato, rodada) — a tela inicial navega por esta lista com as
+// setas, para ver a 29 e a 30 sem sair da home.
+export function listarRodadas(jogos) {
+  const porChave = new Map()
+  for (const j of jogos || []) {
+    if (!(j?.d instanceof Date) || isNaN(j.d)) continue
+    const chave = `${j.comp}|${j.rod}`
+    if (!porChave.has(chave)) porChave.set(chave, { comp: j.comp, rod: j.rod, jogos: [] })
+    porChave.get(chave).jogos.push(j)
+  }
+  const rodadas = [...porChave.values()]
+  for (const r of rodadas) {
+    r.jogos.sort((a, b) => a.d - b.d)
+    r.primeira = r.jogos[0].d
+    r.compLabel = r.jogos[0].competitionLabel
+    r.accentColor = r.jogos[0].accentColor
+  }
+  rodadas.sort((a, b) => a.primeira - b.primeira)
+  return rodadas
+}
+
+// Índice da rodada em destaque por padrão: a do próximo jogo que ainda não
+// aconteceu. -1 quando não há jogo futuro em campeonato nenhum.
+export function indiceDaProxima(rodadas, hoje = new Date()) {
+  const hoje0 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())
+  return (rodadas || []).findIndex(r => r.jogos.some(j => j.d >= hoje0))
+}
+
+// Os jogos que a rodada mostra. Na rodada em destaque, o jogo que já
+// aconteceu fica até o fim do dia seguinte, para ela não aparecer pela metade
+// enquanto acontece (a rodada 30 tem jogo em 10/10 e 11/10: no dia 11 os dois
+// seguem na tela). Navegando para outra rodada, mostra todos.
+export function jogosVisiveis(rodada, { ehDestaque = false, hoje = new Date() } = {}) {
+  if (!rodada) return []
+  if (!ehDestaque) return rodada.jogos.slice(0, TETO_CARDS)
+  const hoje0 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())
+  const ontem = new Date(hoje0.getTime() - DIA)
+  return rodada.jogos.filter(j => j.d >= ontem).slice(0, TETO_CARDS)
+}
+
 // `jogos` precisa de: { d: Date, comp: string, rod: string }
 // Devolve { cards, total, comp, rod, vazio }
 export function selecionarProximaRodada(jogos, hoje = new Date()) {
