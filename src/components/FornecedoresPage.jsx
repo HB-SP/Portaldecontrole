@@ -36,7 +36,7 @@ const normEmUso = s => String(s || '').toLowerCase().normalize('NFD').replace(/[
 // leve por tabela ao abrir a página; nada roda de fundo).
 const FONTES_USO = [
   ['brasileirao_jogos', ['um', 'sng_premiere', 'sng_host', 'gerador', 'supervisores_1', 'supervisores_2', 'liveu_1', 'liveu_2', 'dtv', 'op_vmix', 'op_audio', 'teleporto']],
-  ['paulistao_feminino_jogos', ['um', 'sng', 'gerador', 'supervisor_um_host', 'coordenador', 'dtv', 'op_vmix', 'teleporto', 'dslr', 'refcam', 'drone', 'minidrone', 'grua']],
+  ['paulistao_feminino_jogos', ['um', 'sng', 'gerador', 'supervisor_um_host', 'coordenador', 'dtv', 'op_vmix', 'teleporto', 'refcam']],
   ['perifericos_brasileirao', ['fornecedor_drone', 'fornecedor_minidrone', 'fornecedor_dslr', 'fornecedor_grua', 'fornecedor_goalcam', 'fornecedor_trilho', 'fornecedor_carrinho', 'fornecedor_clipcam']],
   ['perifericos_paulistao', ['fornecedor_drone', 'fornecedor_minidrone', 'fornecedor_dslr', 'fornecedor_grua', 'fornecedor_goalcam', 'fornecedor_trilho', 'fornecedor_carrinho', 'fornecedor_clipcam']],
   ['escala_geral', ['coordenador_um', 'produtor_um', 'produtor_campo', 'monitoracao']],

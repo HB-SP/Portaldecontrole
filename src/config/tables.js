@@ -245,12 +245,8 @@ const paulistaoFemRawColumns = [
   { key: 'um', label: 'UM', type: 'text', width: 150, group: 'Equipe Técnica' },
   { key: 'gerador', label: 'Gerador', type: 'text', width: 130, group: 'Equipe Técnica' },
   { key: 'sng', label: 'SNG', type: 'text', width: 140, group: 'Equipe Técnica' },
-  { key: 'dslr', label: 'DSLR', type: 'text', width: 100, group: 'Equipe Técnica' },
   { key: 'refcam', label: 'RefCam', type: 'text', width: 100, group: 'Equipe Técnica' },
-  { key: 'drone', label: 'Drone', type: 'text', width: 100, group: 'Equipe Técnica' },
-  { key: 'minidrone', label: 'MiniDrone', type: 'text', width: 110, group: 'Equipe Técnica' },
   { key: 'supervisor_um_host', label: 'Supervisor UM Host', type: 'text', width: 180, group: 'Equipe Técnica' },
-  { key: 'grua', label: 'Grua', type: 'text', width: 100, group: 'Equipe Técnica' },
   { key: 'coordenador', label: 'Coordenador', type: 'text', width: 130, group: 'Equipe Técnica' },
   { key: 'dtv', label: 'DTV', type: 'text', width: 140, group: 'Equipe Técnica' },
   { key: 'op_vmix', label: 'Op. Vmix', type: 'text', width: 160, group: 'Equipe Técnica' },
@@ -290,7 +286,10 @@ const paulistaoFemRawColumns = [
 const PAULISTAO_FEM_PLANO = [
   ['Jogo', ['rod', 'dia', 'data', 'hora_brt', 'mandante', 'visitante', 'cidade', 'estadio', 'padrao', 'detentor']],
   ['Pessoal', ['coordenador', 'supervisor_um_host', 'dtv', 'op_vmix']],
-  ['Operações', ['um', 'sng', 'gerador', 'dslr', 'refcam', 'drone', 'minidrone', 'grua']],
+  // dslr/drone/minidrone/grua sairam daqui: existiam no Controle E na aba
+  // Periferico, com os 20 jogos vazios nos dois lados. refcam fica -- so existe
+  // aqui, nao e duplicata.
+  ['Operações', ['um', 'sng', 'gerador', 'refcam']],
   ['Transmissão', [
     'teleporto', 'satelite', 'banda', 'status', 'reserva', 'transponder', 'uplink', 'downlink',
     'service_start_gmt', 'abertura_brt', 'service_end_gmt', 'fechamento_brt', 'total_horas',
