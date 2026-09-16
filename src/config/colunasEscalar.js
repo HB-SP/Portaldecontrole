@@ -25,6 +25,11 @@ const SINONIMOS = {
   supervisores_1: 'supervisor_1',
   supervisor_um_host: 'supervisor_1',
   supervisores_2: 'supervisor_2',
+  // O 'SNG Host' do Brasileirao e o mesmo 'SNG' do Paulistao F e do A1 (equipe,
+  // 16/09/2026). O 'SNG Premiere' e outro SNG, so do Brasileirao, e fica a
+  // parte. O rotulo proprio do Brasileirao segue 'SNG Host' na tela dele, onde
+  // os dois aparecem lado a lado e a distincao importa.
+  sng_host: 'sng',
   // golcam já virou goalcam no banco (uniformizar_colunas.mjs); fica aqui
   // como rede, caso uma reimportação antiga reintroduza a grafia.
   // BR e PF usam 'qtde'; o A1 usa 'qtde_dslr'. Mesma coisa (equipe, 16/09).
@@ -41,6 +46,7 @@ const idLogico = chave => SINONIMOS[chave] || chave
 const ROTULOS = {
   supervisor_1: 'Supervisor 1',
   supervisor_2: 'Supervisor 2',
+  sng: 'SNG',
   qtde_dslr: 'Qtde DSLR',
   goalcam: 'GoalCam',
   fornecedor_goalcam: 'Forn. GoalCam',
