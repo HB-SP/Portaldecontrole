@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useTableData } from '../hooks/useTableData'
 import { useCompetitionEvents } from '../hooks/useCompetitionEvents'
 import { useEscalaGeral } from '../hooks/useEscalaGeral'
@@ -6,6 +6,7 @@ import { usePerifericoIrmao } from '../hooks/usePerifericoIrmao'
 import { getEscudoUrl } from '../lib/escudos'
 import { getStatusClass } from '../config/tables'
 import { FUNCOES_ESCALA, naoTemFuncao, semEscala, acharEscala } from '../lib/escalaLink'
+import { ehFeedB } from '../lib/parearPeriferico'
 import GameModal from './GameModal'
 
 const GRUPO_ESCALA = 'Escala Geral'
@@ -171,7 +172,7 @@ function PerifCol({ perifRow, perifColunas, accentColor }) {
   )
 }
 
-function GameCard({ row, config, onEdit, accentColor, defaultOpen, temEscala, escalaInfo, confirmacoes,
+function GameCard({ row, config, onEdit, accentColor, defaultOpen, cardRef, temEscala, escalaInfo, confirmacoes,
   perifRow, perifColunas, temPeriferico }) {
   const [open, setOpen] = useState(!!defaultOpen)
   const [hiddenGroups, setHiddenGroups] = useState(() => new Set())
@@ -209,7 +210,7 @@ function GameCard({ row, config, onEdit, accentColor, defaultOpen, temEscala, es
   }
 
   return (
-    <div className={`overview-card${open ? ' open' : ''}`} style={{ '--accent': accentColor }}>
+    <div ref={cardRef} className={`overview-card${open ? ' open' : ''}`} style={{ '--accent': accentColor }}>
       {/* div (não button): o ✎ interno é um button e button dentro de button é
           HTML inválido — navegadores podem normalizar a árvore e quebrar o clique */}
       <div
@@ -377,7 +378,26 @@ function GameCard({ row, config, onEdit, accentColor, defaultOpen, temEscala, es
   )
 }
 
-export default function JogosOverview({ config, accentColor }) {
+// Casa um jogo pela identidade, não pelo id: o id do Controle não é o mesmo
+// da tela inicial quando o campeonato é dinâmico, e a data vem escrita com e
+// sem ano na base ("12/09" e "12/09/2026").
+//
+// O `ehFeedB` faz parte da chave porque data + times NÃO basta: cada final tem
+// a linha do sinal principal e a do Feed B, com a mesma data e os mesmos
+// times. Medido na base — as duas finais do Paulistão A1 colidiam, e o salto
+// cairia no card errado. O que as separa é `padrao = 'FeedB'`, o mesmo
+// marcador usado no pareamento com os periféricos.
+const chaveJogo = r => [
+  String(r?.data || '').trim().replace(/\/\d{4}$/, ''),
+  String(r?.mandante || '').trim().toLowerCase(),
+  String(r?.visitante || '').trim().toLowerCase(),
+  ehFeedB(r) ? 'B' : 'A',
+].join('|')
+
+// `jogoAlvo` vem da tela inicial: clicar em "Ficha →" num card deve cair no
+// jogo, não só no campeonato. Mesmo comportamento da aba Periférico, que abre
+// já rolada na rodada atual.
+export default function JogosOverview({ config, accentColor, jogoAlvo }) {
   const legacy = useTableData(config.isLegacy ? config.tableName : null)
   const dynamic = useCompetitionEvents(config.isLegacy ? null : config.competitionId)
   const { data, loading, addRow, updateRow } = config.isLegacy ? legacy : dynamic
@@ -409,6 +429,22 @@ export default function JogosOverview({ config, accentColor }) {
     data.forEach(row => { const r = rodadaOf(row); if (r) set.add(r) })
     return Array.from(set).sort((a, b) => a - b)
   }, [data])
+
+  // ── Salto até o jogo escolhido na tela inicial ──
+  const cardRefs = useRef({})
+  const jaRolou = useRef(false)
+  const chaveAlvo = jogoAlvo ? chaveJogo(jogoAlvo) : null
+
+  useEffect(() => {
+    // Só uma vez: rolar de novo a cada refetch do realtime jogaria a pessoa
+    // de volta ao topo enquanto ela lê outro jogo (mesmo motivo do
+    // `jaRolou` em PerifericosCards).
+    if (jaRolou.current || !chaveAlvo || loading) return
+    const el = cardRefs.current[chaveAlvo]
+    if (!el) return
+    jaRolou.current = true
+    requestAnimationFrame(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }))
+  }, [chaveAlvo, loading, filtered.length])
 
   const statusDisponiveis = useMemo(() => {
     const set = new Set()
@@ -457,6 +493,8 @@ export default function JogosOverview({ config, accentColor }) {
             <GameCard
               key={row.id}
               row={row}
+              cardRef={el => { if (el) cardRefs.current[chaveJogo(row)] = el }}
+              defaultOpen={chaveAlvo != null && chaveJogo(row) === chaveAlvo}
               config={config}
               accentColor={accentColor}
               temEscala={temEscala}

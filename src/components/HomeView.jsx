@@ -276,7 +276,8 @@ export default function HomeView({ competitions, onCompSelect }) {
             onVoltar={() => setRodadaIdx(Math.max(0, idxAtual - 1))}
             onAvancar={() => setRodadaIdx(Math.min(rodadas.length - 1, idxAtual + 1))}
             onVoltarAoDestaque={() => setRodadaIdx(null)}
-            onAbrirFicha={j => onCompSelect(j.competitionId)}
+            // Leva o jogo junto: o "Ficha →" cai no card dele, nao so no campeonato
+            onAbrirFicha={j => onCompSelect(j.competitionId, { data: j.rawDate, mandante: j.mandante, visitante: j.visitante, padrao: j.padrao, rod: j.rod })}
           />
         </div>
       )}

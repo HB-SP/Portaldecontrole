@@ -132,10 +132,16 @@ export default function App() {
   )
   const section = competition?.sections.find(s => s.id === activeSection) || competition?.sections[0]
 
-  function handleCompSelect(compId) {
+  // `jogoAlvo` vem do "Ficha →" da tela inicial: entrar no campeonato e cair
+  // no JOGO, não só na aba. Guardado no App porque quem navega é ele; a Visão
+  // Geral só o consome para rolar até o card e abri-lo.
+  const [jogoAlvo, setJogoAlvo] = useState(null)
+
+  function handleCompSelect(compId, alvo = null) {
     setActiveComp(compId)
     const comp = competitions.find(c => c.id === compId)
     setActiveSection(comp?.sections[0]?.id || null)
+    setJogoAlvo(alvo)
     setActiveView('comp')
   }
 
@@ -397,7 +403,8 @@ export default function App() {
 
       <main className="main-content">
         {section.isOverview ? (
-          <JogosOverview key={section.id} config={section.config} accentColor={section.config.accentColor} />
+          <JogosOverview key={section.id} config={section.config} accentColor={section.config.accentColor}
+            jogoAlvo={jogoAlvo} />
         ) : section.isDashboard ? (
           <DashboardWrapper key={section.id} config={section.config} />
         ) : (
