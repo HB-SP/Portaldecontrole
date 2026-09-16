@@ -17,7 +17,7 @@ const NOME_TABELA = {
 }
 const NOME_CAMPO = {
   um: 'UM', sng: 'SNG', sng_premiere: 'SNG Premiere', sng_host: 'SNG Host', gerador: 'Gerador',
-  supervisores_1: 'Supervisor 1', supervisores_2: 'Supervisor 2', supervisor_um_host: 'Supervisor UM',
+  supervisores_1: 'Supervisor 1', supervisores_2: 'Supervisor 2', supervisor_um_host: 'Supervisor 1',
   dtv: 'DTV', op_vmix: 'vMix', op_audio: 'Áudio', teleporto: 'Teleporto', satelite: 'Satélite',
   coordenador_um: 'Coordenador UM', produtor_um: 'Produtor UM', produtor_campo: 'Produtor Campo',
   monitoracao: 'Monitoração', escala_publicada: 'publicação da escala', credenciamento: 'Credenciamento',

@@ -112,9 +112,9 @@ const brasileiraoRawColumns = [
   { key: 'sng_premiere', label: 'SNG Premiere', type: 'text', width: 150, group: 'Equipe Técnica' },
   { key: 'sng_host', label: 'SNG Host', type: 'text', width: 145, group: 'Equipe Técnica' },
   { key: 'gerador', label: 'Gerador', type: 'text', width: 130, group: 'Equipe Técnica' },
-  { key: 'supervisores_1', label: 'Supervisores 1', type: 'text', width: 220, group: 'Equipe Técnica' },
+  { key: 'supervisores_1', label: 'Supervisor 1', type: 'text', width: 220, group: 'Equipe Técnica' },
   { key: 'liveu_1', label: 'LiveU 1', type: 'text', width: 130, group: 'Equipe Técnica' },
-  { key: 'supervisores_2', label: 'Supervisores 2', type: 'text', width: 220, group: 'Equipe Técnica' },
+  { key: 'supervisores_2', label: 'Supervisor 2', type: 'text', width: 220, group: 'Equipe Técnica' },
   { key: 'liveu_2', label: 'LiveU 2', type: 'text', width: 220, group: 'Equipe Técnica' },
   { key: 'dtv', label: 'DTV', type: 'text', width: 140, group: 'Equipe Técnica' },
   { key: 'op_vmix', label: 'Op Vmix', type: 'text', width: 160, group: 'Equipe Técnica' },
@@ -160,8 +160,10 @@ const brasileiraoRawColumns = [
 // PPV ("Premiere") é o produto da transmissão, não pessoa nem equipamento.
 const BRASILEIRAO_PLANO = [
   ['Jogo', ['eu', 'dia', 'data', 'hora_brt', 'mandante', 'visitante', 'estadio', 'cidade', 'padrao', 'detentor']],
-  ['Pessoal', ['supervisores_1', 'liveu_1', 'supervisores_2', 'liveu_2', 'dtv', 'op_vmix', 'op_audio']],
-  ['Operações', ['um', 'nome_numero', 'sng_premiere', 'sng_host', 'gerador']],
+  ['Pessoal', ['supervisores_1', 'supervisores_2', 'dtv', 'op_vmix', 'op_audio']],
+  // liveu_1/liveu_2 sairam de Pessoal: guardam QUAL LiveU esta no jogo (aparelho,
+  // n de serie ou apelido), nao quem opera. Equipe confirmou em 16/09/2026.
+  ['Operações', ['um', 'nome_numero', 'sng_premiere', 'sng_host', 'gerador', 'liveu_1', 'liveu_2']],
   ['Transmissão', [
     'ppv', 'teleporto', 'satelite', 'banda', 'status', 'reserva', 'transponder', 'uplink', 'downlink',
     'service_start_gmt', 'abertura_brt', 'service_end_gmt', 'fechamento_brt', 'total_horas',
@@ -246,8 +248,7 @@ const paulistaoFemRawColumns = [
   { key: 'gerador', label: 'Gerador', type: 'text', width: 130, group: 'Equipe Técnica' },
   { key: 'sng', label: 'SNG', type: 'text', width: 140, group: 'Equipe Técnica' },
   { key: 'refcam', label: 'RefCam', type: 'text', width: 100, group: 'Equipe Técnica' },
-  { key: 'supervisor_um_host', label: 'Supervisor UM Host', type: 'text', width: 180, group: 'Equipe Técnica' },
-  { key: 'coordenador', label: 'Coordenador', type: 'text', width: 130, group: 'Equipe Técnica' },
+  { key: 'supervisor_um_host', label: 'Supervisor 1', type: 'text', width: 180, group: 'Equipe Técnica' },
   { key: 'dtv', label: 'DTV', type: 'text', width: 140, group: 'Equipe Técnica' },
   { key: 'op_vmix', label: 'Op. Vmix', type: 'text', width: 160, group: 'Equipe Técnica' },
 
@@ -285,7 +286,10 @@ const paulistaoFemRawColumns = [
 // aba Periférico, que continua sendo seção à parte e aparece em coluna própria.
 const PAULISTAO_FEM_PLANO = [
   ['Jogo', ['rod', 'dia', 'data', 'hora_brt', 'mandante', 'visitante', 'cidade', 'estadio', 'padrao', 'detentor']],
-  ['Pessoal', ['coordenador', 'supervisor_um_host', 'dtv', 'op_vmix']],
+  // 'coordenador' saiu: vazio nos 20 jogos, e o Coordenador UM ja vem da
+  // Escala Geral. A equipe nao sabia dizer se era coordenador ou supervisor --
+  // o dado respondeu: nunca foi usado.
+  ['Pessoal', ['supervisor_um_host', 'dtv', 'op_vmix']],
   // dslr/drone/minidrone/grua sairam daqui: existiam no Controle E na aba
   // Periferico, com os 20 jogos vazios nos dois lados. refcam fica -- so existe
   // aqui, nao e duplicata.
