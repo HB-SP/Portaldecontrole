@@ -99,6 +99,10 @@ const normNome = s => String(s || '').toLowerCase().normalize('NFD').replace(/[�
 const SO_TELEFONE = /^[\s()+\-./\d]{8,}$/
 const TELEFONE_NO_FIM = /[\s/-]*(?:\(?\d{2}\)?[\s.-]?)?\d{4,5}[\s.-]?\d{4}\s*$/
 
+// Este pedaço é um telefone, não um nome? A tela Escalar usa para não mostrar
+// "Fulano / 11 99999-9999" como se fossem duas pessoas.
+export const ehTelefone = s => SO_TELEFONE.test(String(s || '').trim())
+
 // O nome está cadastrado na base? (aceita "A / B" — checa cada segmento)
 export function estaCadastrado(valor, fornecedores) {
   if (!valor || !String(valor).trim()) return true // vazio não é "não cadastrado"

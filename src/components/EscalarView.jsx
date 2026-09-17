@@ -9,7 +9,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { montarCatalogo, ehComumATodos, valorDe, ehDeFornecedor, pessoasDaColuna, funcaoSugerida, GRUPOS } from '../config/colunasEscalar'
-import { estaCadastrado } from '../config/funcoesFornecedor'
+import { estaCadastrado, ehTelefone } from '../config/funcoesFornecedor'
 import { useHubFornecedores, cadastrarFornecedor } from '../hooks/useHubFornecedores'
 import { useEscalarDados } from '../hooks/useEscalarDados'
 import { BadgeCamp } from './campeonatoVisual'
@@ -28,6 +28,32 @@ function rotuloData(bruta) {
 const rodadaDe = j => String(j.row.rod || j.row.eu || '').trim()
 
 const BASE_VAZIA = { deFornecedor: false, fornecedores: [], pessoas: [], funcao: '' }
+
+// ── DUAS PESSOAS NA MESMA CÉLULA ─────────────────────────────────────────────
+// Há jogo com dois Produtores UM, dois de Campo, dois supervisores. A planilha
+// sempre resolveu isso com "Fulano / Ciclano", e é essa a convenção do resto do
+// portal: a Escala Geral escreve assim, e a checagem contra a base de
+// fornecedores já parte o valor por "/" e confere cada nome. Aqui é a mesma
+// coisa — não um formato novo.
+const partesDe = v => String(v || '').split('/').map(x => x.trim()).filter(Boolean)
+const juntar = partes => partes.filter(Boolean).join(' / ')
+
+// Arruma o que foi digitado: tira espaço sobrando e barra solta no fim, para
+// que "Fulano /" não vire um nome vazio gravado no banco.
+const arrumar = v => juntar(partesDe(v))
+
+// A lista de sugestões precisa casar com o TEXTO INTEIRO do campo, porque é
+// assim que o navegador filtra. Então, quando já existe um primeiro nome, cada
+// sugestão vira "primeiro / candidato" — sem isso o autocompletar morria no
+// segundo nome, que é exatamente onde ele mais ajuda.
+function sugestoesDaDupla(rascunho, pessoas) {
+  const anteriores = String(rascunho || '').split('/').slice(0, -1).map(x => x.trim()).filter(Boolean)
+  if (!anteriores.length) return pessoas.map(f => ({ ...f, texto: f.apelido }))
+  const prefixo = anteriores.join(' / ')
+  return pessoas
+    .filter(f => !anteriores.includes(f.apelido))
+    .map(f => ({ ...f, texto: `${prefixo} / ${f.apelido}` }))
+}
 
 // Nome preenchido que não existe na base de fornecedores/prestadores.
 function foraDaBase(jogo, col, base) {
@@ -48,6 +74,7 @@ function Celula({ jogo, col, sugestoes, base, onSalvar }) {
   // onBlur — que gravaria de novo, com o valor de antes da escolha. Esta trava
   // faz a edição valer UMA vez só.
   const jaGravou = useRef(false)
+  const campoRef = useRef(null)
   const idLista = `sug-${col.id}`
 
   if (valor === null) {
@@ -60,10 +87,12 @@ function Celula({ jogo, col, sugestoes, base, onSalvar }) {
     setEditando(true)
   }
 
-  async function confirmar(v) {
+  async function confirmar(bruto) {
     if (jaGravou.current) return
     jaGravou.current = true
     setEditando(false)
+    // Uma célula de gente pode ter duas pessoas; grava no formato "A / B".
+    const v = base.deFornecedor ? arrumar(bruto) : String(bruto || '').trim()
     if (v === valor) return
     setSalvando(true)
     const falha = await onSalvar(jogo, col, v)
@@ -71,10 +100,15 @@ function Celula({ jogo, col, sugestoes, base, onSalvar }) {
     if (falha) { alert(`Não deu para salvar "${col.label}": ${falha}`); return }
     // Salvou. Se o nome não existe na base, oferece cadastrar na hora — é o
     // momento em que a pessoa sabe quem é; depois ninguém volta para arrumar.
-    if (!base.deFornecedor || !v || estaCadastrado(v, base.fornecedores)) return
-    if (!confirm(`"${v}" não está cadastrado. Cadastrar como ${base.funcao}?`)) return
-    try { await cadastrarFornecedor({ apelido: v, funcao: base.funcao, tipo: 'Prestador' }) }
-    catch (e) { alert('Não deu para cadastrar: ' + e.message) }
+    if (!base.deFornecedor || !v) return
+    // Pergunta por nome, não pela célula: numa dupla, um pode estar cadastrado
+    // e o outro não.
+    for (const nome of partesDe(v)) {
+      if (estaCadastrado(nome, base.fornecedores)) continue
+      if (!confirm(`"${nome}" não está cadastrado. Cadastrar como ${base.funcao}?`)) continue
+      try { await cadastrarFornecedor({ apelido: nome, funcao: base.funcao, tipo: 'Prestador' }) }
+      catch (e) { alert('Não deu para cadastrar: ' + e.message) }
+    }
   }
 
   // Nome preenchido que não existe na base de fornecedores/prestadores. É o
@@ -89,9 +123,20 @@ function Celula({ jogo, col, sugestoes, base, onSalvar }) {
         onClick={abrir}
         title={foraDaBase ? `"${valor}" não está cadastrado — escolha da lista ou cadastre` : (valor || 'clique para preencher')}
       >
-        {valor || ''}
+        {base.deFornecedor && partesDe(valor).length > 1
+          ? partesDe(valor).map((n, i) => (
+              <span key={i} className={ehTelefone(n) ? 'escalar-tel' : 'escalar-pessoa'}>{n}</span>
+            ))
+          : (valor || '')}
       </td>
     )
+  }
+
+  // Acrescenta um lugar para a próxima pessoa e devolve o foco ao campo.
+  function maisUma() {
+    // Célula vazia: não há primeira pessoa para vir antes da barra.
+    setRascunho(r => (arrumar(r) ? `${arrumar(r)} / ` : r))
+    requestAnimationFrame(() => campoRef.current?.focus())
   }
 
   const comum = {
@@ -119,14 +164,22 @@ function Celula({ jogo, col, sugestoes, base, onSalvar }) {
           {col.opcoes.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
       ) : (
-        <>
-          <input {...comum} list={idLista} onChange={e => setRascunho(e.target.value)} />
+        <div className="escalar-campo">
+          <input {...comum} ref={campoRef} list={idLista} onChange={e => setRascunho(e.target.value)} />
+          {base.deFornecedor && (
+            <button
+              type="button" className="escalar-mais" title="Acrescentar uma 2ª pessoa nesta célula"
+              onMouseDown={e => { e.preventDefault(); maisUma() }}
+            >＋</button>
+          )}
           <datalist id={idLista}>
             {base.deFornecedor
-              ? base.pessoas.map(f => <option key={`${f.id}-${f.apelido}`} value={f.apelido} label={f.funcao || undefined} />)
+              ? sugestoesDaDupla(rascunho, base.pessoas).map(f => (
+                  <option key={`${f.id}-${f.apelido}`} value={f.texto} label={f.funcao || undefined} />
+                ))
               : sugestoes.map(s => <option key={s} value={s} />)}
           </datalist>
-        </>
+        </div>
       )}
     </td>
   )

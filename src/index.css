@@ -4317,7 +4317,7 @@ body {
 .escalar-grupo-pessoal     { border-top: 2px solid var(--lm-green); }
 .escalar-grupo-operacoes   { border-top: 2px solid var(--blue); }
 .escalar-grupo-perifericos { border-top: 2px solid var(--purple); }
-.escalar-th-col { min-width: 130px; }
+.escalar-th-col { min-width: 150px; }   /* cabe uma dupla "A / B" */
 
 /* Colunas presas à esquerda */
 .escalar-fix { position: sticky; z-index: 25; background: var(--bg-card); }
@@ -4376,3 +4376,27 @@ body {
   box-shadow: inset 0 -2px 0 var(--amber);
 }
 .escalar-fora-num { color: var(--amber); }
+
+/* Duas pessoas na mesma célula ("Fulano / Ciclano"): cada uma vira uma
+   etiqueta, para dar para contar de longe quantas pessoas tem ali. */
+.escalar-pessoa {
+  display: inline-block; margin-right: 4px;
+  padding: 1px 6px; border-radius: 4px;
+  background: var(--bg-surface); border: 1px solid var(--border);
+  font-size: 11.5px; max-width: 92px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;
+}
+.escalar-cel-fora .escalar-pessoa { border-color: var(--amber); }
+
+/* O campo em edição, com o botão de acrescentar a 2ª pessoa dentro. */
+.escalar-campo { display: flex; align-items: center; gap: 2px; }
+.escalar-campo .escalar-input { flex: 1; min-width: 0; }
+.escalar-mais {
+  flex: 0 0 auto; width: 22px; height: 28px; cursor: pointer;
+  border: 2px solid var(--lm-green); border-left: none; border-radius: 0 3px 3px 0;
+  background: var(--lm-green-bg); color: var(--lm-green-dim);
+  font-family: inherit; font-size: 13px; line-height: 1;
+}
+.escalar-mais:hover { background: var(--lm-green); color: #fff; }
+/* Telefone guardado junto do nome: não é uma segunda pessoa. */
+.escalar-tel { color: var(--text-dim); font-size: 11px; font-variant-numeric: tabular-nums; }
