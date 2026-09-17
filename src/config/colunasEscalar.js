@@ -18,6 +18,7 @@
 
 import { FUNCOES_ESCALA } from '../lib/escalaLink'
 import { equipamentosDaConfig } from './equipamentos'
+import { getColumnPredicate, FUNCAO_DA_COLUNA } from './funcoesFornecedor'
 
 // Chaves diferentes que significam a mesma coisa -> identidade lógica.
 // Confirmado com a equipe em 16/09/2026.
@@ -163,4 +164,43 @@ export function valorDe(jogo, col) {
     : jogo.row
   const v = linha?.[chave]
   return v == null ? '' : String(v)
+}
+
+// Esta coluna se preenche com gente da base de fornecedores/prestadores?
+// Sim para as 4 funções de produção, para toda coluna `fornecedor_*` e para
+// qualquer coluna que a base já saiba casar com uma função (o mapa MATCH de
+// useHubFornecedores). Fica de FORA o que não é gente: Sim/Não, quantidade,
+// e o "Nome/N°" da unidade móvel.
+export function ehDeFornecedor(col, competitions) {
+  if (col.tipo === 'simnao') return false
+  if (col.fonte === 'escala') return true
+  const chaves = (competitions || []).map(c => chaveDe(col, c.id)).filter(Boolean)
+  if (chaves.some(k => k.startsWith('fornecedor_'))) return true
+  return chaves.some(k => getColumnPredicate(k))
+}
+
+// Quem pode preencher esta coluna, em ordem: primeiro quem tem a função da
+// coluna, depois o resto da base. Se ninguém na base tem essa função, mostra a
+// base inteira — lista vazia empurraria de volta para a digitação livre, que é
+// justamente o que gera erro e nome duplicado.
+export function pessoasDaColuna(col, competitions, fornecedores) {
+  const comApelido = (fornecedores || []).filter(f => f.apelido)
+  const chaves = (competitions || []).map(c => chaveDe(col, c.id)).filter(Boolean)
+  const preds = (col.fonte === 'escala' ? [col.id] : chaves).map(getColumnPredicate).filter(Boolean)
+  const daFuncao = preds.length ? comApelido.filter(f => preds.some(p => p(f))) : []
+  if (!daFuncao.length) return ordenar(comApelido)
+  const resto = comApelido.filter(f => !daFuncao.includes(f))
+  return [...ordenar(daFuncao), ...ordenar(resto)]
+}
+
+const ordenar = lista => [...lista].sort((a, b) => a.apelido.localeCompare(b.apelido))
+
+// A função sugerida ao cadastrar alguém novo a partir desta coluna.
+export function funcaoSugerida(col, competitions) {
+  if (col.fonte === 'escala') return FUNCAO_DA_COLUNA[col.id] || col.label
+  for (const c of competitions || []) {
+    const k = chaveDe(col, c.id)
+    if (k && FUNCAO_DA_COLUNA[k]) return FUNCAO_DA_COLUNA[k]
+  }
+  return col.label
 }

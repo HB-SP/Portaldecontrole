@@ -8,7 +8,9 @@
 // salvar; quem resolve o destino é config/colunasEscalar.js + useEscalarDados.
 
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { montarCatalogo, ehComumATodos, valorDe, GRUPOS } from '../config/colunasEscalar'
+import { montarCatalogo, ehComumATodos, valorDe, ehDeFornecedor, pessoasDaColuna, funcaoSugerida, GRUPOS } from '../config/colunasEscalar'
+import { estaCadastrado } from '../config/funcoesFornecedor'
+import { useHubFornecedores, cadastrarFornecedor } from '../hooks/useHubFornecedores'
 import { useEscalarDados } from '../hooks/useEscalarDados'
 import { BadgeCamp } from './campeonatoVisual'
 import { parseData, compararPorData } from '../lib/datas'
@@ -25,10 +27,19 @@ function rotuloData(bruta) {
 
 const rodadaDe = j => String(j.row.rod || j.row.eu || '').trim()
 
+const BASE_VAZIA = { deFornecedor: false, fornecedores: [], pessoas: [], funcao: '' }
+
+// Nome preenchido que não existe na base de fornecedores/prestadores.
+function foraDaBase(jogo, col, base) {
+  if (!base?.deFornecedor) return false
+  const v = valorDe(jogo, col)
+  return !!v && !estaCadastrado(v, base.fornecedores)
+}
+
 // ── Uma célula ───────────────────────────────────────────────────────────────
 // Fechada é só texto (a planilha tem que dar para bater o olho). Clicou, vira
 // campo. Enter ou sair do campo salva; Esc desiste.
-function Celula({ jogo, col, sugestoes, onSalvar }) {
+function Celula({ jogo, col, sugestoes, base, onSalvar }) {
   const valor = valorDe(jogo, col)
   const [editando, setEditando] = useState(false)
   const [rascunho, setRascunho] = useState('')
@@ -57,15 +68,26 @@ function Celula({ jogo, col, sugestoes, onSalvar }) {
     setSalvando(true)
     const falha = await onSalvar(jogo, col, v)
     setSalvando(false)
-    if (falha) alert(`Não deu para salvar "${col.label}": ${falha}`)
+    if (falha) { alert(`Não deu para salvar "${col.label}": ${falha}`); return }
+    // Salvou. Se o nome não existe na base, oferece cadastrar na hora — é o
+    // momento em que a pessoa sabe quem é; depois ninguém volta para arrumar.
+    if (!base.deFornecedor || !v || estaCadastrado(v, base.fornecedores)) return
+    if (!confirm(`"${v}" não está cadastrado. Cadastrar como ${base.funcao}?`)) return
+    try { await cadastrarFornecedor({ apelido: v, funcao: base.funcao, tipo: 'Prestador' }) }
+    catch (e) { alert('Não deu para cadastrar: ' + e.message) }
   }
+
+  // Nome preenchido que não existe na base de fornecedores/prestadores. É o
+  // sinal de erro de digitação e de nome duplicado ("Marcos Paulo" x "Marcos
+  // paulo"), que é justamente o que se quer evitar.
+  const foraDaBase = base.deFornecedor && !!valor && !estaCadastrado(valor, base.fornecedores)
 
   if (!editando) {
     return (
       <td
-        className={`escalar-cel${valor ? '' : ' escalar-cel-vazia'}${salvando ? ' escalar-cel-salvando' : ''}`}
+        className={`escalar-cel${valor ? '' : ' escalar-cel-vazia'}${salvando ? ' escalar-cel-salvando' : ''}${foraDaBase ? ' escalar-cel-fora' : ''}`}
         onClick={abrir}
-        title={valor || 'clique para preencher'}
+        title={foraDaBase ? `"${valor}" não está cadastrado — escolha da lista ou cadastre` : (valor || 'clique para preencher')}
       >
         {valor || ''}
       </td>
@@ -100,7 +122,9 @@ function Celula({ jogo, col, sugestoes, onSalvar }) {
         <>
           <input {...comum} list={idLista} onChange={e => setRascunho(e.target.value)} />
           <datalist id={idLista}>
-            {sugestoes.map(s => <option key={s} value={s} />)}
+            {base.deFornecedor
+              ? base.pessoas.map(f => <option key={`${f.id}-${f.apelido}`} value={f.apelido} label={f.funcao || undefined} />)
+              : sugestoes.map(s => <option key={s} value={s} />)}
           </datalist>
         </>
       )}
@@ -166,6 +190,7 @@ function PainelColunas({ catalogo, visiveis, setVisiveis, competitions, onFechar
 // o seletor de campeonato.
 export default function EscalarView({ competitions, compFixa = null }) {
   const { jogos, loading, erro, salvar } = useEscalarDados(competitions)
+  const { fornecedores } = useHubFornecedores()
 
   const catalogo = useMemo(() => montarCatalogo(competitions), [competitions])
 
@@ -188,11 +213,28 @@ export default function EscalarView({ competitions, compFixa = null }) {
     return catalogo.filter(c => visiveis.includes(c.id))
   }, [catalogo, visiveis, competitions])
 
+  // Por coluna: se ela se preenche com gente da base, quem pode preenchê-la e
+  // com que função entra alguém cadastrado ali. Calculado uma vez para toda a
+  // tabela — não por célula, que seriam milhares de vezes o mesmo trabalho.
+  const basePorCol = useMemo(() => {
+    const map = {}
+    for (const col of colunasVisiveis) {
+      const deFornecedor = ehDeFornecedor(col, competitions)
+      map[col.id] = {
+        deFornecedor, fornecedores,
+        pessoas: deFornecedor ? pessoasDaColuna(col, competitions, fornecedores) : [],
+        funcao: deFornecedor ? funcaoSugerida(col, competitions) : '',
+      }
+    }
+    return map
+  }, [colunasVisiveis, competitions, fornecedores])
+
   const [painelAberto, setPainelAberto] = useState(false)
   const [fCamp, setFCamp] = useState(compFixa || '')
   const [fRodada, setFRodada] = useState('')
   const [busca, setBusca] = useState('')
   const [soFalta, setSoFalta] = useState(false)
+  const [soFora, setSoFora] = useState(false)
 
   useEffect(() => { if (compFixa) setFCamp(compFixa) }, [compFixa])
 
@@ -208,6 +250,7 @@ export default function EscalarView({ competitions, compFixa = null }) {
     const map = {}
     for (const col of colunasVisiveis) {
       if (col.tipo === 'simnao' || col.opcoes?.length) continue
+      if (basePorCol[col.id]?.deFornecedor) continue   // esta lista vem da base, não do histórico
       const set = new Set()
       for (const j of jogos) {
         const v = valorDe(j, col)
@@ -216,7 +259,7 @@ export default function EscalarView({ competitions, compFixa = null }) {
       map[col.id] = [...set].sort((a, b) => a.localeCompare(b)).slice(0, 200)
     }
     return map
-  }, [jogos, colunasVisiveis])
+  }, [jogos, colunasVisiveis, basePorCol])
 
   const linhas = useMemo(() => {
     const termo = busca.trim().toLowerCase()
@@ -232,14 +275,20 @@ export default function EscalarView({ competitions, compFixa = null }) {
           const temBuraco = colunasVisiveis.some(c => valorDe(j, c) === '')
           if (!temBuraco) return false
         }
+        if (soFora && !colunasVisiveis.some(c => foraDaBase(j, c, basePorCol[c.id]))) return false
         return true
       })
       .sort((a, b) => compararPorData(a.row, b.row))
-  }, [jogos, fCamp, fRodada, busca, soFalta, colunasVisiveis])
+  }, [jogos, fCamp, fRodada, busca, soFalta, soFora, colunasVisiveis, basePorCol])
 
   const quantasFaltam = useMemo(
     () => linhas.reduce((tot, j) => tot + colunasVisiveis.filter(c => valorDe(j, c) === '').length, 0),
     [linhas, colunasVisiveis]
+  )
+
+  const quantasFora = useMemo(
+    () => linhas.reduce((tot, j) => tot + colunasVisiveis.filter(c => foraDaBase(j, c, basePorCol[c.id])).length, 0),
+    [linhas, colunasVisiveis, basePorCol]
   )
 
   if (loading && !jogos.length) {
@@ -272,10 +321,15 @@ export default function EscalarView({ competitions, compFixa = null }) {
           <input type="checkbox" checked={soFalta} onChange={e => setSoFalta(e.target.checked)} />
           só o que falta
         </label>
+        <label className="escalar-check" title="Nomes preenchidos que não existem na base de fornecedores e prestadores">
+          <input type="checkbox" checked={soFora} onChange={e => setSoFora(e.target.checked)} />
+          só fora da base
+        </label>
         <div className="escalar-espaco" />
         <span className="escalar-contagem">
           {linhas.length} {linhas.length === 1 ? 'jogo' : 'jogos'}
           {quantasFaltam > 0 && <> · <strong>{quantasFaltam}</strong> em branco</>}
+          {quantasFora > 0 && <> · <strong className="escalar-fora-num">{quantasFora}</strong> fora da base</>}
         </span>
         <div className="escalar-painel-wrap">
           <button className="escalar-btn" onClick={() => setPainelAberto(a => !a)}>
@@ -330,6 +384,7 @@ export default function EscalarView({ competitions, compFixa = null }) {
                   <Celula
                     key={c.id} jogo={j} col={c}
                     sugestoes={sugestoesPorCol[c.id] || []}
+                    base={basePorCol[c.id] || BASE_VAZIA}
                     onSalvar={salvar}
                   />
                 ))}

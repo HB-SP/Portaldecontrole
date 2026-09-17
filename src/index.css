@@ -4367,3 +4367,12 @@ body {
 .escalar-input:focus { outline: none; }
 
 .escalar-vazio { padding: 40px; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+/* Nome preenchido que não existe na base de fornecedores/prestadores. Marca
+   suave de propósito: não é erro, é "confere esse aqui" — pode ser um nome
+   novo, ou o mesmo nome escrito de outro jeito. */
+.escalar-cel-fora {
+  color: #7A5A0E;
+  box-shadow: inset 0 -2px 0 var(--amber);
+}
+.escalar-fora-num { color: var(--amber); }
