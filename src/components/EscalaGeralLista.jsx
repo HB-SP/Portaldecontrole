@@ -29,7 +29,6 @@ function CelulaFuncao({ row, fn, conf, fPessoa, onPessoa, mudo }) {
   }
 
   const pessoas = String(bruto).split('/').map(s => s.trim()).filter(Boolean)
-  const valorMostrado = fn.valor ? row[fn.valor] : null
 
   return (
     <td className="eg-lst-fn">
@@ -53,7 +52,6 @@ function CelulaFuncao({ row, fn, conf, fPessoa, onPessoa, mudo }) {
             {conf.status === 'confirmado' ? '✓' : '✗'}
           </span>
         )}
-        {valorMostrado && <span className="eg-lst-valor" title={`Valor de ${fn.label}`}>{valorMostrado}</span>}
       </span>
     </td>
   )

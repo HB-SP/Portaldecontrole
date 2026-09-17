@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { supabase, isConfigured } from '../lib/supabase'
 import { parseData } from '../lib/datas'
+import { FUNCOES_ESCALA as FUNCOES } from '../lib/escalaLink'
 import { useHubFornecedores } from '../hooks/useHubFornecedores'
 import FornecedorPicker from './FornecedorPicker'
 import EscalaGeralLista from './EscalaGeralLista'
@@ -9,12 +10,12 @@ import { BadgeCamp, Escudo, estiloCampeonato } from './campeonatoVisual'
 // pendência). Vazio = pendente. Qualquer outro texto = prestador definido.
 const naoTem = v => /^n[aã]o$/i.test(String(v || '').trim())
 
-// Ficha completa: por função, Sim/Não + prestador (e $ quando a função tem)
+// Ficha completa: por função, Sim/Não + prestador
 function FichaFuncoes({ row, cor, fornecedores, onClose, onSave }) {
   const init = {}
   FUNCOES.forEach(fn => {
     const v = row[fn.key] || ''
-    init[fn.key] = { tem: !naoTem(v), nome: naoTem(v) ? '' : v, valor: fn.valor ? (row[fn.valor] || '') : '' }
+    init[fn.key] = { tem: !naoTem(v), nome: naoTem(v) ? '' : v }
   })
   const [form, setForm] = useState(init)
   const [obs, setObs] = useState(row.obs || '')
@@ -31,10 +32,6 @@ function FichaFuncoes({ row, cor, fornecedores, onClose, onSave }) {
       const f = form[fn.key]
       const nome = f.tem ? f.nome.trim() : 'Não'
       if (nome !== String(row[fn.key] || '')) payload[fn.key] = nome
-      if (fn.valor) {
-        const valor = f.tem ? f.valor.trim() : ''
-        if (valor !== String(row[fn.valor] || '')) payload[fn.valor] = valor
-      }
     })
     if (Object.keys(payload).length > 0) await onSave(payload)
     onClose()
@@ -68,10 +65,6 @@ function FichaFuncoes({ row, cor, fornecedores, onClose, onSave }) {
                   <FornecedorPicker value={f.nome} onChange={v => set(fn.key, { nome: v })}
                     colKey={fn.key} fornecedores={fornecedores}
                     placeholder="Prestador(es)... (use / para dois)" />
-                  {fn.valor && (
-                    <input className="eg-ficha-input" style={{ flex: '0 0 72px' }} value={f.valor} placeholder="$"
-                      onChange={e => set(fn.key, { valor: e.target.value })} />
-                  )}
                 </>) : (
                   <span className="eg-ficha-sem">sem esta função neste jogo</span>
                 )}
@@ -95,16 +88,9 @@ function FichaFuncoes({ row, cor, fornecedores, onClose, onSave }) {
 
 // ─── ESCALA GERAL ─────────────────────────────────────────────────────────────
 // Todos os campeonatos numa aba só, em ordem cronológica (abre no dia de hoje).
-// Controla as 4 funções de UM/produção: Coordenador UM ($), Produtor UM ($),
+// Controla as 4 funções de UM/produção: Coordenador UM, Produtor UM,
 // Produtor de Campo e Monitoração — edição inline no card, igual à visão
 // Escala do Controle. Dados na tabela `escala_geral` (realtime ligado).
-
-const FUNCOES = [
-  { key: 'coordenador_um', label: 'Coordenador UM', valor: 'coordenador_um_valor' },
-  { key: 'produtor_um',    label: 'Produtor UM',    valor: 'produtor_um_valor' },
-  { key: 'produtor_campo', label: 'Produtor Campo' },
-  { key: 'monitoracao',    label: 'Monitoração' },
-]
 
 // Jogos "YT Paulistão" não têm equipe escalada pela Livemode — não contam como
 // pendência nem entram nos contadores (os slots seguem editáveis, mas neutros).
@@ -114,15 +100,14 @@ const semEscala = r => /^yt\s*paulist/i.test(String(r?.transmissao || '').trim()
 // lista usa os mesmos, e duas cópias da tabela de cores divergiriam na
 // primeira mudança.
 
-// Slot de função com até DUAS pessoas ("Fulano / Ciclano") + valor $ quando a
-// função tem. O separador " / " é o mesmo da planilha original.
+// Slot de função com até DUAS pessoas ("Fulano / Ciclano"). O separador " / "
+// é o mesmo da planilha original.
 // `mudo`: slot vazio sem o alerta âmbar (jogos que não escalam equipe).
 // `conf`: confirmação de presença vinda do link externo (✓ confirmado / ✗ recusado).
 function SlotPessoa({ row, fn, fornecedores, destaque, mudo, conf, onSave }) {
   const [aberto, setAberto] = useState(false)
   const [nome1, setNome1] = useState('')
   const [nome2, setNome2] = useState('')
-  const [valor, setValor] = useState('')
   const ref = useRef(null)
 
   useEffect(() => {
@@ -136,28 +121,23 @@ function SlotPessoa({ row, fn, fornecedores, destaque, mudo, conf, onSave }) {
   }, [aberto])
 
   const atual = row[fn.key]
-  const atualValor = fn.valor ? row[fn.valor] : ''
   const desativado = naoTem(atual) // "Não" = jogo não terá esta função
   const vazio = !desativado && (!atual || !String(atual).trim())
   const abrir = () => {
     const partes = desativado ? [] : String(atual || '').split('/').map(s => s.trim())
     setNome1(partes[0] || '')
     setNome2(partes.slice(1).join(' / ') || '')
-    setValor(atualValor || '')
     setAberto(a => !a)
   }
   const montar = () => [nome1.trim(), nome2.trim()].filter(Boolean).join(' / ')
-  const salvar = (n, v) => {
-    const payload = { [fn.key]: n }
-    if (fn.valor) payload[fn.valor] = v
-    onSave(row.id, payload)
+  const salvar = n => {
+    onSave(row.id, { [fn.key]: n })
     setAberto(false)
   }
-  const salvarForm = () => salvar(montar(), valor.trim())
-  const aoEnter = e => { if (e.key === 'Enter') salvarForm() }
+  const salvarForm = () => salvar(montar())
   // Sugestão clicada preenche o primeiro campo vazio (1ª pessoa, senão 2ª)
 
-  const texto = desativado ? 'Não' : vazio ? (mudo ? '—' : 'Definir') : `${atual}${atualValor ? ` · ${atualValor}` : ''}`
+  const texto = desativado ? 'Não' : vazio ? (mudo ? '—' : 'Definir') : String(atual)
   const classe = desativado ? 'esc-slot-off' : vazio ? (mudo ? 'esc-slot-off' : 'esc-slot-vazio') : ''
   return (
     <div className={`esc-slot ${classe} ${destaque ? 'esc-slot-destaque' : ''}`} ref={ref}>
@@ -186,14 +166,10 @@ function SlotPessoa({ row, fn, fornecedores, destaque, mudo, conf, onSave }) {
               onEnter={salvarForm} />
           </div>
           <div className="esc-slot-livre" style={{ borderTop: 'none', marginTop: 0, paddingTop: 0 }}>
-            {fn.valor && (
-              <input value={valor} placeholder="$" style={{ flex: '0 0 64px' }}
-                onChange={e => setValor(e.target.value)} onKeyDown={aoEnter} />
-            )}
             <button style={{ flex: 1 }} onClick={salvarForm}>OK</button>
           </div>
-          {!desativado && <button className="esc-slot-opcao" onClick={() => salvar('Não', '')}>🚫 Não terá esta função</button>}
-          {(!vazio || desativado) && <button className="esc-slot-limpar" onClick={() => salvar('', '')}>Limpar slot</button>}
+          {!desativado && <button className="esc-slot-opcao" onClick={() => salvar('Não')}>🚫 Não terá esta função</button>}
+          {(!vazio || desativado) && <button className="esc-slot-limpar" onClick={() => salvar('')}>Limpar slot</button>}
         </div>
       )}
     </div>

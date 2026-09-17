@@ -235,7 +235,7 @@ export default function App() {
             <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
               Todos os campeonatos, um jogo por linha — pessoal, operações e periféricos no mesmo lugar.{' '}
               <button className="escalar-link" onClick={() => setActiveView('escala-geral')}>
-                ver a Escala Geral em cards (valores e confirmação de presença)
+                ver a Escala Geral em cards (confirmação de presença)
               </button>
             </div>
           </div>
