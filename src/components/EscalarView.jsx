@@ -9,7 +9,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { montarCatalogo, ehComumATodos, valorDe, ehDeFornecedor, pessoasDaColuna, funcaoSugerida, GRUPOS } from '../config/colunasEscalar'
-import { estaCadastrado, ehTelefone } from '../config/funcoesFornecedor'
+import { estaCadastrado, ehTelefone, acharCadastro, whatsappDe } from '../config/funcoesFornecedor'
 import { useHubFornecedores, cadastrarFornecedor } from '../hooks/useHubFornecedores'
 import { useEscalarDados } from '../hooks/useEscalarDados'
 import { BadgeCamp } from './campeonatoVisual'
@@ -53,6 +53,36 @@ function sugestoesDaDupla(rascunho, pessoas) {
   return pessoas
     .filter(f => !anteriores.includes(f.apelido))
     .map(f => ({ ...f, texto: `${prefixo} / ${f.apelido}` }))
+}
+
+// ── QUEM ESTÁ NA CÉLULA ──────────────────────────────────────────────────────
+// O telefone NÃO fica na célula. Ele vive no cadastro da pessoa, e daqui sai o
+// botão de WhatsApp — assim o contato continua a um clique sem que o número
+// seja digitado (e redigitado, e errado) em cada jogo.
+//
+// Telefone que AINDA está escrito na célula aparece em cinza, sem virar
+// etiqueta de pessoa: é dado antigo esperando para ser movido, não gente.
+function Pessoas({ valor, fornecedores }) {
+  const partes = partesDe(valor)
+  if (!partes.length) return null
+  return partes.map((nome, i) => {
+    if (ehTelefone(nome)) return <span key={i} className="escalar-tel">{nome}</span>
+    const cadastro = acharCadastro(nome, fornecedores)
+    const zap = whatsappDe(cadastro?.telefone)
+    const so = partes.length === 1
+    return (
+      <span key={i} className={so ? 'escalar-so' : 'escalar-pessoa'}>
+        {nome}
+        {zap && (
+          <a
+            className="escalar-zap" href={zap} target="_blank" rel="noreferrer"
+            title={`Falar com ${nome} no WhatsApp`}
+            onClick={e => e.stopPropagation()}
+          >✆</a>
+        )}
+      </span>
+    )
+  })
 }
 
 // Nome preenchido que não existe na base de fornecedores/prestadores.
@@ -123,10 +153,8 @@ function Celula({ jogo, col, sugestoes, base, onSalvar }) {
         onClick={abrir}
         title={foraDaBase ? `"${valor}" não está cadastrado — escolha da lista ou cadastre` : (valor || 'clique para preencher')}
       >
-        {base.deFornecedor && partesDe(valor).length > 1
-          ? partesDe(valor).map((n, i) => (
-              <span key={i} className={ehTelefone(n) ? 'escalar-tel' : 'escalar-pessoa'}>{n}</span>
-            ))
+        {base.deFornecedor
+          ? <Pessoas valor={valor} fornecedores={base.fornecedores} />
           : (valor || '')}
       </td>
     )

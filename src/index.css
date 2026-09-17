@@ -4400,3 +4400,13 @@ body {
 .escalar-mais:hover { background: var(--lm-green); color: #fff; }
 /* Telefone guardado junto do nome: não é uma segunda pessoa. */
 .escalar-tel { color: var(--text-dim); font-size: 11px; font-variant-numeric: tabular-nums; }
+
+/* Contato a um clique, vindo do CADASTRO da pessoa (não da célula). Discreto:
+   só aparece com cor no hover, para não competir com o nome. */
+.escalar-so { display: inline-flex; align-items: center; gap: 4px; }
+.escalar-zap {
+  flex: 0 0 auto; text-decoration: none;
+  color: var(--text-dim); font-size: 12px; line-height: 1;
+}
+.escalar-zap:hover { color: var(--lm-green-dim); }
+.escalar-pessoa .escalar-zap { margin-left: 4px; }

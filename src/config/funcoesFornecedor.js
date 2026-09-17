@@ -103,6 +103,26 @@ const TELEFONE_NO_FIM = /[\s/-]*(?:\(?\d{2}\)?[\s.-]?)?\d{4,5}[\s.-]?\d{4}\s*$/
 // "Fulano / 11 99999-9999" como se fossem duas pessoas.
 export const ehTelefone = s => SO_TELEFONE.test(String(s || '').trim())
 
+// Acha o cadastro de uma pessoa pelo nome escrito na célula (mesma
+// normalização e mesmas limpezas que `estaCadastrado` usa).
+export function acharCadastro(nome, fornecedores) {
+  const alvo = normNome(String(nome || '').replace(TELEFONE_NO_FIM, ''))
+  if (!alvo) return null
+  return (fornecedores || []).find(f => normNome(f.apelido) === alvo) || null
+}
+
+// Link de WhatsApp a partir do telefone do CADASTRO. O Hub grava só dígitos com
+// DDI ("5511983361535"), que é o formato que o wa.me quer.
+//
+// Alguns cadastros antigos estão truncados em 9 dígitos ("551185400"): abrir
+// uma conversa com um número incompleto é pior que não oferecer o link, então
+// só sai link quando o número está inteiro.
+export function whatsappDe(telefone) {
+  const d = String(telefone || '').replace(/\D/g, '')
+  if (d.length < 12 || d.length > 13) return null
+  return `https://wa.me/${d}`
+}
+
 // O nome está cadastrado na base? (aceita "A / B" — checa cada segmento)
 export function estaCadastrado(valor, fornecedores) {
   if (!valor || !String(valor).trim()) return true // vazio não é "não cadastrado"
