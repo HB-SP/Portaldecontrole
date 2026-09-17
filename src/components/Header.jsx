@@ -4,12 +4,12 @@ import HistoricoAlteracoes from './HistoricoAlteracoes'
 import LiveClock from './LiveClock'
 
 // Header enxuto: presença + ação principal (Novo Jogo) sempre visíveis; a
-// navegação (Início, Escala Geral, Fornecedores, Links, Usuários, Sair) vive
+// navegação (Início, Escalar, Fornecedores, Links, Usuários, Sair) vive
 // no menu ☰. A preferência "menu fixo aberto" fica no navegador.
 // `titulo` e `relogio` são usados pela tela inicial: antes viviam numa faixa
 // própria dentro dela ("PORTAL DE CONTROLE / Host Broadcast" + hora), que
 // gastava uma linha inteira da página para dizer pouco. Subiram para cá.
-export default function Header({ activeView, onHomeClick, onFornecedoresClick, onEscalaGeralClick, onLinksClick, onUsuariosClick, onSair, onNewCompetition, onNewJogo, accentColor, user, userNome, viewLabel, titulo, relogio }) {
+export default function Header({ activeView, onHomeClick, onFornecedoresClick, onEscalarClick, onLinksClick, onUsuariosClick, onSair, onNewCompetition, onNewJogo, accentColor, user, userNome, viewLabel, titulo, relogio }) {
   const [expandido, setExpandido] = useState(() => {
     try { return localStorage.getItem('header_expandido') === '1' } catch { return false }
   })
@@ -40,7 +40,7 @@ export default function Header({ activeView, onHomeClick, onFornecedoresClick, o
         <path d="M6 15V9h4v6" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
       </svg>
     ) },
-    { key: 'escala-geral', label: 'Escala Geral', onClick: onEscalaGeralClick, icon: (
+    { key: 'escalar', label: 'Escalar', onClick: onEscalarClick, icon: (
       <svg viewBox="0 0 16 16" fill="none" width="14" height="14">
         <rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
         <path d="M5 5.5h6M5 8h6M5 10.5h3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>

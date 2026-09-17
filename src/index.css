@@ -4222,3 +4222,148 @@ body {
   padding: 0; white-space: nowrap;
 }
 .pr-ficha:hover { text-decoration: underline; }
+
+/* ─── ESCALAR ──────────────────────────────────────────────────────────────
+   Planilha de preenchimento: linha por jogo, todos os campeonatos. As três
+   primeiras colunas (campeonato, data, jogo) ficam presas à esquerda para você
+   nunca perder de vista QUAL jogo está preenchendo ao rolar para o lado. */
+.escalar { display: flex; flex-direction: column; gap: 12px; }
+
+.escalar-barra {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.escalar-sel, .escalar-busca {
+  height: 32px; padding: 0 10px; border-radius: 6px;
+  border: 1px solid var(--border-light); background: var(--bg-input);
+  color: var(--text); font-family: inherit; font-size: 12.5px;
+}
+.escalar-busca { min-width: 220px; }
+.escalar-sel:focus, .escalar-busca:focus { outline: none; border-color: var(--text-dim); }
+.escalar-check {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; color: var(--text-muted); cursor: pointer; user-select: none;
+}
+.escalar-espaco { flex: 1; }
+.escalar-contagem { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+.escalar-btn {
+  height: 32px; padding: 0 12px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--border-light); background: var(--bg-card);
+  color: var(--text); font-family: inherit; font-size: 12.5px; font-weight: 600;
+}
+.escalar-btn:hover { border-color: var(--text-dim); }
+.escalar-erro {
+  padding: 8px 12px; border-radius: 6px; font-size: 12.5px;
+  background: #FDF6E3; border: 1px solid var(--amber); color: #7A5A0E;
+}
+
+/* Seletor de colunas — o "Hide fields" */
+.escalar-painel-wrap { position: relative; }
+.escalar-painel {
+  position: absolute; right: 0; top: 38px; z-index: 60;
+  width: 280px; max-height: 60vh; overflow: auto;
+  padding: 12px; border-radius: 8px;
+  background: var(--bg-card); border: 1px solid var(--border-light);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+.escalar-painel-topo {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.escalar-painel-grupo { margin-bottom: 10px; }
+.escalar-painel-grupo-topo {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 4px; font-size: 10.5px; font-weight: 800;
+  letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted);
+}
+.escalar-painel-item {
+  display: flex; align-items: center; gap: 7px;
+  padding: 3px 2px; font-size: 12.5px; cursor: pointer; border-radius: 4px;
+}
+.escalar-painel-item:hover { background: var(--bg-hover); }
+.escalar-painel-so { margin-left: auto; font-size: 10.5px; color: var(--text-dim); }
+.escalar-link {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--lm-green-dim); font-family: inherit; font-size: 11.5px; font-weight: 600;
+}
+.escalar-link:hover { text-decoration: underline; }
+
+/* A planilha */
+.escalar-wrap {
+  overflow: auto; max-height: calc(100vh - 220px); min-height: 300px;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg-card); box-shadow: var(--shadow);
+}
+.escalar-tab {
+  border-collapse: separate; border-spacing: 0;
+  font-size: 12.5px; white-space: nowrap;
+}
+.escalar-tab th {
+  position: sticky; top: 26px; z-index: 20;
+  background: var(--bg-surface); color: var(--text-muted);
+  box-shadow: 0 1px 0 var(--border-light);
+  text-align: left; font-weight: 700; font-size: 10.5px;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  height: 30px; padding: 0 8px;
+  border-left: 1px solid var(--border);
+}
+.escalar-tab .escalar-grupos th { top: 0; height: 26px; }
+.escalar-tab .escalar-grupos th[rowspan] { top: 0; height: 56px; }
+.escalar-grupo {
+  text-align: center !important; font-size: 10px !important;
+  color: var(--text) !important; background: var(--bg-surface2) !important;
+}
+.escalar-grupo-pessoal     { border-top: 2px solid var(--lm-green); }
+.escalar-grupo-operacoes   { border-top: 2px solid var(--blue); }
+.escalar-grupo-perifericos { border-top: 2px solid var(--purple); }
+.escalar-th-col { min-width: 130px; }
+
+/* Colunas presas à esquerda */
+.escalar-fix { position: sticky; z-index: 25; background: var(--bg-card); }
+.escalar-tab th.escalar-fix { z-index: 40; background: var(--bg-surface); }
+.escalar-fix-1 { left: 0;     width: 54px;  min-width: 54px; }
+.escalar-fix-2 { left: 54px;  width: 84px;  min-width: 84px; }
+.escalar-fix-3 { left: 138px; width: 250px; min-width: 250px;
+                 box-shadow: 2px 0 4px rgba(0,0,0,0.05); }
+
+.escalar-linha { border-bottom: 1px solid var(--border); }
+.escalar-linha:hover > td { background: var(--bg-hover); }
+.escalar-linha > td {
+  height: 30px; padding: 0 8px; vertical-align: middle;
+  border-bottom: 1px solid var(--border); border-left: 1px solid var(--border);
+}
+.escalar-linha > td.escalar-fix-1 { border-left: 3px solid var(--camp, var(--border)); }
+
+.escalar-td-camp { text-align: center; }
+.escalar-td-data { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.escalar-td-jogo { overflow: hidden; text-overflow: ellipsis; }
+.escalar-td-rod  { width: 48px; text-align: center; color: var(--text-muted); }
+.escalar-time { font-weight: 600; color: var(--text); }
+.escalar-x     { color: var(--text-dim); font-size: 11px; margin: 0 5px; }
+
+/* Células editáveis */
+.escalar-cel {
+  cursor: text; max-width: 200px;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.escalar-cel:hover { box-shadow: inset 0 0 0 1px var(--border-gray); }
+/* Vazio ainda editável: risquinho discreto, SEM alerta — coluna em branco
+   quase sempre significa "este jogo não tem esse serviço", não pendência. */
+.escalar-cel-vazia::after { content: '·'; color: var(--text-dim); }
+.escalar-cel-salvando { opacity: 0.5; }
+/* Coluna que este campeonato não tem: travada, não é um espaço a preencher. */
+.escalar-cel-na {
+  background: repeating-linear-gradient(45deg, transparent, transparent 4px, var(--bg-surface) 4px, var(--bg-surface) 8px);
+  cursor: not-allowed;
+}
+.escalar-cel-edit { padding: 0 !important; }
+.escalar-input {
+  width: 100%; height: 28px; padding: 0 7px;
+  border: 2px solid var(--lm-green); border-radius: 3px;
+  background: var(--bg-input); color: var(--text);
+  font-family: inherit; font-size: 12.5px;
+}
+.escalar-input:focus { outline: none; }
+
+.escalar-vazio { padding: 40px; text-align: center; color: var(--text-muted); font-size: 13px; }

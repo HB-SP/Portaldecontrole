@@ -31,8 +31,8 @@ function toDateKey(d) {
 // linha completa do Controle, a linha irmã de Periféricos e a linha da Escala
 // Geral já casadas. É o mesmo trabalho que a Visão Geral faz por campeonato,
 // só que para todos de uma vez.
-async function carregarCompeticao(comp) {
-  const secaoControle = comp.sections?.find(s => !s.isOverview && !s.isDashboard && s.config?.sectionKind !== 'periferico')
+export async function carregarCompeticao(comp) {
+  const secaoControle = comp.sections?.find(s => !s.isOverview && s.config?.sectionKind !== 'periferico')
   const secaoPerif = comp.sections?.find(s => s.config?.sectionKind === 'periferico')
   const cfg = secaoControle?.config
   if (!cfg) return null

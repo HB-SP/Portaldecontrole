@@ -1,19 +1,17 @@
 import { useState, useMemo, useEffect } from 'react'
 import Header from './components/Header'
 import TablePage from './components/TablePage'
-import Dashboard from './components/Dashboard'
 import JogosOverview from './components/JogosOverview'
 import HomeView from './components/HomeView'
 import FornecedoresPage from './components/FornecedoresPage'
 import EscalaGeralView from './components/EscalaGeralView'
+import EscalarView from './components/EscalarView'
 import NewCompetitionDialog from './components/NewCompetitionDialog'
 import LoginGate, { PendentePortal } from './components/LoginGate'
 import UsuariosPortal from './components/UsuariosPortal'
 import LinksExternosView from './components/LinksExternosView'
 import EscalaPrestador from './components/EscalaPrestador'
 import { supabase, isConfigured } from './lib/supabase'
-import { useTableData } from './hooks/useTableData'
-import { useCompetitionEvents } from './hooks/useCompetitionEvents'
 import { useCompetitions } from './hooks/useCompetitions'
 
 // Garante o perfil do Portal (nasce 'pendente'; admin aprova depois).
@@ -32,32 +30,6 @@ function cleanComp(label) {
   const s = String(label)
   if (/paulist[aã]/i.test(s) && /fem/i.test(s)) return 'Paulistão F'
   return s.replace(/\s+(\d{2})$/, (_, yr) => ` 20${yr}`).trim()
-}
-
-function DashboardWrapper({ config }) {
-  const legacy = useTableData(config.isLegacy ? config.tableName : null)
-  const dynamic = useCompetitionEvents(config.isLegacy ? null : config.competitionId)
-  const source = config.isLegacy ? legacy : dynamic
-  const { data, loading, addRow, updateRow, deleteRow } = source
-
-  if (loading) {
-    return (
-      <div style={{ padding: 60, textAlign: 'center' }}>
-        <div className="skeleton-cell" style={{ width: 200, height: 20, margin: '0 auto 16px' }} />
-        <div className="skeleton-cell" style={{ width: 300, height: 14, margin: '0 auto' }} />
-      </div>
-    )
-  }
-
-  return (
-    <Dashboard
-      data={data}
-      config={config}
-      onAdd={addRow}
-      onUpdate={updateRow}
-      onDelete={deleteRow}
-    />
-  )
 }
 
 export default function App() {
@@ -204,7 +176,7 @@ export default function App() {
           user={user} userNome={userNome} viewLabel={'Links externos'}
           onHomeClick={handleHomeClick}
           onFornecedoresClick={handleFornecedoresClick}
-          onEscalaGeralClick={() => setActiveView('escala-geral')}
+          onEscalarClick={() => setActiveView('escalar')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -228,7 +200,7 @@ export default function App() {
           user={user} userNome={userNome} viewLabel={'Usuários'}
           onHomeClick={handleHomeClick}
           onFornecedoresClick={handleFornecedoresClick}
-          onEscalaGeralClick={() => setActiveView('escala-geral')}
+          onEscalarClick={() => setActiveView('escalar')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -244,6 +216,35 @@ export default function App() {
     )
   }
 
+  if (activeView === 'escalar') {
+    return (
+      <div className="app">
+        <Header
+          activeView="escalar"
+          user={user} userNome={userNome} viewLabel={'Escalar'}
+          onHomeClick={handleHomeClick}
+          onFornecedoresClick={handleFornecedoresClick}
+          onEscalarClick={() => setActiveView('escalar')}
+          onLinksClick={() => setActiveView('links')}
+          onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
+          onSair={isConfigured ? sair : undefined}
+        />
+        <main className="main-content" style={{ paddingTop: 84 }}>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>Escalar</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
+              Todos os campeonatos, um jogo por linha — pessoal, operações e periféricos no mesmo lugar.{' '}
+              <button className="escalar-link" onClick={() => setActiveView('escala-geral')}>
+                ver a Escala Geral em cards (valores e confirmação de presença)
+              </button>
+            </div>
+          </div>
+          <EscalarView competitions={competitions} />
+        </main>
+      </div>
+    )
+  }
+
   if (activeView === 'escala-geral') {
     return (
       <div className="app">
@@ -252,7 +253,7 @@ export default function App() {
           user={user} userNome={userNome} viewLabel={'Escala Geral'}
           onHomeClick={handleHomeClick}
           onFornecedoresClick={handleFornecedoresClick}
-          onEscalaGeralClick={() => setActiveView('escala-geral')}
+          onEscalarClick={() => setActiveView('escalar')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -276,7 +277,7 @@ export default function App() {
           user={user} userNome={userNome} viewLabel={'Fornecedores'}
           onHomeClick={handleHomeClick}
           onFornecedoresClick={handleFornecedoresClick}
-          onEscalaGeralClick={() => setActiveView('escala-geral')}
+          onEscalarClick={() => setActiveView('escalar')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -303,7 +304,7 @@ export default function App() {
           titulo="Host Broadcast" relogio
           onHomeClick={handleHomeClick}
           onFornecedoresClick={handleFornecedoresClick}
-          onEscalaGeralClick={() => setActiveView('escala-geral')}
+          onEscalarClick={() => setActiveView('escalar')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -327,7 +328,7 @@ export default function App() {
           user={user} userNome={userNome} viewLabel={'Portal'}
           onHomeClick={handleHomeClick}
           onFornecedoresClick={handleFornecedoresClick}
-          onEscalaGeralClick={() => setActiveView('escala-geral')}
+          onEscalarClick={() => setActiveView('escalar')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -352,11 +353,11 @@ export default function App() {
     )
   }
 
-  const secaoTemJogos = section && !section.isOverview && !section.isDashboard
-  const secaoJogosPadrao = competition.sections.find(s => !s.isOverview && !s.isDashboard)
+  const secaoTemJogos = section && !section.isOverview && !section.isEscalar
+  const secaoJogosPadrao = competition.sections.find(s => !s.isOverview && !s.isEscalar)
 
   // Botão do header em QUALQUER aba: se a aba atual não tem cadastro de jogo
-  // (Visão Geral, Dashboard), pula para a primeira que tem e abre o modal lá.
+  // (a Visão Geral), pula para a primeira que tem e abre o modal lá.
   const handleNovoJogo = secaoJogosPadrao ? () => {
     if (!secaoTemJogos) setActiveSection(secaoJogosPadrao.id)
     setNovoJogoPedido(true)
@@ -369,7 +370,7 @@ export default function App() {
           user={user} userNome={userNome} viewLabel={cleanComp(competition.label)}
         onHomeClick={handleHomeClick}
         onFornecedoresClick={handleFornecedoresClick}
-          onEscalaGeralClick={() => setActiveView('escala-geral')}
+          onEscalarClick={() => setActiveView('escalar')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -405,8 +406,8 @@ export default function App() {
         {section.isOverview ? (
           <JogosOverview key={section.id} config={section.config} accentColor={section.config.accentColor}
             jogoAlvo={jogoAlvo} />
-        ) : section.isDashboard ? (
-          <DashboardWrapper key={section.id} config={section.config} />
+        ) : section.isEscalar ? (
+          <EscalarView key={section.id} competitions={competitions} compFixa={competition.id} />
         ) : (
           <TablePage key={section.id} config={section.config}
             novoJogoPedido={novoJogoPedido} onNovoJogoConsumido={() => setNovoJogoPedido(false)} />

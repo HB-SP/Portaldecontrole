@@ -98,7 +98,7 @@ export function montarCatalogo(competitions) {
   }
 
   for (const comp of competitions || []) {
-    const secControle = comp.sections?.find(s => !s.isOverview && !s.isDashboard && s.config?.sectionKind !== 'periferico')
+    const secControle = comp.sections?.find(s => !s.isOverview && s.config?.sectionKind !== 'periferico')
     const secPerif = comp.sections?.find(s => s.config?.sectionKind === 'periferico')
 
     // ── Pessoal e Operações: colunas do Controle ──
@@ -150,4 +150,17 @@ export function ehComumATodos(col, competitions) {
 export function chaveDe(col, compId) {
   if (col.fonte === 'escala') return col.id
   return col.chavePorComp[compId] || null
+}
+
+// O valor desta coluna neste jogo. `null` = o campeonato não tem a coluna
+// (célula travada); `''` = tem, mas está vazia (célula editável em branco).
+// O jogo vem do useEscalarDados: { comp, row, perif, escala }.
+export function valorDe(jogo, col) {
+  const chave = chaveDe(col, jogo.comp.id)
+  if (!chave) return null
+  const linha = col.fonte === 'escala' ? jogo.escala
+    : col.fonte === 'periferico' ? jogo.perif
+    : jogo.row
+  const v = linha?.[chave]
+  return v == null ? '' : String(v)
 }
