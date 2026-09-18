@@ -157,53 +157,56 @@ function ATirar({ n, titulo }) {
   return <span className="flg-atirar" style={{ color: corDoSaldo(n) }} title={titulo}>{emPalavras(n)}</span>
 }
 
-// O cabeçalho de cada pessoa mostra os DOIS períodos, com hierarquia: o
-// ACUMULADO manda, porque é o saldo de verdade — é dele que sai "quem está com
-// folga atrasada" e "quanto eu ainda tenho". O mês fica embaixo, miúdo, dizendo
-// o que este mês acrescentou.
+// Para QUEM o dia em branco já vale como dia trabalhado, e portanto a coluna
+// pela metade não é ressalva nenhuma.
 //
-// Os dois falam a MESMA língua ("3 a tirar"), de propósito: dois vocabulários
-// no mesmo cabeçalho era parte da confusão.
-// Para QUEM o dia em branco já vale como dia trabalhado, e portanto o saldo
-// pode ser lido sem ressalva mesmo com a coluna pela metade.
-//
-// Isto é uma exceção por pessoa, não uma regra do sistema: a equipe disse em
-// 18/09/2026 que os dias em branco do Gui Soria são dias trabalhados, e
-// corrigiu em seguida que isso vale só para ele. Para os demais, coluna vazia
-// continua significando dado que falta, e o saldo sai com ressalva.
-//
-// Mora aqui, e não no banco, porque é uma linha e uma pessoa; se virar algo que
-// muda com frequência, vira coluna em folgas_pessoas.
+// Exceção por pessoa, não regra do sistema: a equipe disse em 18/09/2026 que os
+// dias em branco do Gui Soria são dias trabalhados, e corrigiu em seguida que
+// isso vale só para ele.
 const BRANCO_E_TRABALHO = new Set(['gui soria'])
 const semRessalva = nome => BRANCO_E_TRABALHO.has(
   String(nome || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
 )
 
-function Placar({ mes, ano, nome }) {
-  // Coluna com muito dia em branco: o saldo pode estar alto por falta de dado,
-  // não por folga acumulada. O número fica — esconder daria uma certeza falsa —
-  // mas avisa.
-  const duvidoso = ano.emBranco > 20 && !semRessalva(nome)
-  const desdeQuando = ano.desde ? `de ${ano.desde.split('-').reverse().join('/')}` : ''
+// ── O placar de cada pessoa ──────────────────────────────────────────────────
+// O número grande responde a pergunta do dia a dia: QUANTAS FOLGAS AINDA
+// PRECISO AGENDAR para essa pessoa. Ele desconta as que já estão marcadas no
+// calendário, mesmo que sejam de um mês à frente — sem isso, marcar uma folga
+// não mexia em nada e a tela não servia para planejar (equipe, 18/09/2026).
+//
+// A linha de baixo mostra quantas já têm data. As duas juntas reconstroem o
+// saldo bruto, que é o número que a planilha antiga guardava:
+//
+//     a agendar  +  já marcadas  =  saldo devido hoje
+//
+function Placar({ mes, ano }) {
+  const devidas = -ano.aTirar                    // o saldo de hoje, como a planilha conta
+  const aAgendar = devidas - (ano.marcadas || 0) // o que ainda não tem data
+
+  const palavra = aAgendar > 0 ? `${aAgendar} a agendar`
+    : aAgendar < 0 ? `${-aAgendar} adiantada${aAgendar < -1 ? 's' : ''}`
+    : 'em dia'
+
+  const explicacao = ano.desde === null
+    ? 'Sem nenhum dia preenchido neste ano'
+    : `Deve ${devidas} folga${devidas === 1 ? '' : 's'} até hoje` +
+      (ano.marcadas ? `, e ${ano.marcadas} já ${ano.marcadas === 1 ? 'está marcada' : 'estão marcadas'} no calendário` : '') +
+      `. Tirou ${ano.usadas} de ${ano.direito} a que teve direito.`
+
+  // O mês só diz algo depois de começar: "em dia" num mês que nem chegou
+  // afirmava uma coisa que não aconteceu.
+  const rodape = ano.marcadas
+    ? `${ano.marcadas} já marcada${ano.marcadas === 1 ? '' : 's'}`
+    : mes.futuro ? 'mês ainda não começou'
+    : `mês: ${emPalavras(mes.aTirar)}`
+
   return (
     <div className="flg-placar">
-      <div
-        className="flg-placar-total" style={{ color: corDoSaldo(ano.aTirar) }}
-        title={ano.desde === null
-          ? 'Sem nenhum dia preenchido neste ano'
-          : `No ano, ${desdeQuando} até hoje: tirou ${ano.usadas} folgas de ${ano.direito} a que teve direito` +
-            (ano.emBranco && !semRessalva(nome) ? ` — com ${ano.emBranco} dias em branco` : '')}
-      >
-        {ano.desde === null ? '—' : emPalavras(ano.aTirar)}
-        {duvidoso && (
-          <span className="flg-duvida" title={`${ano.emBranco} dias sem preencher: o saldo pode estar alto por falta de dado, não por folga acumulada`}>?</span>
-        )}
+      <div className="flg-placar-total" style={{ color: corDoSaldo(-aAgendar) }} title={explicacao}>
+        {ano.desde === null ? '—' : palavra}
       </div>
-      <div
-        className="flg-placar-mes"
-        title={`Só neste mês: tirou ${mes.usadas} folgas de ${mes.direito} a que teve direito`}
-      >
-        mês: {emPalavras(mes.aTirar)}
+      <div className="flg-placar-mes" title={mes.futuro ? 'Este mês ainda não começou' : `Só neste mês: tirou ${mes.usadas} folgas de ${mes.direito} a que teve direito`}>
+        {rodape}
       </div>
     </div>
   )
@@ -596,6 +599,8 @@ export default function FolgasView({ podeEditar = false }) {
                 <th>Deslocamentos</th>
                 <th title="Dias do ano sem nada preenchido. Contam como dia trabalhado — não tiram nem põem folga">Em branco</th>
                 <th title="O mesmo cálculo, de 1º de janeiro até hoje — a lista vem ordenada por ele">A tirar no ano ↓</th>
+                <th title="Folgas já marcadas para depois de hoje">Já marcadas</th>
+                <th title="O que ainda não tem data: devidas menos as já marcadas">A agendar</th>
               </tr>
             </thead>
             <tbody>
@@ -613,6 +618,8 @@ export default function FolgasView({ podeEditar = false }) {
                     <td>{s.mes.deslocamentos || '—'}</td>
                     <td style={s.ano.emBranco > 20 && !semRessalva(p.nome) ? { color: 'var(--amber)', fontWeight: 700 } : { color: 'var(--text-dim)' }}>{s.ano.emBranco || '—'}</td>
                     <td><ATirar n={s.ano.aTirar} /></td>
+                    <td>{s.ano.marcadas || '—'}</td>
+                    <td><ATirar n={s.ano.aTirar + (s.ano.marcadas || 0)} /></td>
                   </tr>
                 )
               })}

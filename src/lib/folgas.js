@@ -61,7 +61,7 @@ function primeiroRegistro(dias) {
 }
 
 function contar(dias, feriados, ehFolga, suspende, deIso, ateIso, corte) {
-  let direito = 0, usadas = 0, deslocamentos = 0, emBranco = 0, suspensos = 0
+  let direito = 0, usadas = 0, deslocamentos = 0, emBranco = 0, suspensos = 0, marcadas = 0
   const desde = primeiroRegistro(dias)
   const [a0, m0, d0] = deIso.split('-').map(Number)
   const inicio = new Date(a0, m0 - 1, d0)
@@ -71,7 +71,13 @@ function contar(dias, feriados, ehFolga, suspende, deIso, ateIso, corte) {
     const chave = iso(d.getFullYear(), d.getMonth(), d.getDate())
     const reg = dias.get(chave)
     if (reg?.eh_deslocamento) deslocamentos++
-    if (chave > corte) continue
+    // Folga JÁ MARCADA para depois de hoje. Não entra no saldo — o direito dos
+    // fins de semana que ainda vêm também não entrou — mas é contada à parte:
+    // é ela que diz quanto do saldo já tem data marcada.
+    if (chave > corte) {
+      if (reg && ehFolga(reg.categoria_id)) marcadas++
+      continue
+    }
     if (desde === null || chave < desde) continue
 
     // DIA QUE SUSPENDE O DIREITO. Quem está de atestado não trabalhou o fim de
@@ -88,7 +94,7 @@ function contar(dias, feriados, ehFolga, suspende, deIso, ateIso, corte) {
     // preenchido — e não entra no saldo.
     if (!reg) emBranco++
   }
-  return { direito, usadas, deslocamentos, emBranco, suspensos, desde }
+  return { direito, usadas, deslocamentos, emBranco, suspensos, marcadas, desde }
 }
 
 // Saldo do MÊS. `hoje` entra como parâmetro para o cálculo ser testável.
