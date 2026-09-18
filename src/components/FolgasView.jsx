@@ -33,10 +33,16 @@ function estiloCelula(cat) {
   return { color: cat.cor, fontWeight: cat.conta_folga ? 700 : 600 }
 }
 
-// ── Editor de um dia ─────────────────────────────────────────────────────────
-// Abre onde a célula está, com os botões das categorias. Algumas pedem um
-// detalhe (cidade, confronto, descrição) e "Outro" exige.
-function Editor({ atual, categorias, onSalvar, onFechar }) {
+// ── Menu de um dia ───────────────────────────────────────────────────────────
+// Clicou na célula, escolheu, acabou. Preencher um dia tinha virado um
+// formulário — escolher a categoria, preencher, apertar Salvar — e são 31 dias
+// vezes 17 pessoas. Agora a escolha JÁ GRAVA.
+//
+// O descritivo continua ali, mas num segundo passo, para quem quer: ele é a
+// exceção, não o caminho principal.
+function MenuDia({ atual, categorias, onSalvar, onFechar }) {
+  // 'lista' = escolher a categoria. 'texto' = escrever o descritivo daquela.
+  const [modo, setModo] = useState('lista')
   const [cat, setCat] = useState(atual?.categoria_id || '')
   const [detalhe, setDetalhe] = useState(atual?.detalhe || '')
   const [camp, setCamp] = useState(atual?.campeonato || '')
@@ -51,65 +57,71 @@ function Editor({ atual, categorias, onSalvar, onFechar }) {
   }, [onFechar])
 
   const def = categorias.find(c => c.id === cat)
-  const faltaDetalhe = def?.exige_detalhe && !detalhe.trim()
 
-  const gravar = () => {
-    if (faltaDetalhe) return
-    onSalvar(cat ? { categoria_id: cat, detalhe: detalhe.trim() || null, campeonato: camp || null } : null)
+  // "Outro" não diz nada sem o texto, então ele é o único que não grava direto.
+  const escolher = c => {
+    if (c.exige_detalhe) { setCat(c.id); setDetalhe(atual?.categoria_id === c.id ? (atual.detalhe || '') : ''); setModo('texto'); return }
+    onSalvar({ categoria_id: c.id, detalhe: atual?.categoria_id === c.id ? (atual.detalhe || null) : null, campeonato: null })
+  }
+
+  if (modo === 'texto') {
+    const falta = def?.exige_detalhe && !detalhe.trim()
+    return (
+      <div className="flg-menu" ref={ref} onMouseDown={e => e.stopPropagation()}>
+        <div className="flg-menu-topo">
+          <button className="flg-menu-voltar" onClick={() => setModo('lista')}>‹</button>
+          <span>{def?.nome || 'Descritivo'}</span>
+        </div>
+        {def?.presets?.length > 0 && (
+          <div className="flg-menu-presets">
+            {def.presets.map(x => (
+              <button key={x} className={`flg-preset${detalhe === x ? ' is-on' : ''}`} onClick={() => setDetalhe(x)}>{x}</button>
+            ))}
+          </div>
+        )}
+        {def?.campeonatos?.length > 0 && (
+          <select className="flg-menu-campo" value={camp} onChange={e => setCamp(e.target.value)}>
+            <option value="">Campeonato (opcional)</option>
+            {def.campeonatos.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        )}
+        <input
+          className="flg-menu-campo" autoFocus
+          placeholder={def?.dica_detalhe || 'o que será feito no dia'}
+          value={detalhe} onChange={e => setDetalhe(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && !falta) onSalvar({ categoria_id: cat, detalhe: detalhe.trim() || null, campeonato: camp || null })
+          }}
+        />
+        <button
+          className="flg-menu-ok" disabled={falta}
+          onClick={() => onSalvar({ categoria_id: cat, detalhe: detalhe.trim() || null, campeonato: camp || null })}
+        >{falta ? 'Falta o descritivo' : 'Salvar'}</button>
+      </div>
+    )
   }
 
   return (
-    <div className="flg-editor" ref={ref}>
-      <div className="flg-editor-cats">
-        {categorias.map(c => (
-          <button
-            key={c.id}
-            className={`flg-cat${cat === c.id ? ' is-on' : ''}`}
-            style={cat === c.id ? { background: c.cor, borderColor: c.cor, color: '#fff' } : { borderColor: c.cor, color: c.cor }}
-            onClick={() => { setCat(c.id); if (c.id !== cat) { setDetalhe(''); setCamp('') } }}
-          >
-            {c.nome}
-          </button>
-        ))}
-      </div>
-
-      {def?.presets?.length > 0 && (
-        <div className="flg-editor-presets">
-          {def.presets.map(p => (
-            <button key={p} className={`flg-preset${detalhe === p ? ' is-on' : ''}`} onClick={() => setDetalhe(p)}>{p}</button>
-          ))}
-        </div>
-      )}
-
-      {def?.campeonatos?.length > 0 && (
-        <select className="flg-editor-campo" value={camp} onChange={e => setCamp(e.target.value)}>
-          <option value="">Campeonato (opcional)</option>
-          {def.campeonatos.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-      )}
-
-      {/* O descritivo vale para qualquer categoria, e é opcional em quase
-          todas. É o lugar de escrever o que será feito no dia — antes isso ia
-          para o nome da categoria e desfigurava a escala. */}
-      {def && (
-        <label className="flg-editor-rot">
-          {def.exige_detalhe ? 'Descritivo (obrigatório)' : 'Descritivo do dia (opcional)'}
-          <input
-            className="flg-editor-campo" autoFocus
-            placeholder={def.dica_detalhe || 'ex.: preparativos da Copa, tarde/noite, COR x SAO'}
-            value={detalhe} onChange={e => setDetalhe(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') gravar() }}
-          />
-        </label>
-      )}
-
-      <div className="flg-editor-pe">
-        {atual && <button className="flg-editor-limpar" onClick={() => onSalvar(null)}>Apagar o dia</button>}
-        <div style={{ flex: 1 }} />
-        <button className="flg-editor-ok" disabled={faltaDetalhe} onClick={gravar}>
-          {faltaDetalhe ? 'Falta o detalhe' : 'Salvar'}
+    <div className="flg-menu" ref={ref} onMouseDown={e => e.stopPropagation()}>
+      {categorias.map(c => (
+        <button
+          key={c.id}
+          className={`flg-menu-item${atual?.categoria_id === c.id ? ' is-on' : ''}`}
+          onClick={() => escolher(c)}
+        >
+          <span className="flg-menu-cor" style={{ background: c.cor }} />
+          {c.nome}
         </button>
-      </div>
+      ))}
+      <div className="flg-menu-sep" />
+      {atual && (
+        <button className="flg-menu-item flg-menu-acao" onClick={() => { setCat(atual.categoria_id); setModo('texto') }}>
+          ✎ {atual.detalhe ? 'Mudar o descritivo' : 'Acrescentar descritivo'}
+        </button>
+      )}
+      {atual && (
+        <button className="flg-menu-item flg-menu-apagar" onClick={() => onSalvar(null)}>Apagar o dia</button>
+      )}
     </div>
   )
 }
@@ -192,7 +204,12 @@ export default function FolgasView({ podeEditar = false }) {
   })
   const trocarTime = v => { setFTime(v); try { localStorage.setItem(CHAVE_TIME, v) } catch { /* sem storage */ } }
 
-  const [editando, setEditando] = useState(null)      // { pessoaId, dia }
+  const [editando, setEditando] = useState(null)      // { pessoaId, dia } — menu aberto
+  // Arrastar para baixo repete o dia, como numa planilha. O ref guarda o
+  // arrasto em curso porque os eventos de mouse chegam mais rápido do que o
+  // React re-renderiza; o estado é só para desenhar a faixa.
+  const arrastoRef = useRef(null)
+  const [arrasto, setArrasto] = useState(null)
   const [selecao, setSelecao] = useState(null)        // { pessoaId, dias: [] }
   const [aba, setAba] = useState('grade')             // grade | resumo
 
@@ -254,10 +271,53 @@ export default function FolgasView({ podeEditar = false }) {
     setAno(d.getFullYear()); setMes(d.getMonth())
   }
 
-  // Clicar numa célula: no modo seleção, marca; senão abre o editor.
+  // Pressionar numa célula começa um arrasto. Se soltar no mesmo lugar, foi um
+  // clique e abre o menu; se soltou mais abaixo, repete o valor na faixa.
+  function aoPressionar(pessoaId, diaIso, reg, e) {
+    if (!podeEditar || selecao || e.button !== 0) return
+    arrastoRef.current = {
+      pessoaId, de: diaIso, ate: diaIso, moveu: false,
+      valor: reg ? { categoria_id: reg.categoria_id, detalhe: reg.detalhe, campeonato: reg.campeonato } : null,
+    }
+    setArrasto({ ...arrastoRef.current })
+  }
+
+  function aoEntrar(pessoaId, diaIso) {
+    const a = arrastoRef.current
+    if (!a || a.pessoaId !== pessoaId || a.ate === diaIso) return
+    a.ate = diaIso
+    a.moveu = true
+    setArrasto({ ...a })
+  }
+
+  useEffect(() => {
+    const soltar = async () => {
+      const a = arrastoRef.current
+      arrastoRef.current = null
+      setArrasto(null)
+      if (!a) return
+      if (!a.moveu) { setEditando({ pessoaId: a.pessoaId, dia: a.de }); return }
+      const [x, y] = [a.de, a.ate].sort()
+      const alvo = Array.from({ length: diasNoMes(ano, mes) }, (_, i) => iso(ano, mes, i + 1))
+        .filter(k => k >= x && k <= y && k !== a.de)
+      if (!alvo.length) return
+      const falha = await salvarVarios(a.pessoaId, alvo, a.valor)
+      if (falha) alert('Não deu para preencher: ' + falha)
+    }
+    document.addEventListener('mouseup', soltar)
+    return () => document.removeEventListener('mouseup', soltar)
+  }, [ano, mes, salvarVarios])
+
+  // Está dentro da faixa que o arrasto vai preencher?
+  const naFaixa = (pessoaId, diaIso) => {
+    if (!arrasto || arrasto.pessoaId !== pessoaId || !arrasto.moveu) return false
+    const [x, y] = [arrasto.de, arrasto.ate].sort()
+    return diaIso >= x && diaIso <= y
+  }
+
+  // Clicar numa célula: no modo seleção, marca; fora dele quem manda é o arrasto.
   function aoClicar(pessoaId, diaIso, e) {
-    if (!podeEditar) return
-    if (!selecao) { setEditando({ pessoaId, dia: diaIso }); return }
+    if (!podeEditar || !selecao) return
     if (selecao.pessoaId && selecao.pessoaId !== pessoaId) return   // seleção é de uma pessoa só
     setSelecao(s => {
       const jaTem = s.dias.includes(diaIso)
@@ -313,6 +373,10 @@ export default function FolgasView({ podeEditar = false }) {
           >
             {selecao ? 'Sair da seleção' : 'Marcar vários dias'}
           </button>
+        )}
+
+        {podeEditar && aba === 'grade' && !selecao && (
+          <span className="flg-dica">clique para escolher · arraste para baixo para repetir</span>
         )}
       </div>
 
@@ -401,15 +465,17 @@ export default function FolgasView({ podeEditar = false }) {
                       return (
                         <td
                           key={p.id}
-                          className={`flg-cel${marcado ? ' flg-cel-marcada' : ''}${podeEditar ? ' flg-cel-edita' : ''}${p.id === minhaPessoaId ? ' flg-eu' : ''}`}
+                          className={`flg-cel${marcado || naFaixa(p.id, diaIso) ? ' flg-cel-marcada' : ''}${podeEditar ? ' flg-cel-edita' : ''}${p.id === minhaPessoaId ? ' flg-eu' : ''}`}
                           style={estiloCelula(c)}
                           title={reg ? `${c?.nome || 'Categoria removida'}${reg.campeonato ? ` · ${reg.campeonato}` : ''}${reg.detalhe ? `\n${reg.detalhe}` : ''}` : 'vazio'}
                           onClick={e => aoClicar(p.id, diaIso, e)}
+                          onMouseDown={e => aoPressionar(p.id, diaIso, reg, e)}
+                          onMouseEnter={() => aoEntrar(p.id, diaIso)}
                         >
                           {texto}
                           {reg?.detalhe && !c?.exige_detalhe && <span className="flg-nota" title={reg.detalhe}>·</span>}
                           {editando && editando.pessoaId === p.id && editando.dia === diaIso && (
-                            <Editor
+                            <MenuDia
                               atual={reg} categorias={categorias}
                               onFechar={() => setEditando(null)}
                               onSalvar={async v => {
