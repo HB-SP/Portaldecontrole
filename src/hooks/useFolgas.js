@@ -51,7 +51,10 @@ export function useFolgas(ano) {
     const [t, p, c, f, a] = await Promise.all([
       supabase.from('folgas_times').select('*').order('ordem'),
       supabase.from('folgas_pessoas').select('*').eq('ativo', true).order('ordem'),
-      supabase.from('folgas_categorias').select('*').eq('arquivada', false).order('ordem'),
+      // TODAS, inclusive as arquivadas: um dia marcado com categoria arquivada
+      // precisa continuar aparecendo com o nome certo na grade. Quem filtra o que
+      // pode ser ESCOLHIDO é a tela.
+      supabase.from('folgas_categorias').select('*').order('ordem'),
       supabase.from('folgas_feriados').select('*').order('dia'),
       supabase.from('folgas_ajustes').select('*').order('vale_de'),
     ])

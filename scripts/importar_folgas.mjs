@@ -70,23 +70,23 @@ const iso = (a, m, d) => `${a}-${String(m).padStart(2, '0')}-${String(d).padStar
 // para ele.
 const CATEGORIAS = [
   { id: 'folga',        nome: 'Folga',        curto: 'FOLGA',     cor: '#DC2626', fixa: true, conta_folga: true, ordem: 1 },
-  { id: 'ferias',       nome: 'Férias',       curto: 'FÉRIAS',    cor: '#7C3AED', ordem: 2 },
-  { id: 'atestado',     nome: 'Atestado',     curto: 'ATESTADO',  cor: '#B45309', ordem: 3 },
-  { id: 'home',         nome: 'Home',         curto: 'HOME',      cor: '#2563EB', fixa: true, ordem: 4,
+  { id: 'ferias',       nome: 'Férias',       curto: 'FÉRIAS',    cor: '#7C3AED', ordem: 8 },
+  { id: 'atestado',     nome: 'Atestado',     curto: 'ATESTADO',  cor: '#B45309', ordem: 9 },
+  { id: 'home',         nome: 'Home',         curto: 'HOME',      cor: '#2563EB', fixa: true, ordem: 2,
     // 'Home' puro nao entra nos atalhos: home sem nada nao precisa de
     // descritivo (equipe, 18/09/2026).
     presets: ['Home - MM', 'Home - monitoração'] },
-  { id: 'escritorio',   nome: 'Vila Olímpia', curto: 'VILA OLÍMPIA', cor: '#475569', ordem: 5 },
-  { id: 'casablanca',   nome: 'Casablanca',   curto: 'CASABL.',   cor: '#64748B', ordem: 6, pede_detalhe: true },
-  { id: 'livekasa',     nome: 'LiveKasa',     curto: 'LIVEKASA',  cor: '#78716C', ordem: 7, pede_detalhe: true },
-  { id: 'sportheca',    nome: 'Sportheca',    curto: 'SPORTHECA', cor: '#57534E', ordem: 8, pede_detalhe: true },
-  { id: 'monitoracao',  nome: 'Monitoração',  curto: 'MONIT.',    cor: '#0F766E', ordem: 9, pede_detalhe: true },
-  { id: 'externa',      nome: 'Externa',      curto: 'EXTERNA',   cor: '#15803D', ordem: 10,
+  { id: 'escritorio',   nome: 'Vila Olímpia', curto: 'VILA OLÍMPIA', cor: '#475569', ordem: 3 },
+  { id: 'casablanca',   nome: 'Casablanca',   curto: 'CASABL.',   cor: '#64748B', ordem: 4, pede_detalhe: true },
+  { id: 'livekasa',     nome: 'LiveKasa',     curto: 'LIVEKASA',  cor: '#78716C', ordem: 90, pede_detalhe: true, arquivada: true },
+  { id: 'sportheca',    nome: 'Sportheca',    curto: 'SPORTHECA', cor: '#57534E', ordem: 90, pede_detalhe: true, arquivada: true },
+  { id: 'monitoracao',  nome: 'Monitoração',  curto: 'MONIT.',    cor: '#0F766E', ordem: 5, pede_detalhe: true },
+  { id: 'externa',      nome: 'Externa',      curto: 'EXTERNA',   cor: '#15803D', ordem: 6,
     pede_detalhe: true, dica_detalhe: 'Evento, cidade ou confronto',
     campeonatos: ['Brasileirão', 'Paulistão', 'Paulistão Feminino', 'Copinha'] },
-  { id: 'deslocamento', nome: 'Viagem',       curto: 'VIAGEM',    cor: '#0891B2', ordem: 11,
+  { id: 'deslocamento', nome: 'Viagem',       curto: 'VIAGEM',    cor: '#0891B2', ordem: 7,
     eh_deslocamento: true, pede_detalhe: true, dica_detalhe: 'Cidade — dia de ida ou de volta' },
-  { id: 'outro',        nome: 'Outro',        curto: '—',         cor: '#6B7280', ordem: 12,
+  { id: 'outro',        nome: 'Outro',        curto: '—',         cor: '#6B7280', ordem: 10,
     pede_detalhe: true, exige_detalhe: true, dica_detalhe: 'Descrição' },
 ]
 

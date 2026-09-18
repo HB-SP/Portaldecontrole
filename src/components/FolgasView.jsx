@@ -237,6 +237,9 @@ export default function FolgasView({ podeEditar = false }) {
   const feriadosSet = useMemo(() => new Map(feriados.map(f => [f.dia, f.nome])), [feriados])
   const feriadosChaves = useMemo(() => new Set(feriados.map(f => f.dia)), [feriados])
   const catPorId = useMemo(() => new Map(categorias.map(c => [c.id, c])), [categorias])
+  // As arquivadas seguem sendo LIDAS (para a grade mostrar o nome certo em quem
+  // já está marcado com elas), mas saem da lista de escolher.
+  const oferecidas = useMemo(() => categorias.filter(c => !c.arquivada), [categorias])
   const ehFolga = id => !!catPorId.get(id)?.conta_folga
   // Dia de atestado não gera folga de direito: quem está afastado não trabalhou
   // aquele fim de semana (equipe, 18/09/2026). Férias NÃO entra aqui — medido
@@ -476,7 +479,7 @@ export default function FolgasView({ podeEditar = false }) {
           {selecao.pessoaId && <> · {pessoas.find(p => p.id === selecao.pessoaId)?.nome}</>}
           <span className="flg-selbarra-dica">clique ou arraste sobre os dias · shift para um intervalo</span>
           <div style={{ flex: 1 }} />
-          {categorias.map(c => (
+          {oferecidas.map(c => (
             <button
               key={c.id} className="flg-cat" style={{ borderColor: c.cor, color: c.cor }}
               disabled={!selecao.dias.length}
@@ -500,7 +503,7 @@ export default function FolgasView({ podeEditar = false }) {
 
       {aba === 'grade' && (
         <div className="flg-legenda-cores">
-          {categorias.map(c => (
+          {oferecidas.map(c => (
             <span key={c.id} className="flg-chip" style={estiloCelula(c)}>{c.nome}</span>
           ))}
         </div>
@@ -509,7 +512,7 @@ export default function FolgasView({ podeEditar = false }) {
       {editando && createPortal(
         <MenuDia
           atual={dias.get(`${editando.pessoaId}|${editando.dia}`)}
-          categorias={categorias}
+          categorias={oferecidas}
           quantos={editando.faixa?.length || 1}
           ancora={posicaoDoMenu(editando.caixa)}
           onFechar={() => setEditando(null)}
