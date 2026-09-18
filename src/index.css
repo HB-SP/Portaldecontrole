@@ -4478,13 +4478,18 @@ body {
 /* Placar de cada pessoa: os DOIS períodos, em palavras. Um número solto
    ("-3") não diz se é bom ou ruim; "deve 3" diz. */
 .flg-placar { display: flex; flex-direction: column; gap: 1px; }
-.flg-placar-linha { display: flex; align-items: baseline; justify-content: center; gap: 4px; cursor: help; }
-.flg-placar-rot {
-  font-size: 8.5px; font-weight: 700; color: var(--text-dim);
-  letter-spacing: 0.06em; text-transform: uppercase;
+.flg-placar-total {
+  font-size: 13px; font-weight: 800; cursor: help;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.flg-placar-num { font-size: 11px; font-weight: 700; }
-.flg-placar-ano { font-size: 12.5px; font-weight: 800; }
+.flg-placar-mes {
+  font-size: 9.5px; font-weight: 500; color: var(--text-dim); cursor: help;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* A minha coluna: quem abre a tela quer achar a si mesmo primeiro. */
+.flg-eu { background: var(--lm-green-bg) !important; }
+.flg-tab th.flg-eu .flg-th-nome { font-weight: 800; }
 .flg-atirar { font-weight: 700; font-size: 12.5px; }
 
 /* Legenda: com a cor lavada, o nome da categoria precisa ficar à mão. */

@@ -142,8 +142,22 @@ export function useFolgas(ano) {
     return null
   }, [carregarDias])
 
+  // Qual linha de folgas_pessoas sou EU. Serve para destacar a minha coluna:
+  // uma das perguntas que a tela responde é "quanto eu ainda tenho a tirar".
+  const [minhaPessoaId, setMinhaPessoaId] = useState(null)
+  useEffect(() => {
+    let cancelado = false
+    if (!isConfigured) return
+    supabase.auth.getUser().then(({ data }) => {
+      const uid = data?.user?.id
+      if (cancelado || !uid) return
+      setMinhaPessoaId(pessoas.find(p => p.profile_id === uid)?.id || null)
+    })
+    return () => { cancelado = true }
+  }, [pessoas])
+
   return {
-    times, pessoas, categorias, feriados, ajustes, dias,
+    times, pessoas, categorias, feriados, ajustes, dias, minhaPessoaId,
     loading, erro,
     salvarDia, salvarVarios,
     recarregar: () => { carregarBase(); carregarDias() },

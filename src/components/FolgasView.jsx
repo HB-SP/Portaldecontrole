@@ -123,18 +123,27 @@ function ATirar({ n, titulo }) {
   return <span className="flg-atirar" style={{ color: corDoSaldo(n) }} title={titulo}>{emPalavras(n)}</span>
 }
 
-// O cabeçalho de cada pessoa mostra os DOIS períodos. Só o mês fazia a conta do
-// ano se perder, que é justamente a que diz o tamanho da dívida.
+// O cabeçalho de cada pessoa mostra os DOIS períodos, com hierarquia: o
+// ACUMULADO manda, porque é o saldo de verdade — é dele que sai "quem está com
+// folga atrasada" e "quanto eu ainda tenho". O mês fica embaixo, miúdo, dizendo
+// o que este mês acrescentou.
+//
+// Os dois falam a MESMA língua ("3 a tirar"), de propósito: dois vocabulários
+// no mesmo cabeçalho era parte da confusão.
 function Placar({ mes, ano }) {
   return (
     <div className="flg-placar">
-      <div className="flg-placar-linha" title={`No mês: ${mes.usadas} folgas usadas, ${mes.direito} de direito até hoje`}>
-        <span className="flg-placar-rot">mês</span>
-        <span className="flg-placar-num" style={{ color: corDoSaldo(mes.aTirar) }}>{emPalavras(mes.aTirar)}</span>
+      <div
+        className="flg-placar-total" style={{ color: corDoSaldo(ano.aTirar) }}
+        title={`No ano, de 1º de janeiro até hoje: tirou ${ano.usadas} folgas de ${ano.direito} a que teve direito`}
+      >
+        {emPalavras(ano.aTirar)}
       </div>
-      <div className="flg-placar-linha" title={`No ano, de 1º de janeiro até hoje: ${ano.usadas} folgas usadas, ${ano.direito} de direito`}>
-        <span className="flg-placar-rot">ano</span>
-        <span className="flg-placar-num flg-placar-ano" style={{ color: corDoSaldo(ano.aTirar) }}>{emPalavras(ano.aTirar)}</span>
+      <div
+        className="flg-placar-mes"
+        title={`Só neste mês: tirou ${mes.usadas} folgas de ${mes.direito} a que teve direito`}
+      >
+        mês: {emPalavras(mes.aTirar)}
       </div>
     </div>
   )
@@ -144,7 +153,7 @@ export default function FolgasView({ podeEditar = false }) {
   const hoje = hojeIso()
   const [ano, setAno] = useState(() => Number(hoje.slice(0, 4)))
   const [mes, setMes] = useState(() => new Date().getMonth())
-  const { times, pessoas, categorias, feriados, ajustes, dias, loading, erro, salvarDia, salvarVarios } = useFolgas(ano)
+  const { times, pessoas, categorias, feriados, ajustes, dias, minhaPessoaId, loading, erro, salvarDia, salvarVarios } = useFolgas(ano)
 
   const [fTime, setFTime] = useState(() => {
     try { return localStorage.getItem(CHAVE_TIME) || '' } catch { return '' }
@@ -191,6 +200,14 @@ export default function FolgasView({ podeEditar = false }) {
     }
     return m
   }, [visiveis, diasDe, ajustes, feriadosChaves, ano, mes, hoje, catPorId])
+
+  // O Resumo é a lista de quem cobrar e de quem pode folgar na próxima rodada,
+  // então ele vem de quem tem MAIS folga a tirar para quem tem menos — a grade
+  // é que segue a ordem de leitura da equipe.
+  const porMaisDevendo = useMemo(
+    () => [...visiveis].sort((a, b) => (saldos.get(a.id)?.ano.aTirar ?? 0) - (saldos.get(b.id)?.ano.aTirar ?? 0)),
+    [visiveis, saldos]
+  )
 
   const total = diasNoMes(ano, mes)
   const listaDias = useMemo(() => Array.from({ length: total }, (_, i) => i + 1), [total])
@@ -309,7 +326,7 @@ export default function FolgasView({ podeEditar = false }) {
                 {visiveis.map(p => {
                   const s = saldos.get(p.id)
                   return (
-                    <th key={p.id} className="flg-th-pessoa">
+                    <th key={p.id} className={`flg-th-pessoa${p.id === minhaPessoaId ? ' flg-eu' : ''}`}>
                       <div className="flg-th-nome">{p.nome}</div>
                       {s && <Placar mes={s.mes} ano={s.ano} />}
                     </th>
@@ -338,7 +355,7 @@ export default function FolgasView({ podeEditar = false }) {
                       return (
                         <td
                           key={p.id}
-                          className={`flg-cel${marcado ? ' flg-cel-marcada' : ''}${podeEditar ? ' flg-cel-edita' : ''}`}
+                          className={`flg-cel${marcado ? ' flg-cel-marcada' : ''}${podeEditar ? ' flg-cel-edita' : ''}${p.id === minhaPessoaId ? ' flg-eu' : ''}`}
                           style={estiloCelula(c)}
                           title={reg ? `${c?.nome || 'Categoria removida'}${reg.detalhe ? ` — ${reg.detalhe}` : ''}${reg.campeonato ? ` (${reg.campeonato})` : ''}` : 'vazio'}
                           onClick={e => aoClicar(p.id, diaIso, e)}
@@ -374,15 +391,15 @@ export default function FolgasView({ podeEditar = false }) {
                 <th>Usadas</th><th>Ajustes</th>
                 <th title="Usadas menos as de direito. Negativo = ainda deve tirar">A tirar no mês</th>
                 <th>Deslocamentos</th>
-                <th title="O mesmo cálculo, de 1º de janeiro até hoje">A tirar no ano</th>
+                <th title="O mesmo cálculo, de 1º de janeiro até hoje — a lista vem ordenada por ele">A tirar no ano ↓</th>
               </tr>
             </thead>
             <tbody>
-              {visiveis.map(p => {
+              {porMaisDevendo.map(p => {
                 const s = saldos.get(p.id)
                 if (!s) return null
                 return (
-                  <tr key={p.id}>
+                  <tr key={p.id} className={p.id === minhaPessoaId ? 'flg-eu' : undefined}>
                     <td className="flg-resumo-nome"><span className="flg-ponto" style={{ background: p.cor }} />{p.nome}</td>
                     <td>{times.find(t => t.id === p.time_id)?.nome || '—'}</td>
                     <td>{s.mes.direito}</td>
