@@ -154,31 +154,14 @@ function MenuDia({ atual, categorias, onSalvar, onFechar, ancora, quantos = 1 })
   )
 }
 
-// ── O número que importa ─────────────────────────────────────────────────────
-// "-3" não diz sozinho se é bom ou ruim, e "deve 3" dizia o contrário do que
-// acontece: quem tem folga acumulada não deve nada — a folga é DELA, ainda por
-// tirar. "3 a tirar" é o termo que a própria planilha da equipe usa.
-function emPalavras(n) {
-  if (n < 0) return `${-n} a tirar`
-  if (n > 0) return `${n} adiantada${n > 1 ? 's' : ''}`
-  return 'em dia'
-}
+// A cor do saldo: vermelho quando ainda falta agendar, verde quando a pessoa
+// tirou mais do que devia, cinza quando está em dia.
 const corDoSaldo = n => (n < 0 ? 'var(--red)' : n > 0 ? 'var(--lm-green-dim)' : 'var(--text-dim)')
 
-function ATirar({ n, titulo }) {
-  return <span className="flg-atirar" style={{ color: corDoSaldo(n) }} title={titulo}>{emPalavras(n)}</span>
-}
-
-// Para QUEM o dia em branco já vale como dia trabalhado, e portanto a coluna
-// pela metade não é ressalva nenhuma.
-//
-// Exceção por pessoa, não regra do sistema: a equipe disse em 18/09/2026 que os
-// dias em branco do Gui Soria são dias trabalhados, e corrigiu em seguida que
-// isso vale só para ele.
-const BRANCO_E_TRABALHO = new Set(['gui soria'])
-const semRessalva = nome => BRANCO_E_TRABALHO.has(
-  String(nome || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
-)
+// A ressalva de "coluna com muito dia em branco" saiu junto com a tabela do
+// Resumo, e não faz falta: a visão do ano MOSTRA os buracos — a linha da pessoa
+// fica vazada no trecho não preenchido. Um aviso em texto dizia o que agora se
+// vê, e a exceção que o Gui Soria precisava deixou de ser necessária com ele.
 
 // ── O placar de cada pessoa ──────────────────────────────────────────────────
 // O número grande responde a pergunta do dia a dia: QUANTAS FOLGAS AINDA
@@ -304,6 +287,15 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
     () => [...visiveis].sort((a, b) => (saldos.get(a.id)?.ano.aTirar ?? 0) - (saldos.get(b.id)?.ano.aTirar ?? 0)),
     [visiveis, saldos]
   )
+
+  // Os dias do ano inteiro, em ordem — a régua da visão do ano.
+  const diasDoAno = useMemo(() => {
+    const fora = []
+    for (let m = 0; m < 12; m++) {
+      for (let d = 1; d <= diasNoMes(ano, m); d++) fora.push({ chave: iso(ano, m, d), mes: m, dia: d })
+    }
+    return fora
+  }, [ano])
 
   const total = diasNoMes(ano, mes)
   const listaDias = useMemo(() => Array.from({ length: total }, (_, i) => i + 1), [total])
@@ -472,7 +464,7 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
 
         <div className="flg-abas">
           <button className={`flg-aba${aba === 'grade' ? ' is-on' : ''}`} onClick={() => setAba('grade')}>Grade</button>
-          <button className={`flg-aba${aba === 'resumo' ? ' is-on' : ''}`} onClick={() => setAba('resumo')}>Resumo</button>
+          <button className={`flg-aba${aba === 'resumo' ? ' is-on' : ''}`} onClick={() => setAba('resumo')}>Ano</button>
         </div>
 
         <div style={{ flex: 1 }} />
@@ -648,47 +640,68 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
           </table>
         </div>
       ) : (
-        <div className="flg-wrap">
-          <table className="flg-resumo">
-            <thead>
-              <tr>
-                <th>Pessoa</th><th>Time</th>
-                <th title="Quantas folgas a pessoa já deveria ter tirado, contando até hoje">De direito</th>
-                <th>Usadas</th><th>Ajustes</th>
-                <th title="Usadas menos as de direito. Negativo = ainda deve tirar">A tirar no mês</th>
-                <th>Deslocamentos</th>
-                <th title="Dias do ano sem nada preenchido. Contam como dia trabalhado — não tiram nem põem folga">Em branco</th>
-                <th title="O mesmo cálculo, de 1º de janeiro até hoje — a lista vem ordenada por ele">A tirar no ano ↓</th>
-                <th title="Folgas já marcadas para depois de hoje">Já marcadas</th>
-                <th title="O que ainda não tem data: devidas menos as já marcadas">A agendar</th>
-              </tr>
-            </thead>
-            <tbody>
-              {porMaisDevendo.map(p => {
-                const s = saldos.get(p.id)
-                if (!s) return null
-                return (
-                  <tr key={p.id} className={p.id === minhaPessoaId ? 'flg-eu' : undefined}>
-                    <td className="flg-resumo-nome"><span className="flg-ponto" style={{ background: p.cor }} />{p.nome}</td>
-                    <td>{times.find(t => t.id === p.time_id)?.nome || '—'}</td>
-                    <td>{s.mes.direito}</td>
-                    <td>{s.mes.usadas}</td>
-                    <td>{s.mes.ajuste || '—'}</td>
-                    <td><ATirar n={s.mes.aTirar} /></td>
-                    <td>{s.mes.deslocamentos || '—'}</td>
-                    <td style={s.ano.emBranco > 20 && !semRessalva(p.nome) ? { color: 'var(--amber)', fontWeight: 700 } : { color: 'var(--text-dim)' }}>{s.ano.emBranco || '—'}</td>
-                    <td><ATirar n={s.ano.aTirar} /></td>
-                    <td>{s.ano.marcadas || '—'}</td>
-                    <td><ATirar n={s.ano.aTirar + (s.ano.marcadas || 0)} /></td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+        <div className="flg-wrap flg-ano-wrap">
+          <div className="flg-ano-cab">
+            <span className="flg-ano-nome" />
+            <span className="flg-ano-num" title="Folgas devidas que ainda não têm data marcada">a agendar</span>
+            <span className="flg-ano-num" title="Dias de férias no ano">férias</span>
+            <span className="flg-ano-num" title="Folgas já tiradas ou já marcadas no ano">folgas</span>
+            <div className="flg-ano-barra">
+              {MESES.map((m, i) => (
+                <span key={i} className="flg-ano-mes" style={{ flexGrow: diasNoMes(ano, i) }}>{m.slice(0, 3)}</span>
+              ))}
+            </div>
+          </div>
+
+          {porMaisDevendo.map(p => {
+            const sal = saldos.get(p.id)
+            if (!sal) return null
+            const meus = diasDe.get(p.id) || new Map()
+            const aAgendar = -sal.ano.aTirar - (sal.ano.marcadas || 0)
+            let ferias = 0, folgas = 0
+            for (const [, reg] of meus) {
+              if (reg.categoria_id === 'ferias') ferias++
+              if (ehFolga(reg.categoria_id)) folgas++
+            }
+            return (
+              <div key={p.id} className={`flg-ano-linha${p.id === minhaPessoaId ? ' flg-eu' : ''}`}>
+                <span className="flg-ano-nome" title={times.find(t => t.id === p.time_id)?.nome || ''}>
+                  <span className="flg-ponto" style={{ background: p.cor }} />{p.nome}
+                </span>
+                <span className="flg-ano-num" style={{ color: corDoSaldo(-aAgendar), fontWeight: 800 }}>
+                  {aAgendar > 0 ? aAgendar : aAgendar < 0 ? `+${-aAgendar}` : '—'}
+                </span>
+                <span className="flg-ano-num">{ferias || '—'}</span>
+                <span className="flg-ano-num">{folgas || '—'}</span>
+                <div className="flg-ano-barra">
+                  {diasDoAno.map(d => {
+                    const reg = meus.get(d.chave)
+                    const cat = reg ? catPorId.get(reg.categoria_id) : null
+                    const ausencia = cat && AUSENCIA.has(cat.id)
+                    const temJogo = !reg && (jogosPorDia.get(`${p.id}|${d.chave}`) || []).length
+                    return (
+                      <i
+                        key={d.chave}
+                        className={`flg-ano-dia${d.dia === 1 ? ' flg-ano-virada' : ''}`}
+                        style={{
+                          background: ausencia ? cat.cor : (reg || temJogo) ? 'var(--border-light)' : 'transparent',
+                          opacity: d.chave > hoje ? 0.5 : 1,
+                        }}
+                        title={`${String(d.dia).padStart(2, '0')}/${String(d.mes + 1).padStart(2, '0')} — ${cat?.nome || (temJogo ? 'jogo escalado' : 'em branco')}${reg?.detalhe ? `: ${reg.detalhe}` : ''}`}
+                      />
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+
           <div className="flg-legenda">
-            Cada sábado, domingo e feriado gera uma folga de direito. Feriado que cai em
-            fim de semana não conta duas vezes. As folgas de direito contam só até hoje —
-            um mês que ainda não chegou não gera dívida.
+            Cada risquinho é um dia do ano, e só a AUSÊNCIA tem cor:{' '}
+            <b style={{ color: 'var(--red)' }}>folga</b>, <b style={{ color: '#7C3AED' }}>férias</b>,{' '}
+            <b style={{ color: '#B45309' }}>atestado</b>. Cinza é dia de trabalho preenchido ou com jogo
+            escalado; em branco é dia sem nada. O que ainda não chegou fica mais claro.
+            A lista vem de quem tem mais folga a agendar para quem tem menos.
           </div>
         </div>
       )}
