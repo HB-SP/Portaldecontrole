@@ -316,6 +316,10 @@ export default function FolgasView({ podeEditar = false }) {
     setArrasto({ ...arrastoRef.current })
   }
 
+  // onMouseOver, e não onMouseEnter: o "enter" só dispara ao cruzar a borda do
+  // próprio <td>, e com o botão pressionado isso falha em alguns casos. O
+  // "over" dispara também vindo de dentro de um filho, e a função é idempotente
+  // — repetir no mesmo dia não faz nada.
   function aoEntrar(pessoaId, diaIso) {
     const a = arrastoRef.current
     if (!a || a.pessoaId !== pessoaId || a.ate === diaIso) return
@@ -529,7 +533,7 @@ export default function FolgasView({ podeEditar = false }) {
                           style={estiloCelula(c)}
                           title={reg ? `${c?.nome || 'Categoria removida'}${reg.campeonato ? ` · ${reg.campeonato}` : ''}${reg.detalhe ? `\n${reg.detalhe}` : ''}` : 'vazio'}
                           onMouseDown={e => aoPressionar(p.id, diaIso, reg, e)}
-                          onMouseEnter={() => aoEntrar(p.id, diaIso)}
+                          onMouseOver={() => aoEntrar(p.id, diaIso)}
                         >
                           {texto}
                           {reg?.detalhe && !c?.exige_detalhe && <span className="flg-nota" title={reg.detalhe}>·</span>}
