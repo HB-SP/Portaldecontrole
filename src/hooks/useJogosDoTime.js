@@ -28,7 +28,7 @@
 import { useState, useEffect } from 'react'
 import { supabase, isConfigured } from '../lib/supabase'
 import { carregarCompeticao } from './useHomeData'
-import { FUNCOES_ESCALA, naoTemFuncao, escalaCampeonatosDe } from '../lib/escalaLink'
+import { FUNCOES_ESCALA, naoTemFuncao, acharEscala } from '../lib/escalaLink'
 import { mesmoNome } from '../config/funcoesFornecedor'
 import { parseData } from '../lib/datas'
 import { iso } from '../lib/folgas'
@@ -59,68 +59,84 @@ export function useJogosDoTime(pessoas, competitions, ano) {
         mapa.get(chave).push(item)
       }
 
-      // Cada nome de campeonato da escala_geral -> a aba do Portal, quando existe.
-      const doPortal = new Map()
-      for (const c of competitions || []) {
-        const cfg = c.sections?.find(s => s.isOverview)?.config
-        for (const nome of escalaCampeonatosDe(c.label, cfg?.escalaCamps)) {
-          doPortal.set(String(nome).toLowerCase().trim(), c)
-        }
-      }
-
-      const anota = (jogo, escalados, campLabel, comp) => {
-        const d = parseData(jogo.data, ano)
-        if (!d || d.getFullYear() !== Number(ano)) return
-        const dia = iso(d.getFullYear(), d.getMonth(), d.getDate())
-        const confronto = jogo.visitante
-          ? `${jogo.mandante} × ${jogo.visitante}`
-          : String(jogo.mandante || '').trim()
-        if (!confronto) return
+      const anota = ({ dia, confronto, escalados, comp, jogo, campeonato }) => {
         for (const p of ligadas) {
           const achou = escalados.find(e => p.nomes_escala.some(a => mesmoNome(a, e.nome)))
           if (!achou) continue
           guardar(p.id, dia, {
             compId: comp?.id || null,
-            compLabel: comp?.label || campLabel,
+            compLabel: comp?.label || campeonato || 'Escala Geral',
             cor: comp?.accentColor || '#8A8FA3',
             confronto, funcao: achou.funcao, jogo,
           })
         }
       }
+      const diaDe = valor => {
+        const d = parseData(valor, ano)
+        if (!d || d.getFullYear() !== Number(ano)) return null
+        return iso(d.getFullYear(), d.getMonth(), d.getDate())
+      }
 
-      // ── 1. a escala_geral inteira ──
+      // ── 1. os jogos de cada campeonato, e a linha da escala de cada um ──
+      // Percorrer os JOGOS (e não a escala) para achar o par usa o mesmo
+      // casamento que a Visão Geral — com apelido de time e tolerância de um
+      // dia. E dá o que faltava: a linha da grade passa a ser o jogo DE
+      // VERDADE, com a data e o nome que o Controle tem, e é ele que abre ao
+      // clicar.
+      const jogoDaEscala = new Map()   // id da linha da escala -> { jogo, comp }
+      await Promise.all((competitions || []).map(async comp => {
+        try {
+          const res = await carregarCompeticao(comp)
+          if (!res) return
+          const colunas = pessoalDaConfig(res.cfg)
+          for (const j of res.jogos) {
+            if (!j.mandante || !j.visitante) continue
+            const eg = acharEscala(j, res.idxEscala)?.escala
+            if (eg?.id) jogoDaEscala.set(eg.id, { jogo: j, comp })
+
+            const dia = diaDe(j.data)
+            if (!dia) continue
+            const confronto = `${j.mandante} × ${j.visitante}`
+
+            // as 4 funções de produção, da linha da escala casada com este jogo
+            const escalados = []
+            if (eg) {
+              for (const fn of FUNCOES_ESCALA) {
+                if (naoTemFuncao(eg[fn.key])) continue
+                pedacos(eg[fn.key]).forEach(n => escalados.push({ nome: n, funcao: fn.label }))
+              }
+            }
+            // e as colunas de Pessoal do Controle
+            for (const col of colunas) {
+              pedacos(j[col.key]).forEach(n => escalados.push({ nome: n, funcao: col.label }))
+            }
+            if (escalados.length) anota({ dia, confronto, escalados, comp, jogo: j })
+          }
+        } catch (e) {
+          console.warn(`[useJogosDoTime] ${comp.label}:`, e.message)
+        }
+      }))
+
+      // ── 2. o que sobrou na escala_geral ──
+      // Linhas que nenhum jogo do Portal reclamou: campeonato sem aba (Media
+      // Day, Copinha, Série B) e as linhas de COBERTURA, que não são partida
+      // nenhuma — "Vas x Ctb" contra "Mir x Bota" é um plantão sobre quatro
+      // jogos. Aparecem, porque é trabalho de verdade no dia, mas não abrem
+      // jogo: não há um jogo só para abrir.
       const { data: eg } = await supabase.from('escala_geral').select('*')
       for (const r of eg || []) {
-        if (!r.mandante) continue
+        if (!r.mandante || jogoDaEscala.has(r.id)) continue
+        const dia = diaDe(r.data)
+        if (!dia) continue
         const escalados = []
         for (const fn of FUNCOES_ESCALA) {
           if (naoTemFuncao(r[fn.key])) continue
           pedacos(r[fn.key]).forEach(n => escalados.push({ nome: n, funcao: fn.label }))
         }
         if (!escalados.length) continue
-        anota(r, escalados, r.campeonato || 'Escala Geral',
-          doPortal.get(String(r.campeonato || '').toLowerCase().trim()))
+        const confronto = [r.mandante, r.visitante].map(x => String(x || '').trim()).filter(Boolean).join(' × ')
+        anota({ dia, confronto, escalados, comp: null, jogo: r, campeonato: r.campeonato })
       }
-
-      // ── 2. as colunas de Pessoal do Controle ──
-      await Promise.all((competitions || []).map(async comp => {
-        try {
-          const res = await carregarCompeticao(comp)
-          if (!res) return
-          const colunas = pessoalDaConfig(res.cfg)
-          if (!colunas.length) return
-          for (const j of res.jogos) {
-            if (!j.mandante || !j.visitante) continue
-            const escalados = []
-            for (const col of colunas) {
-              pedacos(j[col.key]).forEach(n => escalados.push({ nome: n, funcao: col.label }))
-            }
-            if (escalados.length) anota(j, escalados, comp.label, comp)
-          }
-        } catch (e) {
-          console.warn(`[useJogosDoTime] ${comp.label}:`, e.message)
-        }
-      }))
 
       if (!cancelado) setJogosPorDia(mapa)
     })()

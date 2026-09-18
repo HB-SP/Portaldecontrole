@@ -599,11 +599,11 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
                           {reg?.detalhe && !c?.exige_detalhe && <span className="flg-nota" title={reg.detalhe}>·</span>}
                           {(jogosPorDia.get(`${p.id}|${diaIso}`) || []).map((j, i) => (
                             <button
-                              key={i} className="flg-jogo"
-                              title={`${j.compLabel} · ${j.confronto}\n${j.funcao}${j.compId ? ' — clique para abrir o jogo' : ''}`}
+                              key={i} className={`flg-jogo${j.compId ? '' : ' flg-jogo-sem'}`}
+                              title={`${j.compLabel} · ${j.confronto}\n${j.funcao}${j.compId ? ' — clique para abrir o jogo' : ' — este jogo não tem ficha no Portal'}`}
                               onMouseDown={e => e.stopPropagation()}
                               onClick={e => { e.stopPropagation(); if (j.compId) onAbrirJogo?.(j.compId, j.jogo) }}
-                              style={{ background: j.cor, cursor: j.compId ? 'pointer' : 'help' }}
+                              style={j.compId ? { background: j.cor } : { borderColor: j.cor }}
                             />
                           ))}
                         </td>

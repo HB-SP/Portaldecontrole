@@ -4647,3 +4647,5 @@ body {
   border: none; border-radius: 2px; cursor: pointer;
 }
 .flg-jogo:hover { outline: 2px solid var(--text); outline-offset: 1px; }
+/* Vazada: a escala tem o jogo, o Controle não — não há ficha para abrir. */
+.flg-jogo-sem { background: transparent; border: 1.5px solid; cursor: help; }
