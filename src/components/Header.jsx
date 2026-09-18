@@ -4,12 +4,12 @@ import HistoricoAlteracoes from './HistoricoAlteracoes'
 import LiveClock from './LiveClock'
 
 // Header enxuto: presença + ação principal (Novo Jogo) sempre visíveis; a
-// navegação (Início, Escalar, Fornecedores, Links, Usuários, Sair) vive
+// navegação (Início, Escalar, Folgas, Fornecedores, Links, Usuários, Sair) vive
 // no menu ☰. A preferência "menu fixo aberto" fica no navegador.
 // `titulo` e `relogio` são usados pela tela inicial: antes viviam numa faixa
 // própria dentro dela ("PORTAL DE CONTROLE / Host Broadcast" + hora), que
 // gastava uma linha inteira da página para dizer pouco. Subiram para cá.
-export default function Header({ activeView, onHomeClick, onFornecedoresClick, onEscalarClick, onLinksClick, onUsuariosClick, onSair, onNewCompetition, onNewJogo, accentColor, user, userNome, viewLabel, titulo, relogio }) {
+export default function Header({ activeView, onHomeClick, onFornecedoresClick, onEscalarClick, onFolgasClick, onLinksClick, onUsuariosClick, onSair, onNewCompetition, onNewJogo, accentColor, user, userNome, viewLabel, titulo, relogio }) {
   const [expandido, setExpandido] = useState(() => {
     try { return localStorage.getItem('header_expandido') === '1' } catch { return false }
   })
@@ -44,6 +44,14 @@ export default function Header({ activeView, onHomeClick, onFornecedoresClick, o
       <svg viewBox="0 0 16 16" fill="none" width="14" height="14">
         <rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
         <path d="M5 5.5h6M5 8h6M5 10.5h3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+      </svg>
+    ) },
+    { key: 'folgas', label: 'Folgas e presença', onClick: onFolgasClick, icon: (
+      <svg viewBox="0 0 16 16" fill="none" width="14" height="14">
+        <rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
+        <path d="M2 6.5h12M5.5 2v2.5M10.5 2v2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+        <circle cx="6" cy="9.5" r="1" fill="currentColor"/>
+        <circle cx="10" cy="11.5" r="1" fill="currentColor"/>
       </svg>
     ) },
     { key: 'fornecedores', label: 'Fornecedores', onClick: onFornecedoresClick, icon: (

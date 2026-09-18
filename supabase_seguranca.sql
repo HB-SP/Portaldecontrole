@@ -70,7 +70,9 @@ BEGIN
     'brasileirao_jogos','perifericos_brasileirao',
     'paulistao_feminino_jogos','perifericos_paulistao',
     'nba_prime_video','competitions','competition_columns',
-    'competition_events','dropdown_options','escala_geral'
+    'competition_events','dropdown_options','escala_geral',
+    'folgas_times','folgas_pessoas','folgas_categorias',
+    'folgas_dias','folgas_feriados','folgas_ajustes'
   ] LOOP
     IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename=t) THEN
       EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);

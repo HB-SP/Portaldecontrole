@@ -6,6 +6,7 @@ import HomeView from './components/HomeView'
 import FornecedoresPage from './components/FornecedoresPage'
 import EscalaGeralView from './components/EscalaGeralView'
 import EscalarView from './components/EscalarView'
+import FolgasView from './components/FolgasView'
 import NewCompetitionDialog from './components/NewCompetitionDialog'
 import LoginGate, { PendentePortal } from './components/LoginGate'
 import UsuariosPortal from './components/UsuariosPortal'
@@ -177,6 +178,7 @@ export default function App() {
           onHomeClick={handleHomeClick}
           onFornecedoresClick={handleFornecedoresClick}
           onEscalarClick={() => setActiveView('escalar')}
+          onFolgasClick={() => setActiveView('folgas')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -201,6 +203,7 @@ export default function App() {
           onHomeClick={handleHomeClick}
           onFornecedoresClick={handleFornecedoresClick}
           onEscalarClick={() => setActiveView('escalar')}
+          onFolgasClick={() => setActiveView('folgas')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -216,6 +219,34 @@ export default function App() {
     )
   }
 
+  if (activeView === 'folgas') {
+    return (
+      <div className="app">
+        <Header
+          activeView="folgas"
+          user={user} userNome={userNome} viewLabel={'Folgas e presença'}
+          onHomeClick={handleHomeClick}
+          onFornecedoresClick={handleFornecedoresClick}
+          onEscalarClick={() => setActiveView('escalar')}
+          onFolgasClick={() => setActiveView('folgas')}
+          onLinksClick={() => setActiveView('links')}
+          onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
+          onSair={isConfigured ? sair : undefined}
+        />
+        <main className="main-content" style={{ paddingTop: 84 }}>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>Folgas e presença</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
+              Onde cada um está, dia a dia — e quantas folgas ainda tem a tirar.
+              Como o time trabalha fim de semana, cada sábado, domingo e feriado gera uma folga de direito.
+            </div>
+          </div>
+          <FolgasView podeEditar={portalRole === 'admin' || portalRole === 'equipe'} />
+        </main>
+      </div>
+    )
+  }
+
   if (activeView === 'escalar') {
     return (
       <div className="app">
@@ -225,6 +256,7 @@ export default function App() {
           onHomeClick={handleHomeClick}
           onFornecedoresClick={handleFornecedoresClick}
           onEscalarClick={() => setActiveView('escalar')}
+          onFolgasClick={() => setActiveView('folgas')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -254,6 +286,7 @@ export default function App() {
           onHomeClick={handleHomeClick}
           onFornecedoresClick={handleFornecedoresClick}
           onEscalarClick={() => setActiveView('escalar')}
+          onFolgasClick={() => setActiveView('folgas')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -278,6 +311,7 @@ export default function App() {
           onHomeClick={handleHomeClick}
           onFornecedoresClick={handleFornecedoresClick}
           onEscalarClick={() => setActiveView('escalar')}
+          onFolgasClick={() => setActiveView('folgas')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -305,6 +339,7 @@ export default function App() {
           onHomeClick={handleHomeClick}
           onFornecedoresClick={handleFornecedoresClick}
           onEscalarClick={() => setActiveView('escalar')}
+          onFolgasClick={() => setActiveView('folgas')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -329,6 +364,7 @@ export default function App() {
           onHomeClick={handleHomeClick}
           onFornecedoresClick={handleFornecedoresClick}
           onEscalarClick={() => setActiveView('escalar')}
+          onFolgasClick={() => setActiveView('folgas')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -371,6 +407,7 @@ export default function App() {
         onHomeClick={handleHomeClick}
         onFornecedoresClick={handleFornecedoresClick}
           onEscalarClick={() => setActiveView('escalar')}
+          onFolgasClick={() => setActiveView('folgas')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}

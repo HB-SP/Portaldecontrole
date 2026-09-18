@@ -4406,3 +4406,146 @@ body {
 }
 .escalar-zap:hover { color: var(--lm-green-dim); }
 .escalar-pessoa .escalar-zap { margin-left: 4px; }
+
+/* ─── CONTROLE DE FOLGAS ───────────────────────────────────────────────────
+   A grade do mês no formato que a equipe já lê: um dia por linha, uma pessoa
+   por coluna. A coluna do dia fica presa à esquerda para não se perder de
+   vista qual dia é ao rolar para o lado. */
+.flg { display: flex; flex-direction: column; gap: 12px; }
+
+.flg-barra { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.flg-mes { display: inline-flex; align-items: center; gap: 4px; }
+.flg-mes-nome { min-width: 140px; text-align: center; font-size: 14px; color: var(--text); }
+.flg-seta {
+  width: 28px; height: 28px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--border-light); background: var(--bg-card);
+  color: var(--text); font-size: 16px; line-height: 1;
+}
+.flg-seta:hover { border-color: var(--text-dim); }
+.flg-sel {
+  height: 30px; padding: 0 10px; border-radius: 6px;
+  border: 1px solid var(--border-light); background: var(--bg-input);
+  color: var(--text); font-family: inherit; font-size: 12.5px;
+}
+.flg-abas { display: inline-flex; border: 1px solid var(--border-light); border-radius: 6px; overflow: hidden; }
+.flg-aba {
+  padding: 0 12px; height: 30px; cursor: pointer; border: none;
+  background: var(--bg-card); color: var(--text-muted);
+  font-family: inherit; font-size: 12.5px; font-weight: 600;
+}
+.flg-aba.is-on { background: var(--lm-green-bg); color: var(--lm-green-dim); }
+.flg-btn {
+  height: 30px; padding: 0 12px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--border-light); background: var(--bg-card);
+  color: var(--text); font-family: inherit; font-size: 12.5px; font-weight: 600;
+}
+.flg-btn.is-on { background: var(--lm-green); border-color: var(--lm-green); color: #fff; }
+.flg-erro {
+  padding: 8px 12px; border-radius: 6px; font-size: 12.5px;
+  background: #FDF6E3; border: 1px solid var(--amber); color: #7A5A0E;
+}
+
+/* Barra da seleção múltipla */
+.flg-selbarra {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 12px; border-radius: 8px;
+  background: var(--lm-green-bg); border: 1px solid var(--lm-green);
+  font-size: 12.5px; color: var(--text);
+}
+.flg-selbarra-dica { color: var(--text-muted); font-size: 11.5px; }
+
+/* A grade */
+.flg-wrap {
+  overflow: auto; max-height: calc(100vh - 230px); min-height: 320px;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg-card); box-shadow: var(--shadow);
+}
+.flg-tab { border-collapse: separate; border-spacing: 0; font-size: 12px; white-space: nowrap; }
+.flg-tab th {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--bg-surface); box-shadow: 0 1px 0 var(--border-light);
+  padding: 6px 8px; text-align: center; font-weight: 700;
+}
+.flg-th-dia { width: 74px; min-width: 74px; text-align: left !important; }
+.flg-th-pessoa { min-width: 96px; }
+.flg-th-nome {
+  border-top: 3px solid var(--border); padding-top: 4px;
+  font-size: 11.5px; color: var(--text); text-overflow: ellipsis; overflow: hidden;
+}
+.flg-atirar { display: block; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.flg-fix { position: sticky; left: 0; z-index: 25; background: var(--bg-card); }
+.flg-tab th.flg-fix { z-index: 40; background: var(--bg-surface); }
+
+.flg-linha > td { height: 26px; padding: 0 6px; border-bottom: 1px solid var(--border); border-left: 1px solid var(--border); }
+/* Fim de semana e feriado: o dia que GERA a folga de direito. */
+.flg-linha-descanso > td.flg-td-dia { background: var(--bg-surface2); font-weight: 700; }
+.flg-linha-hoje > td { border-top: 2px solid var(--lm-green); }
+.flg-td-dia { display: flex; align-items: center; gap: 6px; }
+.flg-dia-num { font-variant-numeric: tabular-nums; font-weight: 600; }
+.flg-dia-sem { color: var(--text-muted); font-size: 11px; }
+.flg-dia-feriado { color: var(--amber); font-size: 9px; cursor: help; }
+
+.flg-cel {
+  position: relative; text-align: center; max-width: 140px;
+  overflow: hidden; text-overflow: ellipsis; font-size: 11px;
+}
+.flg-cel-edita { cursor: pointer; }
+.flg-cel-edita:hover { box-shadow: inset 0 0 0 2px var(--lm-green); }
+.flg-cel-marcada { box-shadow: inset 0 0 0 2px var(--lm-green) !important; }
+
+/* Editor do dia */
+.flg-editor {
+  position: absolute; top: 100%; left: 0; z-index: 80;
+  width: 260px; padding: 10px; text-align: left; cursor: default;
+  background: var(--bg-card); color: var(--text);
+  border: 1px solid var(--border-light); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.16);
+  display: flex; flex-direction: column; gap: 8px; white-space: normal;
+}
+.flg-editor-cats { display: flex; flex-wrap: wrap; gap: 4px; }
+.flg-cat {
+  padding: 3px 8px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--bg-card);
+  font-family: inherit; font-size: 11.5px; font-weight: 600;
+}
+.flg-cat:disabled { opacity: 0.4; cursor: default; }
+.flg-editor-presets { display: flex; flex-wrap: wrap; gap: 4px; }
+.flg-preset {
+  padding: 3px 8px; border-radius: 5px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--bg-surface);
+  color: var(--text-muted); font-family: inherit; font-size: 11.5px;
+}
+.flg-preset.is-on { background: var(--lm-green-bg); border-color: var(--lm-green); color: var(--lm-green-dim); font-weight: 700; }
+.flg-editor-campo {
+  width: 100%; height: 30px; padding: 0 8px; border-radius: 6px;
+  border: 1px solid var(--border-light); background: var(--bg-input);
+  color: var(--text); font-family: inherit; font-size: 12.5px;
+}
+.flg-editor-pe { display: flex; align-items: center; gap: 8px; }
+.flg-editor-limpar {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--red); font-family: inherit; font-size: 11.5px; font-weight: 600;
+}
+.flg-editor-ok {
+  padding: 5px 14px; border-radius: 6px; cursor: pointer; border: none;
+  background: var(--lm-green); color: #fff; font-family: inherit; font-size: 12px; font-weight: 700;
+}
+.flg-editor-ok:disabled { background: var(--border-gray); cursor: default; }
+
+/* Resumo */
+.flg-resumo { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.flg-resumo th {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--bg-surface); color: var(--text-muted);
+  padding: 8px; text-align: left; font-size: 10.5px;
+  font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  box-shadow: 0 1px 0 var(--border-light);
+}
+.flg-resumo td { padding: 7px 8px; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+.flg-resumo-nome { font-weight: 600; }
+.flg-ponto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; }
+.flg-resumo .flg-atirar { display: inline; font-size: 13px; }
+.flg-legenda { padding: 12px; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
