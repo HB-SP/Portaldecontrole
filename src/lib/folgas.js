@@ -70,9 +70,10 @@ function contar(dias, feriados, ehFolga, deIso, ateIso, corte) {
     if (desde === null || chave < desde) continue
     if (geraFolga(d.getFullYear(), d.getMonth(), d.getDate(), feriados)) direito++
     if (reg && ehFolga(reg.categoria_id)) usadas++
-    // Dia sem nada preenchido. Não muda a conta, mas diz o quanto ela é
-    // confiável: um saldo alto com muito dia em branco é coluna mal preenchida,
-    // não folga acumulada.
+    // DIA EM BRANCO É DIA TRABALHADO (equipe, 18/09/2026). Ele já entra certo
+    // na conta sem precisar de nada: gera folga de direito, como todo dia, e não
+    // consome nenhuma. A contagem aqui é só informação — quanto da grade está
+    // preenchido — e não entra no saldo.
     if (!reg) emBranco++
   }
   return { direito, usadas, deslocamentos, emBranco, desde }
