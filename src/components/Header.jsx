@@ -111,6 +111,22 @@ export default function Header({ activeView, onHomeClick, onFornecedoresClick, o
         </div>
       )}
 
+      {/* A escala interna do time fica escondida no menu, e é o que a equipe
+          abre todo dia. Aqui ela ganha um atalho ao lado do título, na tela
+          inicial — que é por onde todo mundo entra. */}
+      {titulo && onFolgasClick && (
+        <button className="hd-time" onClick={onFolgasClick}
+          title="Time HB — folgas, home, externas e férias da equipe">
+          <svg viewBox="0 0 16 16" fill="none" width="13" height="13">
+            <rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
+            <path d="M2 6.5h12M5.5 2v2.5M10.5 2v2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            <circle cx="6" cy="9.5" r="1" fill="currentColor"/>
+            <circle cx="10" cy="11.5" r="1" fill="currentColor"/>
+          </svg>
+          Time HB
+        </button>
+      )}
+
       <div className="header-actions">
         {relogio && <LiveClock />}
         {user && <PresencaBar user={user} nome={userNome} viewLabel={viewLabel} />}

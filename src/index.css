@@ -4127,6 +4127,17 @@ body {
 }
 /* O relógio ficava numa faixa grande; no cabeçalho vai discreto */
 .header-actions .hv-clock { margin-right: 6px; }
+/* Atalho para a escala interna do time, ao lado do título na tela inicial. */
+.hd-time {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 30px; padding: 0 12px; border-radius: 999px; cursor: pointer;
+  background: var(--lm-green-bg); border: 1px solid var(--lm-green);
+  color: var(--lm-green-dim);
+  font-family: inherit; font-size: 12.5px; font-weight: 700;
+  white-space: nowrap;
+}
+.hd-time:hover { background: var(--lm-green); color: #fff; }
+
 @media (max-width: 900px) {
   .hd-titulo { display: none; }
   .header-actions .hv-clock { display: none; }
