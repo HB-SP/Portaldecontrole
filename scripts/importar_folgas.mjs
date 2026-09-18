@@ -64,14 +64,17 @@ const iso = (a, m, d) => `${a}-${String(m).padStart(2, '0')}-${String(d).padStar
 
 // ── as categorias ────────────────────────────────────────────────────────────
 // "Escritório" (Operações) e "Vila Olímpia" (Sinal Inter) são o mesmo lugar
-// chamado por dois nomes — viram uma categoria só (decisão da equipe, 18/09).
+// chamado por dois nomes — viram uma categoria só, padronizada em "Vila
+// Olímpia" (decisão da equipe, 18/09/2026). O id segue "escritorio" porque ele
+// nunca aparece na tela e trocá-lo obrigaria a reescrever os dias que apontam
+// para ele.
 const CATEGORIAS = [
   { id: 'folga',        nome: 'Folga',        curto: 'FOLGA',     cor: '#DC2626', fixa: true, conta_folga: true, ordem: 1 },
   { id: 'ferias',       nome: 'Férias',       curto: 'FÉRIAS',    cor: '#7C3AED', ordem: 2 },
   { id: 'atestado',     nome: 'Atestado',     curto: 'ATESTADO',  cor: '#B45309', ordem: 3 },
   { id: 'home',         nome: 'Home',         curto: 'HOME',      cor: '#2563EB', fixa: true, ordem: 4,
     presets: ['Home', 'Home - MM', 'Home - monitoração'] },
-  { id: 'escritorio',   nome: 'Escritório',   curto: 'ESCRIT.',   cor: '#475569', ordem: 5 },
+  { id: 'escritorio',   nome: 'Vila Olímpia', curto: 'V. OLÍMPIA', cor: '#475569', ordem: 5 },
   { id: 'casablanca',   nome: 'Casablanca',   curto: 'CASABL.',   cor: '#64748B', ordem: 6, pede_detalhe: true },
   { id: 'livekasa',     nome: 'LiveKasa',     curto: 'LIVEKASA',  cor: '#78716C', ordem: 7, pede_detalhe: true },
   { id: 'sportheca',    nome: 'Sportheca',    curto: 'SPORTHECA', cor: '#57534E', ordem: 8, pede_detalhe: true },
