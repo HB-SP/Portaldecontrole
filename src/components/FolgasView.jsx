@@ -130,11 +130,26 @@ function ATirar({ n, titulo }) {
 //
 // Os dois falam a MESMA língua ("3 a tirar"), de propósito: dois vocabulários
 // no mesmo cabeçalho era parte da confusão.
-function Placar({ mes, ano }) {
-  // DIA EM BRANCO É DIA TRABALHADO (equipe, 18/09/2026). Isso resolve o que
-  // parecia um problema: o branco não põe o saldo em dúvida, porque ele já
-  // está contado como trabalho — gera folga de direito e não consome nenhuma.
-  // Só quem não tem NENHUM registro fica sem saldo, por não ter começado.
+// Para QUEM o dia em branco já vale como dia trabalhado, e portanto o saldo
+// pode ser lido sem ressalva mesmo com a coluna pela metade.
+//
+// Isto é uma exceção por pessoa, não uma regra do sistema: a equipe disse em
+// 18/09/2026 que os dias em branco do Gui Soria são dias trabalhados, e
+// corrigiu em seguida que isso vale só para ele. Para os demais, coluna vazia
+// continua significando dado que falta, e o saldo sai com ressalva.
+//
+// Mora aqui, e não no banco, porque é uma linha e uma pessoa; se virar algo que
+// muda com frequência, vira coluna em folgas_pessoas.
+const BRANCO_E_TRABALHO = new Set(['gui soria'])
+const semRessalva = nome => BRANCO_E_TRABALHO.has(
+  String(nome || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
+)
+
+function Placar({ mes, ano, nome }) {
+  // Coluna com muito dia em branco: o saldo pode estar alto por falta de dado,
+  // não por folga acumulada. O número fica — esconder daria uma certeza falsa —
+  // mas avisa.
+  const duvidoso = ano.emBranco > 20 && !semRessalva(nome)
   const desdeQuando = ano.desde ? `de ${ano.desde.split('-').reverse().join('/')}` : ''
   return (
     <div className="flg-placar">
@@ -142,9 +157,13 @@ function Placar({ mes, ano }) {
         className="flg-placar-total" style={{ color: corDoSaldo(ano.aTirar) }}
         title={ano.desde === null
           ? 'Sem nenhum dia preenchido neste ano'
-          : `No ano, ${desdeQuando} até hoje: tirou ${ano.usadas} folgas de ${ano.direito} a que teve direito`}
+          : `No ano, ${desdeQuando} até hoje: tirou ${ano.usadas} folgas de ${ano.direito} a que teve direito` +
+            (ano.emBranco && !semRessalva(nome) ? ` — com ${ano.emBranco} dias em branco` : '')}
       >
         {ano.desde === null ? '—' : emPalavras(ano.aTirar)}
+        {duvidoso && (
+          <span className="flg-duvida" title={`${ano.emBranco} dias sem preencher: o saldo pode estar alto por falta de dado, não por folga acumulada`}>?</span>
+        )}
       </div>
       <div
         className="flg-placar-mes"
@@ -335,7 +354,7 @@ export default function FolgasView({ podeEditar = false }) {
                   return (
                     <th key={p.id} className={`flg-th-pessoa${p.id === minhaPessoaId ? ' flg-eu' : ''}`}>
                       <div className="flg-th-nome">{p.nome}</div>
-                      {s && <Placar mes={s.mes} ano={s.ano} />}
+                      {s && <Placar mes={s.mes} ano={s.ano} nome={p.nome} />}
                     </th>
                   )
                 })}
@@ -415,7 +434,7 @@ export default function FolgasView({ podeEditar = false }) {
                     <td>{s.mes.ajuste || '—'}</td>
                     <td><ATirar n={s.mes.aTirar} /></td>
                     <td>{s.mes.deslocamentos || '—'}</td>
-                    <td style={{ color: 'var(--text-dim)' }}>{s.ano.emBranco || '—'}</td>
+                    <td style={s.ano.emBranco > 20 && !semRessalva(p.nome) ? { color: 'var(--amber)', fontWeight: 700 } : { color: 'var(--text-dim)' }}>{s.ano.emBranco || '—'}</td>
                     <td><ATirar n={s.ano.aTirar} /></td>
                   </tr>
                 )
@@ -423,7 +442,7 @@ export default function FolgasView({ podeEditar = false }) {
             </tbody>
           </table>
           <div className="flg-legenda">
-            Dia em branco conta como dia trabalhado. Cada sábado, domingo e feriado gera uma folga de direito. Feriado que cai em
+            Cada sábado, domingo e feriado gera uma folga de direito. Feriado que cai em
             fim de semana não conta duas vezes. As folgas de direito contam só até hoje —
             um mês que ainda não chegou não gera dívida.
           </div>
