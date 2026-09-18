@@ -244,11 +244,6 @@ export default function FolgasView({ podeEditar = false }) {
   // já está marcado com elas), mas saem da lista de escolher.
   const oferecidas = useMemo(() => categorias.filter(c => !c.arquivada), [categorias])
   const ehFolga = id => !!catPorId.get(id)?.conta_folga
-  // Dia de atestado não gera folga de direito: quem está afastado não trabalhou
-  // aquele fim de semana (equipe, 18/09/2026). Férias NÃO entra aqui — medido
-  // contra o saldo das planilhas, incluir férias piorava justamente as colunas
-  // bem preenchidas (Anny, Pardal, Lucas).
-  const suspende = id => id === 'atestado'
 
   const visiveis = useMemo(
     () => pessoas.filter(p => !fTime || p.time_id === fTime),
@@ -275,8 +270,8 @@ export default function FolgasView({ podeEditar = false }) {
       const meus = diasDe.get(p.id) || new Map()
       const meusAjustes = ajustes.filter(a => a.pessoa_id === p.id)
       m.set(p.id, {
-        mes: saldoDoMes({ dias: meus, feriados: feriadosChaves, ehFolga, suspende, ajustes: meusAjustes, ano, mes, hoje }),
-        ano: saldoDoAno({ dias: meus, feriados: feriadosChaves, ehFolga, suspende, ajustes: meusAjustes, ano, hoje }),
+        mes: saldoDoMes({ dias: meus, feriados: feriadosChaves, ehFolga, ajustes: meusAjustes, ano, mes, hoje }),
+        ano: saldoDoAno({ dias: meus, feriados: feriadosChaves, ehFolga, ajustes: meusAjustes, ano, hoje }),
       })
     }
     return m

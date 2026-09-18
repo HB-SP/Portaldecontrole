@@ -36,6 +36,19 @@ export const ehFimDeSemana = (ano, mes, dia) => {
   return d === 0 || d === 6
 }
 
+// Categorias que SUSPENDEM o direito. Quem está afastado não trabalhou aquele
+// fim de semana, então não ganha a folga — e, não estando de folga, também não
+// consome as pendentes. O saldo fica parado.
+//
+// Férias entra aqui junto com atestado, por decisão da equipe (18/09/2026):
+// "ferias é quase igual o atestado. ela não te da direito de folga nos finais
+// de semana e não conta tudo como folga tbm".
+//
+// Mora aqui, e não em cada tela, porque é REGRA: estava copiada na tela e em
+// dois scripts, e com duas categorias isso divergiria na primeira mudança.
+export const SUSPENDE_DIREITO = new Set(['atestado', 'ferias'])
+export const suspendeDireito = id => SUSPENDE_DIREITO.has(id)
+
 // Um dia gera folga de direito quando é fim de semana OU feriado — nunca os
 // dois, ver a decisão 2 no topo.
 export const geraFolga = (ano, mes, dia, feriados) =>
@@ -98,7 +111,7 @@ function contar(dias, feriados, ehFolga, suspende, deIso, ateIso, corte) {
 }
 
 // Saldo do MÊS. `hoje` entra como parâmetro para o cálculo ser testável.
-export function saldoDoMes({ dias, feriados, ehFolga, suspende = () => false, ajustes = [], ano, mes, hoje = hojeIso() }) {
+export function saldoDoMes({ dias, feriados, ehFolga, suspende = suspendeDireito, ajustes = [], ano, mes, hoje = hojeIso() }) {
   const ultimo = diasNoMes(ano, mes)
   const primeiroIso = iso(ano, mes, 1)
   const ultimoIso = iso(ano, mes, ultimo)
@@ -110,7 +123,7 @@ export function saldoDoMes({ dias, feriados, ehFolga, suspende = () => false, aj
 }
 
 // Saldo ACUMULADO do ano, do 1º de janeiro até hoje.
-export function saldoDoAno({ dias, feriados, ehFolga, suspende = () => false, ajustes = [], ano, hoje = hojeIso() }) {
+export function saldoDoAno({ dias, feriados, ehFolga, suspende = suspendeDireito, ajustes = [], ano, hoje = hojeIso() }) {
   const primeiroIso = iso(ano, 0, 1)
   const ultimoIso = iso(ano, 11, 31)
   const limite = hoje < primeiroIso ? '0000-00-00' : (hoje < ultimoIso ? hoje : ultimoIso)
