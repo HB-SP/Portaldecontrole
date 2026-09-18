@@ -55,7 +55,7 @@ function estiloCelula(cat) {
 //
 // O descritivo continua ali, mas num segundo passo, para quem quer: ele é a
 // exceção, não o caminho principal.
-function MenuDia({ atual, categorias, onSalvar, onFechar, ancora }) {
+function MenuDia({ atual, categorias, onSalvar, onFechar, ancora, quantos = 1 }) {
   // 'lista' = escolher a categoria. 'texto' = escrever o descritivo daquela.
   const [modo, setModo] = useState('lista')
   const [cat, setCat] = useState(atual?.categoria_id || '')
@@ -118,6 +118,7 @@ function MenuDia({ atual, categorias, onSalvar, onFechar, ancora }) {
 
   return (
     <div className="flg-menu" ref={ref} style={ancora} onMouseDown={e => e.stopPropagation()}>
+      {quantos > 1 && <div className="flg-menu-quantos">{quantos} dias marcados</div>}
       {categorias.map(c => (
         <button
           key={c.id}
@@ -300,7 +301,7 @@ export default function FolgasView({ podeEditar = false }) {
     [ano, mes]
   )
 
-  function aoPressionar(pessoaId, diaIso, reg, e) {
+  function aoPressionar(pessoaId, diaIso, e) {
     if (!podeEditar || e.button !== 0) return
     // A seleção é de UMA pessoa: começar noutra coluna no meio do caminho
     // misturaria dias de gente diferente no mesmo lote.
@@ -311,7 +312,6 @@ export default function FolgasView({ podeEditar = false }) {
       // célula corta o que passa da borda (para truncar texto longo) e a grade
       // também. Ele nasce preso ao body, nesta posição.
       caixa: e.currentTarget.getBoundingClientRect(),
-      valor: reg ? { categoria_id: reg.categoria_id, detalhe: reg.detalhe, campeonato: reg.campeonato } : null,
     }
     setArrasto({ ...arrastoRef.current })
   }
@@ -355,14 +355,28 @@ export default function FolgasView({ podeEditar = false }) {
       }
 
       if (!a.moveu) { setEditando({ pessoaId: a.pessoaId, dia: a.de, caixa: a.caixa }); return }
+
+      // O valor de partida é lido AGORA, do estado atual, e não guardado lá no
+      // mousedown: guardado, ele podia chegar aqui vazio e o preenchimento caía
+      // no caminho de APAGAR — que em dias vazios não muda nada na tela e
+      // parecia que o arrasto não tinha funcionado.
+      const partida = dias.get(`${a.pessoaId}|${a.de}`)
+
+      // Partiu de um dia vazio: não há o que repetir. Em vez de apagar a faixa
+      // em silêncio, abre o menu UMA vez e aplica a todos os dias marcados —
+      // que é o preenchimento que a tela devia ter desde o começo.
+      if (!partida) { setEditando({ pessoaId: a.pessoaId, dia: a.de, caixa: a.caixa, faixa }); return }
+
       const alvo = faixa.filter(k => k !== a.de)
       if (!alvo.length) return
-      const falha = await salvarVarios(a.pessoaId, alvo, a.valor)
+      const falha = await salvarVarios(a.pessoaId, alvo, {
+        categoria_id: partida.categoria_id, detalhe: partida.detalhe, campeonato: partida.campeonato,
+      })
       if (falha) alert('Não deu para preencher: ' + falha)
     }
     document.addEventListener('mouseup', soltar)
     return () => document.removeEventListener('mouseup', soltar)
-  }, [todosOsDias, salvarVarios, selecao])
+  }, [todosOsDias, salvarVarios, selecao, dias])
 
   // O menu é preso à tela, então rolar a grade o deixaria solto no ar.
   useEffect(() => {
@@ -470,12 +484,15 @@ export default function FolgasView({ podeEditar = false }) {
         <MenuDia
           atual={dias.get(`${editando.pessoaId}|${editando.dia}`)}
           categorias={categorias}
+          quantos={editando.faixa?.length || 1}
           ancora={posicaoDoMenu(editando.caixa)}
           onFechar={() => setEditando(null)}
           onSalvar={async v => {
-            const { pessoaId, dia } = editando
+            const { pessoaId, dia, faixa } = editando
             setEditando(null)
-            const falha = await salvarDia(pessoaId, dia, v)
+            const falha = faixa?.length > 1
+              ? await salvarVarios(pessoaId, faixa, v)
+              : await salvarDia(pessoaId, dia, v)
             if (falha) alert('Não deu para salvar: ' + falha)
           }}
         />,
@@ -532,7 +549,7 @@ export default function FolgasView({ podeEditar = false }) {
                           className={`flg-cel${marcado || naFaixa(p.id, diaIso) ? ' flg-cel-marcada' : ''}${podeEditar ? ' flg-cel-edita' : ''}${p.id === minhaPessoaId ? ' flg-eu' : ''}`}
                           style={estiloCelula(c)}
                           title={reg ? `${c?.nome || 'Categoria removida'}${reg.campeonato ? ` · ${reg.campeonato}` : ''}${reg.detalhe ? `\n${reg.detalhe}` : ''}` : 'vazio'}
-                          onMouseDown={e => aoPressionar(p.id, diaIso, reg, e)}
+                          onMouseDown={e => aoPressionar(p.id, diaIso, e)}
                           onMouseOver={() => aoEntrar(p.id, diaIso)}
                         >
                           {texto}

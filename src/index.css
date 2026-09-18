@@ -4603,3 +4603,8 @@ body {
   font-weight: 800; font-size: 13px; line-height: 0; cursor: help;
 }
 .flg-dica { font-size: 11.5px; color: var(--text-dim); }
+.flg-menu-quantos {
+  padding: 5px 8px 6px; margin-bottom: 2px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11.5px; font-weight: 700; color: var(--lm-green-dim);
+}
