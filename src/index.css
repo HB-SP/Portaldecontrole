@@ -4513,7 +4513,20 @@ body {
    para ver quem trabalhou no sábado. */
 .flg-linha-descanso > td { background: #F4F5F7; }
 .flg-linha-descanso > td.flg-td-dia { background: var(--bg-surface2); font-weight: 700; }
-.flg-linha-hoje > td { border-top: 2px solid var(--lm-green); }
+/* O dia de hoje. A linha inteira fica entre duas faixas verdes, e a coluna do
+   dia ganha a palavra — uma linha só destacada por cor se perde no meio das de
+   fim de semana, que também têm fundo. */
+.flg-linha-hoje > td {
+  border-top: 2px solid var(--lm-green);
+  border-bottom: 2px solid var(--lm-green);
+}
+.flg-linha-hoje > td.flg-td-dia { background: var(--lm-green-bg); }
+.flg-linha-hoje .flg-dia-num { color: var(--lm-green-dim); font-weight: 800; }
+.flg-dia-hoje {
+  margin-left: auto; padding: 1px 6px; border-radius: 999px;
+  background: var(--lm-green); color: #fff;
+  font-size: 8.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+}
 
 /* Linha em destaque: clicar no dia acende a linha toda, como a barra de
    seleção de uma planilha. Vem depois das outras de propósito — com a mesma

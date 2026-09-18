@@ -236,6 +236,10 @@ export default function FolgasView({ podeEditar = false }) {
   // Linha em destaque, como numa planilha: clicar no dia acende a linha toda,
   // para acompanhar um dia inteiro sem perder a conta de qual coluna é quem.
   const [linhaFoco, setLinhaFoco] = useState(null)
+  // Para abrir a grade já no dia de hoje: com 31 linhas, entrar no dia 1 e ter
+  // de procurar é trabalho que a tela pode poupar.
+  const wrapRef = useRef(null)
+  const hojeRef = useRef(null)
 
   const feriadosSet = useMemo(() => new Map(feriados.map(f => [f.dia, f.nome])), [feriados])
   const feriadosChaves = useMemo(() => new Set(feriados.map(f => f.dia)), [feriados])
@@ -398,6 +402,15 @@ export default function FolgasView({ podeEditar = false }) {
     return () => window.removeEventListener('keydown', tecla)
   }, [desfazer])
 
+  // Abre a grade no dia de hoje, quando o mês na tela é o mês corrente.
+  useEffect(() => {
+    if (loading || aba !== 'grade') return
+    const wrap = wrapRef.current, linha = hojeRef.current
+    if (!wrap || !linha) return
+    // Um terço da altura, e não o topo: dá para ver alguns dias de trás.
+    wrap.scrollTop = Math.max(0, linha.offsetTop - wrap.clientHeight / 3)
+  }, [loading, aba, ano, mes])
+
   // O menu é preso à tela, então rolar a grade o deixaria solto no ar.
   useEffect(() => {
     if (!editando) return
@@ -519,7 +532,7 @@ export default function FolgasView({ podeEditar = false }) {
       )}
 
       {aba === 'grade' ? (
-        <div className="flg-wrap">
+        <div className="flg-wrap" ref={wrapRef}>
           <table className="flg-tab">
             <thead>
               <tr>
@@ -542,7 +555,8 @@ export default function FolgasView({ podeEditar = false }) {
                 const feriado = feriadosSet.get(diaIso)
                 const ehHoje = diaIso === hoje
                 return (
-                  <tr key={d} className={`flg-linha${fds || feriado ? ' flg-linha-descanso' : ''}${ehHoje ? ' flg-linha-hoje' : ''}${linhaFoco === diaIso ? ' flg-linha-foco' : ''}`}>
+                  <tr key={d} ref={ehHoje ? hojeRef : null}
+                    className={`flg-linha${fds || feriado ? ' flg-linha-descanso' : ''}${ehHoje ? ' flg-linha-hoje' : ''}${linhaFoco === diaIso ? ' flg-linha-foco' : ''}`}>
                     <td
                       className="flg-fix flg-td-dia"
                       title={`${feriado ? feriado + ' · ' : ''}clique para destacar o dia inteiro`}
@@ -551,6 +565,7 @@ export default function FolgasView({ podeEditar = false }) {
                       <span className="flg-dia-num">{String(d).padStart(2, '0')}</span>
                       <span className="flg-dia-sem">{SEMANA_CURTA[new Date(ano, mes, d).getDay()]}</span>
                       {feriado && <span className="flg-dia-feriado">●</span>}
+                      {ehHoje && <span className="flg-dia-hoje">hoje</span>}
                     </td>
                     {visiveis.map(p => {
                       const reg = (diasDe.get(p.id) || new Map()).get(diaIso)
