@@ -15,6 +15,11 @@
 //
 // 2. Feriado que cai em fim de semana NÃO conta duas vezes. O dia já era de
 //    descanso; somar de novo daria à pessoa uma folga que ela não ganhou.
+//
+// 3. Dia de ATESTADO não gera folga de direito. Quem está afastado não
+//    trabalhou aquele fim de semana, então não há o que compensar — e não
+//    estando de folga, também não consome as pendentes. A pessoa afastada fica
+//    com o saldo parado, que é o comportamento que a equipe descreveu.
 
 export const SEMANA_CURTA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 export const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -55,8 +60,8 @@ function primeiroRegistro(dias) {
   return menor
 }
 
-function contar(dias, feriados, ehFolga, deIso, ateIso, corte) {
-  let direito = 0, usadas = 0, deslocamentos = 0, emBranco = 0
+function contar(dias, feriados, ehFolga, suspende, deIso, ateIso, corte) {
+  let direito = 0, usadas = 0, deslocamentos = 0, emBranco = 0, suspensos = 0
   const desde = primeiroRegistro(dias)
   const [a0, m0, d0] = deIso.split('-').map(Number)
   const inicio = new Date(a0, m0 - 1, d0)
@@ -68,6 +73,13 @@ function contar(dias, feriados, ehFolga, deIso, ateIso, corte) {
     if (reg?.eh_deslocamento) deslocamentos++
     if (chave > corte) continue
     if (desde === null || chave < desde) continue
+
+    // DIA QUE SUSPENDE O DIREITO. Quem está de atestado não trabalhou o fim de
+    // semana, então não ganhou a folga correspondente. Sem isso a pessoa
+    // afastada acumula folga parada — foi o que fez o saldo do Yuji dar 33 na
+    // tela contra 6 na planilha (equipe, 18/09/2026).
+    if (reg && suspende(reg.categoria_id)) { suspensos++; continue }
+
     if (geraFolga(d.getFullYear(), d.getMonth(), d.getDate(), feriados)) direito++
     if (reg && ehFolga(reg.categoria_id)) usadas++
     // DIA EM BRANCO É DIA TRABALHADO (equipe, 18/09/2026). Ele já entra certo
@@ -76,27 +88,27 @@ function contar(dias, feriados, ehFolga, deIso, ateIso, corte) {
     // preenchido — e não entra no saldo.
     if (!reg) emBranco++
   }
-  return { direito, usadas, deslocamentos, emBranco, desde }
+  return { direito, usadas, deslocamentos, emBranco, suspensos, desde }
 }
 
 // Saldo do MÊS. `hoje` entra como parâmetro para o cálculo ser testável.
-export function saldoDoMes({ dias, feriados, ehFolga, ajustes = [], ano, mes, hoje = hojeIso() }) {
+export function saldoDoMes({ dias, feriados, ehFolga, suspende = () => false, ajustes = [], ano, mes, hoje = hojeIso() }) {
   const ultimo = diasNoMes(ano, mes)
   const primeiroIso = iso(ano, mes, 1)
   const ultimoIso = iso(ano, mes, ultimo)
   // O direito para no dia de hoje: mês futuro ainda não gera nada.
   const limite = hoje < primeiroIso ? '0000-00-00' : (hoje < ultimoIso ? hoje : ultimoIso)
-  const c = contar(dias, feriados, ehFolga, primeiroIso, ultimoIso, limite)
+  const c = contar(dias, feriados, ehFolga, suspende, primeiroIso, ultimoIso, limite)
   const ajuste = ajustes.filter(a => a.vale_de <= ultimoIso).reduce((s, a) => s + (a.delta || 0), 0)
   return { ...c, ajuste, aTirar: c.usadas - c.direito - ajuste, futuro: hoje < primeiroIso }
 }
 
 // Saldo ACUMULADO do ano, do 1º de janeiro até hoje.
-export function saldoDoAno({ dias, feriados, ehFolga, ajustes = [], ano, hoje = hojeIso() }) {
+export function saldoDoAno({ dias, feriados, ehFolga, suspende = () => false, ajustes = [], ano, hoje = hojeIso() }) {
   const primeiroIso = iso(ano, 0, 1)
   const ultimoIso = iso(ano, 11, 31)
   const limite = hoje < primeiroIso ? '0000-00-00' : (hoje < ultimoIso ? hoje : ultimoIso)
-  const c = contar(dias, feriados, ehFolga, primeiroIso, ultimoIso, limite)
+  const c = contar(dias, feriados, ehFolga, suspende, primeiroIso, ultimoIso, limite)
   const ajuste = ajustes.filter(a => a.vale_de <= limite).reduce((s, a) => s + (a.delta || 0), 0)
   return { ...c, ajuste, aTirar: c.usadas - c.direito - ajuste }
 }
