@@ -4469,12 +4469,30 @@ body {
   padding: 6px 8px; text-align: center; font-weight: 700;
 }
 .flg-th-dia { width: 74px; min-width: 74px; text-align: left !important; }
-.flg-th-pessoa { min-width: 96px; }
+.flg-th-pessoa { min-width: 104px; }
 .flg-th-nome {
-  border-top: 3px solid var(--border); padding-top: 4px;
-  font-size: 11.5px; color: var(--text); text-overflow: ellipsis; overflow: hidden;
+  font-size: 12px; color: var(--text); margin-bottom: 3px;
+  text-overflow: ellipsis; overflow: hidden;
 }
-.flg-atirar { display: block; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* Placar de cada pessoa: os DOIS períodos, em palavras. Um número solto
+   ("-3") não diz se é bom ou ruim; "deve 3" diz. */
+.flg-placar { display: flex; flex-direction: column; gap: 1px; }
+.flg-placar-linha { display: flex; align-items: baseline; justify-content: center; gap: 4px; cursor: help; }
+.flg-placar-rot {
+  font-size: 8.5px; font-weight: 700; color: var(--text-dim);
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.flg-placar-num { font-size: 11px; font-weight: 700; }
+.flg-placar-ano { font-size: 12.5px; font-weight: 800; }
+.flg-atirar { font-weight: 700; font-size: 12.5px; }
+
+/* Legenda: com a cor lavada, o nome da categoria precisa ficar à mão. */
+.flg-legenda-cores { display: flex; flex-wrap: wrap; gap: 5px; }
+.flg-chip {
+  padding: 2px 9px; border-radius: 999px; font-size: 11px;
+  border: 1px solid var(--border);
+}
 
 .flg-fix { position: sticky; left: 0; z-index: 25; background: var(--bg-card); }
 .flg-tab th.flg-fix { z-index: 40; background: var(--bg-surface); }

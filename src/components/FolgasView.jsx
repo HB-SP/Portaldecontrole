@@ -18,10 +18,34 @@ import {
 
 const CHAVE_TIME = 'folgas_time'
 
+// ── COR NA GRADE ─────────────────────────────────────────────────────────────
+// Pintar toda célula com a cor forte da categoria vira carnaval: com 18 colunas
+// e 31 linhas nada salta, porque tudo salta.
+//
+// Então só a AUSÊNCIA ganha cor de verdade — é dela que a tela trata, e é ela
+// que a conta de folga persegue. Dia de trabalho fica num tom lavado da própria
+// cor, o bastante para distinguir Casablanca de Escritório de relance, sem
+// competir com o vermelho da folga.
+const AUSENCIA = new Set(['folga', 'ferias', 'atestado'])
+
+// '#DC2626' -> 'rgba(220, 38, 38, 0.1)'
+function tom(hex, alfa) {
+  const h = String(hex || '#888888').replace('#', '')
+  const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16)
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alfa})`
+}
+
+function estiloCelula(cat) {
+  if (!cat) return undefined
+  if (cat.id === 'folga') return { background: cat.cor, color: '#fff', fontWeight: 700 }
+  if (AUSENCIA.has(cat.id)) return { background: tom(cat.cor, 0.2), color: cat.cor, fontWeight: 600 }
+  return { background: tom(cat.cor, 0.09), color: 'var(--text)' }
+}
+
 // ── Editor de um dia ─────────────────────────────────────────────────────────
 // Abre onde a célula está, com os botões das categorias. Algumas pedem um
 // detalhe (cidade, confronto, descrição) e "Outro" exige.
-function Editor({ atual, categorias, onSalvar, onFechar, ancora }) {
+function Editor({ atual, categorias, onSalvar, onFechar }) {
   const [cat, setCat] = useState(atual?.categoria_id || '')
   const [detalhe, setDetalhe] = useState(atual?.detalhe || '')
   const [camp, setCamp] = useState(atual?.campeonato || '')
@@ -44,7 +68,7 @@ function Editor({ atual, categorias, onSalvar, onFechar, ancora }) {
   }
 
   return (
-    <div className="flg-editor" ref={ref} style={ancora}>
+    <div className="flg-editor" ref={ref}>
       <div className="flg-editor-cats">
         {categorias.map(c => (
           <button
@@ -94,12 +118,33 @@ function Editor({ atual, categorias, onSalvar, onFechar, ancora }) {
 }
 
 // ── O número que importa ─────────────────────────────────────────────────────
+// "-3" no cabeçalho não diz sozinho se é bom ou ruim. Em palavras, diz: "deve 3"
+// é dívida de folga, "a mais 3" é folga tirada adiantada.
+function emPalavras(n) {
+  if (n < 0) return `deve ${-n}`
+  if (n > 0) return `a mais ${n}`
+  return 'em dia'
+}
+const corDoSaldo = n => (n < 0 ? 'var(--red)' : n > 0 ? 'var(--lm-green-dim)' : 'var(--text-dim)')
+
 function ATirar({ n, titulo }) {
-  const cor = n < 0 ? 'var(--red)' : n > 0 ? 'var(--lm-green-dim)' : 'var(--text-dim)'
+  return <span className="flg-atirar" style={{ color: corDoSaldo(n) }} title={titulo}>{emPalavras(n)}</span>
+}
+
+// O cabeçalho de cada pessoa mostra os DOIS períodos. Só o mês fazia a conta do
+// ano se perder, que é justamente a que diz o tamanho da dívida.
+function Placar({ mes, ano }) {
   return (
-    <span className="flg-atirar" style={{ color: cor }} title={titulo}>
-      {n > 0 ? '+' : ''}{n}
-    </span>
+    <div className="flg-placar">
+      <div className="flg-placar-linha" title={`No mês: ${mes.usadas} folgas usadas, ${mes.direito} de direito até hoje`}>
+        <span className="flg-placar-rot">mês</span>
+        <span className="flg-placar-num" style={{ color: corDoSaldo(mes.aTirar) }}>{emPalavras(mes.aTirar)}</span>
+      </div>
+      <div className="flg-placar-linha" title={`No ano, de 1º de janeiro até hoje: ${ano.usadas} folgas usadas, ${ano.direito} de direito`}>
+        <span className="flg-placar-rot">ano</span>
+        <span className="flg-placar-num flg-placar-ano" style={{ color: corDoSaldo(ano.aTirar) }}>{emPalavras(ano.aTirar)}</span>
+      </div>
+    </div>
   )
 }
 
@@ -255,6 +300,14 @@ export default function FolgasView({ podeEditar = false }) {
         </div>
       )}
 
+      {aba === 'grade' && (
+        <div className="flg-legenda-cores">
+          {categorias.map(c => (
+            <span key={c.id} className="flg-chip" style={estiloCelula(c)}>{c.nome}</span>
+          ))}
+        </div>
+      )}
+
       {aba === 'grade' ? (
         <div className="flg-wrap">
           <table className="flg-tab">
@@ -265,9 +318,8 @@ export default function FolgasView({ podeEditar = false }) {
                   const s = saldos.get(p.id)
                   return (
                     <th key={p.id} className="flg-th-pessoa">
-                      <div className="flg-th-nome" style={{ borderTopColor: p.cor }}>{p.nome}</div>
-                      <ATirar n={s ? s.mes.aTirar : 0}
-                        titulo={s ? `${s.mes.usadas} folgas usadas · ${s.mes.direito} de direito até hoje${s.mes.ajuste ? ` · ajuste ${s.mes.ajuste}` : ''}` : ''} />
+                      <div className="flg-th-nome">{p.nome}</div>
+                      {s && <Placar mes={s.mes} ano={s.ano} />}
                     </th>
                   )
                 })}
@@ -295,7 +347,7 @@ export default function FolgasView({ podeEditar = false }) {
                         <td
                           key={p.id}
                           className={`flg-cel${marcado ? ' flg-cel-marcada' : ''}${podeEditar ? ' flg-cel-edita' : ''}`}
-                          style={c ? { background: c.cor, color: '#fff' } : undefined}
+                          style={estiloCelula(c)}
                           title={reg ? `${c?.nome || 'Categoria removida'}${reg.detalhe ? ` — ${reg.detalhe}` : ''}${reg.campeonato ? ` (${reg.campeonato})` : ''}` : 'vazio'}
                           onClick={e => aoClicar(p.id, diaIso, e)}
                         >
@@ -303,7 +355,6 @@ export default function FolgasView({ podeEditar = false }) {
                           {editando && editando.pessoaId === p.id && editando.dia === diaIso && (
                             <Editor
                               atual={reg} categorias={categorias}
-                              ancora={{}}
                               onFechar={() => setEditando(null)}
                               onSalvar={async v => {
                                 setEditando(null)
