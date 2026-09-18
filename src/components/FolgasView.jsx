@@ -193,20 +193,22 @@ function Placar({ mes, ano }) {
       (ano.marcadas ? `, e ${ano.marcadas} já ${ano.marcadas === 1 ? 'está marcada' : 'estão marcadas'} no calendário` : '') +
       `. Tirou ${ano.usadas} de ${ano.direito} a que teve direito.`
 
-  // O mês só diz algo depois de começar: "em dia" num mês que nem chegou
-  // afirmava uma coisa que não aconteceu.
-  const rodape = ano.marcadas
-    ? `${ano.marcadas} já marcada${ano.marcadas === 1 ? '' : 's'}`
-    : mes.futuro ? 'mês ainda não começou'
-    : `mês: ${emPalavras(mes.aTirar)}`
+  // A linha de baixo acompanha o MÊS que está na tela: quantas folgas a pessoa
+  // tem marcadas nele. Serve para qualquer mês — passado, corrente ou futuro —
+  // ao contrário de um saldo mensal, que num mês que nem começou dava "em dia"
+  // e afirmava uma coisa que não aconteceu.
+  //
+  // Soma as duas pontas porque a conta do saldo para em hoje: no mês corrente,
+  // parte das folgas já passou e parte ainda vem.
+  const noMes = (mes.usadas || 0) + (mes.marcadas || 0)
 
   return (
     <div className="flg-placar">
       <div className="flg-placar-total" style={{ color: corDoSaldo(-aAgendar) }} title={explicacao}>
         {ano.desde === null ? '—' : palavra}
       </div>
-      <div className="flg-placar-mes" title={mes.futuro ? 'Este mês ainda não começou' : `Só neste mês: tirou ${mes.usadas} folgas de ${mes.direito} a que teve direito`}>
-        {rodape}
+      <div className="flg-placar-mes" title={`Folgas marcadas neste mês: ${noMes}`}>
+        {noMes ? `${noMes} folga${noMes === 1 ? '' : 's'} no mês` : 'sem folga no mês'}
       </div>
     </div>
   )
