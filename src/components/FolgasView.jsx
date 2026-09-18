@@ -88,13 +88,19 @@ function Editor({ atual, categorias, onSalvar, onFechar }) {
         </select>
       )}
 
-      {def?.pede_detalhe && (
-        <input
-          className="flg-editor-campo" autoFocus
-          placeholder={def.dica_detalhe || 'Detalhe'}
-          value={detalhe} onChange={e => setDetalhe(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') gravar() }}
-        />
+      {/* O descritivo vale para qualquer categoria, e é opcional em quase
+          todas. É o lugar de escrever o que será feito no dia — antes isso ia
+          para o nome da categoria e desfigurava a escala. */}
+      {def && (
+        <label className="flg-editor-rot">
+          {def.exige_detalhe ? 'Descritivo (obrigatório)' : 'Descritivo do dia (opcional)'}
+          <input
+            className="flg-editor-campo" autoFocus
+            placeholder={def.dica_detalhe || 'ex.: preparativos da Copa, tarde/noite, COR x SAO'}
+            value={detalhe} onChange={e => setDetalhe(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') gravar() }}
+          />
+        </label>
       )}
 
       <div className="flg-editor-pe">
@@ -382,16 +388,26 @@ export default function FolgasView({ podeEditar = false }) {
                       const reg = (diasDe.get(p.id) || new Map()).get(diaIso)
                       const c = reg ? catPorId.get(reg.categoria_id) : null
                       const marcado = selecao?.dias.includes(diaIso) && (!selecao.pessoaId || selecao.pessoaId === p.id)
-                      const texto = reg ? (reg.detalhe || c?.curto || c?.nome || '?') : ''
+                      // A célula diz O QUÊ, sempre igual e por extenso. O descritivo
+                      // do dia não toma o lugar dela: vira uma marca, e o texto
+                      // inteiro aparece ao passar o mouse. Antes o texto livre
+                      // substituía a categoria, e a coluna do Sinal Inter virava
+                      // um campo de anotação em vez de uma escala.
+                      // Exceção: em "Outro" o nome da categoria não diz nada — ali o
+                      // descritivo É a informação, e por isso ele aparece na célula.
+                      const texto = !reg ? ''
+                        : (c?.exige_detalhe && reg.detalhe) ? reg.detalhe
+                        : (c?.nome || 'Categoria removida')
                       return (
                         <td
                           key={p.id}
                           className={`flg-cel${marcado ? ' flg-cel-marcada' : ''}${podeEditar ? ' flg-cel-edita' : ''}${p.id === minhaPessoaId ? ' flg-eu' : ''}`}
                           style={estiloCelula(c)}
-                          title={reg ? `${c?.nome || 'Categoria removida'}${reg.detalhe ? ` — ${reg.detalhe}` : ''}${reg.campeonato ? ` (${reg.campeonato})` : ''}` : 'vazio'}
+                          title={reg ? `${c?.nome || 'Categoria removida'}${reg.campeonato ? ` · ${reg.campeonato}` : ''}${reg.detalhe ? `\n${reg.detalhe}` : ''}` : 'vazio'}
                           onClick={e => aoClicar(p.id, diaIso, e)}
                         >
                           {texto}
+                          {reg?.detalhe && !c?.exige_detalhe && <span className="flg-nota" title={reg.detalhe}>·</span>}
                           {editando && editando.pessoaId === p.id && editando.dia === diaIso && (
                             <Editor
                               atual={reg} categorias={categorias}

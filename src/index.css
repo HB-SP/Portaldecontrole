@@ -4578,3 +4578,14 @@ body {
   background: var(--amber); color: #fff; font-size: 9px; font-weight: 800;
   vertical-align: middle;
 }
+/* Marca de que o dia tem um descritivo. A célula continua dizendo O QUÊ; o
+   texto inteiro aparece ao passar o mouse e no editor. */
+.flg-nota {
+  margin-left: 3px; color: var(--lm-green-dim);
+  font-weight: 800; font-size: 13px; line-height: 0; cursor: help;
+}
+.flg-editor-rot {
+  display: flex; flex-direction: column; gap: 3px;
+  font-size: 10.5px; font-weight: 700; color: var(--text-muted);
+  letter-spacing: 0.03em; text-transform: uppercase;
+}
