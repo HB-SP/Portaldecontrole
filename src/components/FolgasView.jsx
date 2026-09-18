@@ -6,8 +6,8 @@
 //
 // O que a planilha não fazia e é o ponto da tela: como o time trabalha fim de
 // semana, cada sábado, domingo e feriado gera uma folga de direito. O número
-// "a tirar" no cabeçalho de cada pessoa mostra quanto ela ainda deve — a conta
-// vive em lib/folgas.js.
+// "a tirar" no cabeçalho de cada pessoa mostra quantas ela ainda tem para tirar
+// — a conta vive em lib/folgas.js.
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useFolgas } from '../hooks/useFolgas'
@@ -131,13 +131,23 @@ function ATirar({ n, titulo }) {
 // Os dois falam a MESMA língua ("3 a tirar"), de propósito: dois vocabulários
 // no mesmo cabeçalho era parte da confusão.
 function Placar({ mes, ano }) {
+  // Saldo alto com muito dia em branco não é folga acumulada: é coluna mal
+  // preenchida. O número fica, mas avisa — esconder daria uma certeza falsa.
+  const duvidoso = ano.emBranco > 20
+  const desdeQuando = ano.desde ? `de ${ano.desde.split('-').reverse().join('/')}` : ''
   return (
     <div className="flg-placar">
       <div
         className="flg-placar-total" style={{ color: corDoSaldo(ano.aTirar) }}
-        title={`No ano, de 1º de janeiro até hoje: tirou ${ano.usadas} folgas de ${ano.direito} a que teve direito`}
+        title={ano.desde === null
+          ? 'Sem nenhum dia preenchido neste ano'
+          : `No ano, ${desdeQuando} até hoje: tirou ${ano.usadas} folgas de ${ano.direito} a que teve direito` +
+            (ano.emBranco ? ` — mas com ${ano.emBranco} dias em branco` : '')}
       >
-        {emPalavras(ano.aTirar)}
+        {ano.desde === null ? '—' : emPalavras(ano.aTirar)}
+        {duvidoso && (
+          <span className="flg-duvida" title={`${ano.emBranco} dias sem preencher: o saldo pode estar alto por falta de dado, não por folga acumulada`}>?</span>
+        )}
       </div>
       <div
         className="flg-placar-mes"
@@ -391,6 +401,7 @@ export default function FolgasView({ podeEditar = false }) {
                 <th>Usadas</th><th>Ajustes</th>
                 <th title="Usadas menos as de direito. Negativo = ainda deve tirar">A tirar no mês</th>
                 <th>Deslocamentos</th>
+                <th title="Dias do ano sem nada preenchido para esta pessoa">Em branco</th>
                 <th title="O mesmo cálculo, de 1º de janeiro até hoje — a lista vem ordenada por ele">A tirar no ano ↓</th>
               </tr>
             </thead>
@@ -407,6 +418,7 @@ export default function FolgasView({ podeEditar = false }) {
                     <td>{s.mes.ajuste || '—'}</td>
                     <td><ATirar n={s.mes.aTirar} /></td>
                     <td>{s.mes.deslocamentos || '—'}</td>
+                    <td style={s.ano.emBranco > 20 ? { color: 'var(--amber)', fontWeight: 700 } : undefined}>{s.ano.emBranco || '—'}</td>
                     <td><ATirar n={s.ano.aTirar} /></td>
                   </tr>
                 )

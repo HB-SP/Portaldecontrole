@@ -38,25 +38,44 @@ export const geraFolga = (ano, mes, dia, feriados) =>
 
 // ── Saldo de um período ──────────────────────────────────────────────────────
 // `dias` é um Map de 'aaaa-mm-dd' -> { categoria_id, ... } da pessoa.
-// `ate` limita a contagem do DIREITO (o que ela já deveria ter tirado); as
-// folgas usadas contam o período inteiro, porque uma folga tirada adiantado
-// já foi tirada.
-function contar(dias, feriados, ehFolga, deIso, ateIso, limiteDireito) {
-  let direito = 0, usadas = 0, deslocamentos = 0, ausentes = 0
+//
+// O CORTE VALE PARA OS DOIS LADOS. Direito e folgas usadas param no mesmo dia,
+// e isso não é detalhe: contar uma folga já marcada para o mês que vem, sem
+// contar os fins de semana que ainda vão gerar direito, faz o saldo aparecer
+// MENOR do que é — foi assim que a tela mostrou menos folga do que as planilhas
+// (109 folgas do futuro entrando como já tiradas, 18/09/2026).
+//
+// `deslocamentos` fica de fora do corte de propósito: é informação do período
+// ("quantas viagens tem este mês"), não parte do saldo.
+// Primeiro dia que a pessoa aparece na grade. Ninguém acumula folga antes de
+// entrar no time: sem isso, quem chegou em setembro nasce devendo o ano inteiro.
+function primeiroRegistro(dias) {
+  let menor = null
+  for (const chave of dias.keys()) if (menor === null || chave < menor) menor = chave
+  return menor
+}
+
+function contar(dias, feriados, ehFolga, deIso, ateIso, corte) {
+  let direito = 0, usadas = 0, deslocamentos = 0, emBranco = 0
+  const desde = primeiroRegistro(dias)
   const [a0, m0, d0] = deIso.split('-').map(Number)
   const inicio = new Date(a0, m0 - 1, d0)
   const [a1, m1, d1] = ateIso.split('-').map(Number)
   const fim = new Date(a1, m1 - 1, d1)
   for (let d = new Date(inicio); d <= fim; d.setDate(d.getDate() + 1)) {
     const chave = iso(d.getFullYear(), d.getMonth(), d.getDate())
-    if (chave <= limiteDireito && geraFolga(d.getFullYear(), d.getMonth(), d.getDate(), feriados)) direito++
     const reg = dias.get(chave)
-    if (!reg) continue
-    if (ehFolga(reg.categoria_id)) usadas++
-    if (reg.eh_deslocamento) deslocamentos++
-    if (reg.ausente) ausentes++
+    if (reg?.eh_deslocamento) deslocamentos++
+    if (chave > corte) continue
+    if (desde === null || chave < desde) continue
+    if (geraFolga(d.getFullYear(), d.getMonth(), d.getDate(), feriados)) direito++
+    if (reg && ehFolga(reg.categoria_id)) usadas++
+    // Dia sem nada preenchido. Não muda a conta, mas diz o quanto ela é
+    // confiável: um saldo alto com muito dia em branco é coluna mal preenchida,
+    // não folga acumulada.
+    if (!reg) emBranco++
   }
-  return { direito, usadas, deslocamentos, ausentes }
+  return { direito, usadas, deslocamentos, emBranco, desde }
 }
 
 // Saldo do MÊS. `hoje` entra como parâmetro para o cálculo ser testável.
