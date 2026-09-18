@@ -30,7 +30,14 @@ const ORDEM = [
   'Previde', 'Anny', 'Natan', 'Ana Clara', 'Rafa', 'Pardal', 'Yuji', 'Leandro',
 ]
 const ENTRAM = [{ nome: 'Suzana', time_id: 'operacoes' }]
-const SAEM = ['Fernanda']
+
+// Sair da grade não é ser apagado: a pessoa fica com ativo=false e todos os
+// dias dela seguem no banco.
+//   · Fernanda saiu do time.
+//   · Crispim é o gestor — ele LÊ a tela, não preenche nela (equipe, 18/09).
+//     Uma coluna de 31 células vazias é exatamente a poluição que pediram para
+//     tirar; ele continua cadastrado e vê tudo pelo login do Portal.
+const SAEM = ['Fernanda', 'Crispim']
 
 const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
 const CORES = ['#4C8DFF', '#3ED598', '#F2B84B', '#B98CF2', '#E6483C', '#5B8DEF', '#6B7686',
