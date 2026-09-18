@@ -237,7 +237,11 @@ export default function App() {
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>Folgas e presença</div>
           </div>
-          <FolgasView podeEditar={portalRole === 'admin' || portalRole === 'equipe'} />
+          <FolgasView
+            podeEditar={portalRole === 'admin' || portalRole === 'equipe'}
+            competitions={competitions}
+            onAbrirJogo={handleCompSelect}
+          />
         </main>
       </div>
     )

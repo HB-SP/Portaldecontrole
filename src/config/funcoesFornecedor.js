@@ -124,17 +124,31 @@ export function whatsappDe(telefone) {
 }
 
 // O nome está cadastrado na base? (aceita "A / B" — checa cada segmento)
+// O NOME, sem os apêndices que a planilha gruda nele: "(H)", "- Record",
+// "cobre", telefone no fim. Vive aqui porque duas coisas precisam limpar do
+// mesmo jeito — conferir contra a base de fornecedores e casar a pessoa do time
+// com o nome dela na escala dos jogos. Duas limpezas parecidas divergiriam.
+export function nomeBase(seg) {
+  return String(seg || '')
+    .replace(/\s*\([^)]*\)\s*/g, ' ')
+    .replace(/[\s-]+(record news|record|youtube|yt|premiere|cazetv|amazon|tnt|hbo)$/i, '')
+    .replace(/\s+cobre$/i, '')
+    .replace(TELEFONE_NO_FIM, '')
+    .trim()
+}
+
+// Dois nomes são a mesma pessoa? Ignora acento, caixa e os apêndices acima.
+export const mesmoNome = (a, b) => {
+  const x = normNome(nomeBase(a))
+  return !!x && x === normNome(nomeBase(b))
+}
+
 export function estaCadastrado(valor, fornecedores) {
   if (!valor || !String(valor).trim()) return true // vazio não é "não cadastrado"
   const norms = new Set(fornecedores.map(f => normNome(f.apelido)))
   return String(valor).split('/').map(s => s.trim()).filter(Boolean).every(seg => {
     if (/^n[aã]o$|^sim$/i.test(seg)) return true
     if (SO_TELEFONE.test(seg)) return true
-    // ignora anotações: "(H)", "- Record", "cobre"
-    const base = seg.replace(/\s*\([^)]*\)\s*/g, ' ')
-      .replace(/[\s-]+(record news|record|youtube|yt|premiere|cazetv|amazon|tnt|hbo)$/i, '')
-      .replace(/\s+cobre$/i, '')
-      .replace(TELEFONE_NO_FIM, '').trim()
-    return norms.has(normNome(base))
+    return norms.has(normNome(nomeBase(seg)))
   })
 }

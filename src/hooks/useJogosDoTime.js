@@ -1,0 +1,132 @@
+// ─── OS JOGOS DE CADA PESSOA DO TIME ─────────────────────────────────────────
+// A escala dos jogos e a escala interna do time são preenchidas em lugares
+// diferentes, por pessoas diferentes. Quem está escalado num jogo de sábado não
+// precisa marcar nada na grade de folgas: o jogo já está dito, e repetir é
+// trabalho dobrado que sai errado na primeira vez que um dos dois muda.
+//
+// Então o jogo é LIDO, não copiado. A grade mostra o que já existe.
+//
+// O vínculo entre as duas escalas é DECLARADO, não adivinhado: na grade a
+// pessoa é "Previde", na escala do jogo é "Matheus Previde", e existe gente
+// diferente com primeiro nome igual (dois Flávios, dois Lucas, dois Rafaéis).
+// Casar por semelhança mostraria na folga de alguém o jogo de outra pessoa.
+// Por isso `folgas_pessoas.nomes_escala`.
+//
+// DUAS FONTES, e é preciso as duas:
+//
+//   1. `escala_geral` INTEIRA — é onde estão as 4 funções de produção, e ela
+//      cobre campeonatos que o Portal nem tem como aba (Media Day, Copinha,
+//      Série B). Ler só pelos campeonatos do Portal perdia tudo isso: a Laís,
+//      por exemplo, só aparece em Media Day, e ficava com zero jogo.
+//
+//   2. As colunas de PESSOAL do Controle de cada campeonato — supervisor, DTV,
+//      vMix, que não existem na escala_geral.
+//
+// Onde o campeonato da escala tem aba no Portal, a marca vira link para o jogo.
+// Onde não tem, ela ainda aparece — só não clica, porque não há para onde ir.
+
+import { useState, useEffect } from 'react'
+import { supabase, isConfigured } from '../lib/supabase'
+import { carregarCompeticao } from './useHomeData'
+import { FUNCOES_ESCALA, naoTemFuncao, escalaCampeonatosDe } from '../lib/escalaLink'
+import { mesmoNome } from '../config/funcoesFornecedor'
+import { parseData } from '../lib/datas'
+import { iso } from '../lib/folgas'
+
+const pessoalDaConfig = cfg => (cfg?.columns || []).filter(c => c.group === 'Pessoal')
+// "Fulano / Ciclano" e "Fulano / 11 99999-9999" — cada pedaço é candidato.
+const pedacos = v => String(v || '').split('/').map(s => s.trim()).filter(Boolean)
+
+export function useJogosDoTime(pessoas, competitions, ano) {
+  // Map de 'pessoaId|aaaa-mm-dd' -> [{ compId, compLabel, cor, confronto, funcao, jogo }]
+  const [jogosPorDia, setJogosPorDia] = useState(new Map())
+
+  useEffect(() => {
+    const ligadas = (pessoas || []).filter(p => (p.nomes_escala || []).length)
+    if (!isConfigured || !ligadas.length || !ano) { setJogosPorDia(new Map()); return }
+
+    let cancelado = false
+    ;(async () => {
+      const mapa = new Map()
+      const vistos = new Set()   // pessoa|dia|confronto — a mesma partida nas duas fontes
+
+      const guardar = (pessoaId, dia, item) => {
+        const eco = `${pessoaId}|${dia}|${item.confronto}`
+        if (vistos.has(eco)) return
+        vistos.add(eco)
+        const chave = `${pessoaId}|${dia}`
+        if (!mapa.has(chave)) mapa.set(chave, [])
+        mapa.get(chave).push(item)
+      }
+
+      // Cada nome de campeonato da escala_geral -> a aba do Portal, quando existe.
+      const doPortal = new Map()
+      for (const c of competitions || []) {
+        const cfg = c.sections?.find(s => s.isOverview)?.config
+        for (const nome of escalaCampeonatosDe(c.label, cfg?.escalaCamps)) {
+          doPortal.set(String(nome).toLowerCase().trim(), c)
+        }
+      }
+
+      const anota = (jogo, escalados, campLabel, comp) => {
+        const d = parseData(jogo.data, ano)
+        if (!d || d.getFullYear() !== Number(ano)) return
+        const dia = iso(d.getFullYear(), d.getMonth(), d.getDate())
+        const confronto = jogo.visitante
+          ? `${jogo.mandante} × ${jogo.visitante}`
+          : String(jogo.mandante || '').trim()
+        if (!confronto) return
+        for (const p of ligadas) {
+          const achou = escalados.find(e => p.nomes_escala.some(a => mesmoNome(a, e.nome)))
+          if (!achou) continue
+          guardar(p.id, dia, {
+            compId: comp?.id || null,
+            compLabel: comp?.label || campLabel,
+            cor: comp?.accentColor || '#8A8FA3',
+            confronto, funcao: achou.funcao, jogo,
+          })
+        }
+      }
+
+      // ── 1. a escala_geral inteira ──
+      const { data: eg } = await supabase.from('escala_geral').select('*')
+      for (const r of eg || []) {
+        if (!r.mandante) continue
+        const escalados = []
+        for (const fn of FUNCOES_ESCALA) {
+          if (naoTemFuncao(r[fn.key])) continue
+          pedacos(r[fn.key]).forEach(n => escalados.push({ nome: n, funcao: fn.label }))
+        }
+        if (!escalados.length) continue
+        anota(r, escalados, r.campeonato || 'Escala Geral',
+          doPortal.get(String(r.campeonato || '').toLowerCase().trim()))
+      }
+
+      // ── 2. as colunas de Pessoal do Controle ──
+      await Promise.all((competitions || []).map(async comp => {
+        try {
+          const res = await carregarCompeticao(comp)
+          if (!res) return
+          const colunas = pessoalDaConfig(res.cfg)
+          if (!colunas.length) return
+          for (const j of res.jogos) {
+            if (!j.mandante || !j.visitante) continue
+            const escalados = []
+            for (const col of colunas) {
+              pedacos(j[col.key]).forEach(n => escalados.push({ nome: n, funcao: col.label }))
+            }
+            if (escalados.length) anota(j, escalados, comp.label, comp)
+          }
+        } catch (e) {
+          console.warn(`[useJogosDoTime] ${comp.label}:`, e.message)
+        }
+      }))
+
+      if (!cancelado) setJogosPorDia(mapa)
+    })()
+
+    return () => { cancelado = true }
+  }, [pessoas, competitions, ano])
+
+  return { jogosPorDia }
+}

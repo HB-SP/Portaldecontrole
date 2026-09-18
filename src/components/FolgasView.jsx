@@ -12,6 +12,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useFolgas } from '../hooks/useFolgas'
+import { useJogosDoTime } from '../hooks/useJogosDoTime'
 import {
   MESES, SEMANA_CURTA, iso, diasNoMes, hojeIso, ehFimDeSemana,
   saldoDoMes, saldoDoAno,
@@ -214,11 +215,15 @@ function Placar({ mes, ano }) {
   )
 }
 
-export default function FolgasView({ podeEditar = false }) {
+export default function FolgasView({ podeEditar = false, competitions = [], onAbrirJogo }) {
   const hoje = hojeIso()
   const [ano, setAno] = useState(() => Number(hoje.slice(0, 4)))
   const [mes, setMes] = useState(() => new Date().getMonth())
   const { times, pessoas, categorias, feriados, ajustes, dias, minhaPessoaId, loading, erro, salvarDia, salvarVarios, desfazer, podeDesfazer } = useFolgas(ano)
+
+  // Os jogos em que o time está escalado. Vêm de outra escala, preenchida por
+  // outra gente: aqui são só LIDOS.
+  const { jogosPorDia } = useJogosDoTime(pessoas, competitions, ano)
 
   const [fTime, setFTime] = useState(() => {
     try { return localStorage.getItem(CHAVE_TIME) || '' } catch { return '' }
@@ -592,6 +597,15 @@ export default function FolgasView({ podeEditar = false }) {
                         >
                           {texto}
                           {reg?.detalhe && !c?.exige_detalhe && <span className="flg-nota" title={reg.detalhe}>·</span>}
+                          {(jogosPorDia.get(`${p.id}|${diaIso}`) || []).map((j, i) => (
+                            <button
+                              key={i} className="flg-jogo"
+                              title={`${j.compLabel} · ${j.confronto}\n${j.funcao}${j.compId ? ' — clique para abrir o jogo' : ''}`}
+                              onMouseDown={e => e.stopPropagation()}
+                              onClick={e => { e.stopPropagation(); if (j.compId) onAbrirJogo?.(j.compId, j.jogo) }}
+                              style={{ background: j.cor, cursor: j.compId ? 'pointer' : 'help' }}
+                            />
+                          ))}
                         </td>
                       )
                     })}

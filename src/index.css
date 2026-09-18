@@ -4638,3 +4638,12 @@ body {
   border-bottom: 1px solid var(--border);
   font-size: 11.5px; font-weight: 700; color: var(--lm-green-dim);
 }
+/* Marca de que a pessoa está escalada num jogo naquele dia. O jogo vem da
+   escala do campeonato, não desta tela — por isso é uma marca, não um valor:
+   ela não pode ser editada aqui. Clicar abre a ficha do jogo. */
+.flg-jogo {
+  display: inline-block; vertical-align: middle;
+  width: 8px; height: 8px; margin-left: 4px; padding: 0;
+  border: none; border-radius: 2px; cursor: pointer;
+}
+.flg-jogo:hover { outline: 2px solid var(--text); outline-offset: 1px; }
