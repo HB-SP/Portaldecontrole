@@ -22,6 +22,29 @@ export function useFolgas(ano) {
   const [erro, setErro] = useState(null)
   const seqDias = useRef(0)
 
+  // ── DESFAZER ───────────────────────────────────────────────────────────────
+  // Cada gravação empilha COMO OS DIAS ESTAVAM antes dela. Desfazer é repor
+  // esse retrato — inclusive apagando o que não existia.
+  //
+  // A pilha guarda o estado anterior, e não a operação: repor um retrato é uma
+  // conta só, enquanto inverter operações exigiria uma regra para cada tipo
+  // (gravou, apagou, preencheu faixa) e erraria na primeira que eu esquecesse.
+  const historico = useRef([])
+  const [podeDesfazer, setPodeDesfazer] = useState(false)
+  const LIMITE_HISTORICO = 60
+
+  // Espelho de `dias` sempre atual: as funções de gravar são memorizadas e
+  // pegariam um `dias` velho no momento de tirar o retrato.
+  const diasRef = useRef(dias)
+  diasRef.current = dias
+
+  const guardar = useCallback((pessoaId, listaDias) => {
+    const antes = listaDias.map(d => [d, diasRef.current.get(`${pessoaId}|${d}`) || null])
+    historico.current.push({ pessoaId, antes })
+    if (historico.current.length > LIMITE_HISTORICO) historico.current.shift()
+    setPodeDesfazer(true)
+  }, [])
+
   // ── o que não depende do ano ──
   const carregarBase = useCallback(async () => {
     if (!isConfigured) { setLoading(false); return }
@@ -81,6 +104,7 @@ export function useFolgas(ano) {
   const salvarDia = useCallback(async (pessoaId, dia, valor) => {
     const chave = `${pessoaId}|${dia}`
     const antes = dias.get(chave)
+    guardar(pessoaId, [dia])
     const apagar = !valor?.categoria_id
 
     setDias(prev => {
@@ -114,11 +138,12 @@ export function useFolgas(ano) {
       return error.message
     }
     return null
-  }, [dias])
+  }, [dias, guardar])
 
   // Grava vários dias de uma pessoa de uma vez (a seleção múltipla).
   const salvarVarios = useCallback(async (pessoaId, listaDias, valor) => {
     if (!listaDias.length) return null
+    guardar(pessoaId, listaDias)
     if (!valor?.categoria_id) {
       setDias(prev => { const m = new Map(prev); listaDias.forEach(d => m.delete(`${pessoaId}|${d}`)); return m })
       if (!isConfigured) return null
@@ -140,6 +165,41 @@ export function useFolgas(ano) {
     const { error } = await supabase.from('folgas_dias').upsert(linhas, { onConflict: 'pessoa_id,dia' })
     if (error) { carregarDias(); return error.message }
     return null
+  }, [carregarDias, guardar])
+
+  // Repõe um retrato: apaga os dias que não existiam e regrava os que existiam.
+  // NÃO empilha nada — senão desfazer viraria uma gravação a ser desfeita.
+  const desfazer = useCallback(async () => {
+    const passo = historico.current.pop()
+    setPodeDesfazer(historico.current.length > 0)
+    if (!passo) return null
+    const { pessoaId, antes } = passo
+    const apagar = antes.filter(([, l]) => !l).map(([d]) => d)
+    const repor = antes.filter(([, l]) => l).map(([, l]) => l)
+
+    setDias(prev => {
+      const m = new Map(prev)
+      apagar.forEach(d => m.delete(`${pessoaId}|${d}`))
+      repor.forEach(l => m.set(`${pessoaId}|${l.dia}`, l))
+      return m
+    })
+    if (!isConfigured) return null
+
+    if (apagar.length) {
+      const { error } = await supabase.from('folgas_dias').delete().eq('pessoa_id', pessoaId).in('dia', apagar)
+      if (error) { carregarDias(); return error.message }
+    }
+    if (repor.length) {
+      const { data: sessao } = await supabase.auth.getUser()
+      const linhas = repor.map(l => ({
+        pessoa_id: pessoaId, dia: l.dia,
+        categoria_id: l.categoria_id, detalhe: l.detalhe || null, campeonato: l.campeonato || null,
+        updated_at: new Date().toISOString(), updated_by: sessao?.user?.id || null,
+      }))
+      const { error } = await supabase.from('folgas_dias').upsert(linhas, { onConflict: 'pessoa_id,dia' })
+      if (error) { carregarDias(); return error.message }
+    }
+    return null
   }, [carregarDias])
 
   // Qual linha de folgas_pessoas sou EU. Serve para destacar a minha coluna:
@@ -160,6 +220,7 @@ export function useFolgas(ano) {
     times, pessoas, categorias, feriados, ajustes, dias, minhaPessoaId,
     loading, erro,
     salvarDia, salvarVarios,
+    desfazer, podeDesfazer,
     recarregar: () => { carregarBase(); carregarDias() },
   }
 }

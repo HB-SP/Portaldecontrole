@@ -213,7 +213,7 @@ export default function FolgasView({ podeEditar = false }) {
   const hoje = hojeIso()
   const [ano, setAno] = useState(() => Number(hoje.slice(0, 4)))
   const [mes, setMes] = useState(() => new Date().getMonth())
-  const { times, pessoas, categorias, feriados, ajustes, dias, minhaPessoaId, loading, erro, salvarDia, salvarVarios } = useFolgas(ano)
+  const { times, pessoas, categorias, feriados, ajustes, dias, minhaPessoaId, loading, erro, salvarDia, salvarVarios, desfazer, podeDesfazer } = useFolgas(ano)
 
   const [fTime, setFTime] = useState(() => {
     try { return localStorage.getItem(CHAVE_TIME) || '' } catch { return '' }
@@ -378,6 +378,20 @@ export default function FolgasView({ podeEditar = false }) {
     return () => document.removeEventListener('mouseup', soltar)
   }, [todosOsDias, salvarVarios, selecao, dias])
 
+  // Ctrl+Z desfaz a última mudança. Dentro de um campo de texto o atalho
+  // continua sendo o do navegador — sequestrá-lo ali tiraria o desfazer de
+  // quem está escrevendo o descritivo.
+  useEffect(() => {
+    const tecla = e => {
+      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || String(e.key).toLowerCase() !== 'z') return
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '')) return
+      e.preventDefault()
+      desfazer().then(falha => { if (falha) alert('Não deu para desfazer: ' + falha) })
+    }
+    window.addEventListener('keydown', tecla)
+    return () => window.removeEventListener('keydown', tecla)
+  }, [desfazer])
+
   // O menu é preso à tela, então rolar a grade o deixaria solto no ar.
   useEffect(() => {
     if (!editando) return
@@ -437,8 +451,15 @@ export default function FolgasView({ podeEditar = false }) {
           </button>
         )}
 
+        {podeEditar && podeDesfazer && (
+          <button
+            className="flg-btn" title="Desfazer a última mudança (Ctrl+Z)"
+            onClick={() => desfazer().then(falha => { if (falha) alert('Não deu para desfazer: ' + falha) })}
+          >↶ Desfazer</button>
+        )}
+
         {podeEditar && aba === 'grade' && !selecao && (
-          <span className="flg-dica">clique para escolher · arraste para baixo para repetir</span>
+          <span className="flg-dica">clique para escolher · arraste para baixo para repetir · Ctrl+Z desfaz</span>
         )}
       </div>
 
