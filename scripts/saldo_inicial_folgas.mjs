@@ -38,14 +38,7 @@ const PLANILHA = {
   'Pardal': -1,
 }
 
-// Quem a equipe deixou de fora, e por quê.
-const DUVIDOSOS = {
-  'Yuji': 'saldo da planilha traz um zeramento manual que nenhum dado registra',
-  'Junior': 'coluna com 169 dias em branco',
-  'Gui Soria': 'coluna com 81 dias em branco',
-  'Flávio': 'coluna com 53 dias em branco',
-  'Belezinha': 'coluna com 32 dias em branco',
-}
+const DUVIDOSOS = {}
 
 const ANO = 2026
 const hoje = hojeIso()
@@ -75,7 +68,11 @@ for (const p of pessoas) {
   if (jaTem.some(a => a.pessoa_id === p.id && a.motivo === MOTIVO)) { plano.push({ nome: p.nome, acao: 'já ajustado antes' }); continue }
 
   const s = saldoDoAno({ dias: por.get(p.id), feriados, ehFolga, ajustes: [], ano: ANO, hoje })
-  const tela = -s.aTirar
+  // O alvo é o número QUE A TELA MOSTRA, que é o "a agendar" — saldo devido
+  // menos as folgas já marcadas à frente. Na primeira vez eu alinhei o saldo
+  // BRUTO, e a tela ficou abaixo do print de cada um exatamente pelo número de
+  // folgas que a pessoa já tinha agendada.
+  const tela = -s.aTirar - (s.marcadas || 0)
   const alvo = PLANILHA[p.nome]
   // aTirar = usadas − direito − ajuste, e a tela mostra −aTirar, ou seja
   // (direito + ajuste − usadas). Para a tela virar `alvo`, o ajuste tem de
@@ -114,7 +111,8 @@ if (!gravar) {
     if (!(p.nome in PLANILHA)) continue
     const meus = agora.filter(a => a.pessoa_id === p.id)
     const s = saldoDoAno({ dias: por.get(p.id), feriados, ehFolga, ajustes: meus, ano: ANO, hoje })
-    const marca = p.nome in DUVIDOSOS ? '  (deixado de fora)' : (-s.aTirar === PLANILHA[p.nome] ? '  ✓ igual à planilha' : '  ← ainda diferente')
-    console.log(`  ${p.nome.padEnd(12)} tela ${String(-s.aTirar).padStart(4)} · planilha ${String(PLANILHA[p.nome]).padStart(4)}${marca}`)
+    const naTela = -s.aTirar - (s.marcadas || 0)
+    const marca = naTela === PLANILHA[p.nome] ? '  ✓ igual ao print' : '  ← ainda diferente'
+    console.log(`  ${p.nome.padEnd(12)} tela ${String(naTela).padStart(4)} · print ${String(PLANILHA[p.nome]).padStart(4)}${marca}`)
   }
 }
