@@ -73,8 +73,10 @@ const CATEGORIAS = [
   { id: 'ferias',       nome: 'Férias',       curto: 'FÉRIAS',    cor: '#7C3AED', ordem: 2 },
   { id: 'atestado',     nome: 'Atestado',     curto: 'ATESTADO',  cor: '#B45309', ordem: 3 },
   { id: 'home',         nome: 'Home',         curto: 'HOME',      cor: '#2563EB', fixa: true, ordem: 4,
-    presets: ['Home', 'Home - MM', 'Home - monitoração'] },
-  { id: 'escritorio',   nome: 'Vila Olímpia', curto: 'V. OLÍMPIA', cor: '#475569', ordem: 5 },
+    // 'Home' puro nao entra nos atalhos: home sem nada nao precisa de
+    // descritivo (equipe, 18/09/2026).
+    presets: ['Home - MM', 'Home - monitoração'] },
+  { id: 'escritorio',   nome: 'Vila Olímpia', curto: 'VILA OLÍMPIA', cor: '#475569', ordem: 5 },
   { id: 'casablanca',   nome: 'Casablanca',   curto: 'CASABL.',   cor: '#64748B', ordem: 6, pede_detalhe: true },
   { id: 'livekasa',     nome: 'LiveKasa',     curto: 'LIVEKASA',  cor: '#78716C', ordem: 7, pede_detalhe: true },
   { id: 'sportheca',    nome: 'Sportheca',    curto: 'SPORTHECA', cor: '#57534E', ordem: 8, pede_detalhe: true },
@@ -82,7 +84,7 @@ const CATEGORIAS = [
   { id: 'externa',      nome: 'Externa',      curto: 'EXTERNA',   cor: '#15803D', ordem: 10,
     pede_detalhe: true, dica_detalhe: 'Evento, cidade ou confronto',
     campeonatos: ['Brasileirão', 'Paulistão', 'Paulistão Feminino', 'Copinha'] },
-  { id: 'deslocamento', nome: 'Deslocamento', curto: 'DESLOC.',   cor: '#0891B2', ordem: 11,
+  { id: 'deslocamento', nome: 'Viagem',       curto: 'VIAGEM',    cor: '#0891B2', ordem: 11,
     eh_deslocamento: true, pede_detalhe: true, dica_detalhe: 'Cidade — dia de ida ou de volta' },
   { id: 'outro',        nome: 'Outro',        curto: '—',         cor: '#6B7280', ordem: 12,
     pede_detalhe: true, exige_detalhe: true, dica_detalhe: 'Descrição' },
