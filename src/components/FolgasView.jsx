@@ -271,12 +271,27 @@ export default function FolgasView({ podeEditar = false }) {
     setAno(d.getFullYear()); setMes(d.getMonth())
   }
 
-  // Pressionar numa célula começa um arrasto. Se soltar no mesmo lugar, foi um
-  // clique e abre o menu; se soltou mais abaixo, repete o valor na faixa.
+  // ── O GESTO É UM SÓ: pressionar, arrastar, soltar ──────────────────────────
+  // Vale nos dois modos, e é o que a equipe pediu — antes o arrasto só existia
+  // no preenchimento, e marcar vários dias exigia clicar em cada um.
+  //
+  //   soltou no mesmo lugar  -> clique: abre o menu, ou marca/desmarca o dia
+  //   soltou mais adiante    -> faixa: repete o valor, ou marca a faixa inteira
+  //
+  // O arrasto vive num ref porque os eventos de mouse chegam mais rápido do que
+  // o React re-renderiza; o estado serve só para desenhar a faixa.
+  const todosOsDias = useMemo(
+    () => Array.from({ length: diasNoMes(ano, mes) }, (_, i) => iso(ano, mes, i + 1)),
+    [ano, mes]
+  )
+
   function aoPressionar(pessoaId, diaIso, reg, e) {
-    if (!podeEditar || selecao || e.button !== 0) return
+    if (!podeEditar || e.button !== 0) return
+    // A seleção é de UMA pessoa: começar noutra coluna no meio do caminho
+    // misturaria dias de gente diferente no mesmo lote.
+    if (selecao?.pessoaId && selecao.pessoaId !== pessoaId) return
     arrastoRef.current = {
-      pessoaId, de: diaIso, ate: diaIso, moveu: false,
+      pessoaId, de: diaIso, ate: diaIso, moveu: false, shift: e.shiftKey,
       valor: reg ? { categoria_id: reg.categoria_id, detalhe: reg.detalhe, campeonato: reg.campeonato } : null,
     }
     setArrasto({ ...arrastoRef.current })
@@ -296,40 +311,41 @@ export default function FolgasView({ podeEditar = false }) {
       arrastoRef.current = null
       setArrasto(null)
       if (!a) return
-      if (!a.moveu) { setEditando({ pessoaId: a.pessoaId, dia: a.de }); return }
       const [x, y] = [a.de, a.ate].sort()
-      const alvo = Array.from({ length: diasNoMes(ano, mes) }, (_, i) => iso(ano, mes, i + 1))
-        .filter(k => k >= x && k <= y && k !== a.de)
+      const faixa = todosOsDias.filter(k => k >= x && k <= y)
+
+      if (selecao) {
+        setSelecao(atual => {
+          if (a.moveu) return { pessoaId: a.pessoaId, dias: [...new Set([...atual.dias, ...faixa])] }
+          // Shift estende do último marcado até aqui — o gesto de planilha.
+          if (a.shift && atual.dias.length) {
+            const ultimo = atual.dias[atual.dias.length - 1]
+            const [i, f] = [ultimo, a.de].sort()
+            return { pessoaId: a.pessoaId, dias: [...new Set([...atual.dias, ...todosOsDias.filter(k => k >= i && k <= f)])] }
+          }
+          return {
+            pessoaId: a.pessoaId,
+            dias: atual.dias.includes(a.de) ? atual.dias.filter(k => k !== a.de) : [...atual.dias, a.de],
+          }
+        })
+        return
+      }
+
+      if (!a.moveu) { setEditando({ pessoaId: a.pessoaId, dia: a.de }); return }
+      const alvo = faixa.filter(k => k !== a.de)
       if (!alvo.length) return
       const falha = await salvarVarios(a.pessoaId, alvo, a.valor)
       if (falha) alert('Não deu para preencher: ' + falha)
     }
     document.addEventListener('mouseup', soltar)
     return () => document.removeEventListener('mouseup', soltar)
-  }, [ano, mes, salvarVarios])
+  }, [todosOsDias, salvarVarios, selecao])
 
-  // Está dentro da faixa que o arrasto vai preencher?
+  // Está dentro da faixa que o arrasto vai pegar?
   const naFaixa = (pessoaId, diaIso) => {
     if (!arrasto || arrasto.pessoaId !== pessoaId || !arrasto.moveu) return false
     const [x, y] = [arrasto.de, arrasto.ate].sort()
     return diaIso >= x && diaIso <= y
-  }
-
-  // Clicar numa célula: no modo seleção, marca; fora dele quem manda é o arrasto.
-  function aoClicar(pessoaId, diaIso, e) {
-    if (!podeEditar || !selecao) return
-    if (selecao.pessoaId && selecao.pessoaId !== pessoaId) return   // seleção é de uma pessoa só
-    setSelecao(s => {
-      const jaTem = s.dias.includes(diaIso)
-      // Shift extende do último marcado até aqui — é o gesto de planilha.
-      if (e.shiftKey && s.dias.length) {
-        const ultimo = s.dias[s.dias.length - 1]
-        const [a, b] = [ultimo, diaIso].sort()
-        const faixa = listaDias.map(d => iso(ano, mes, d)).filter(x => x >= a && x <= b)
-        return { pessoaId, dias: [...new Set([...s.dias, ...faixa])] }
-      }
-      return { pessoaId, dias: jaTem ? s.dias.filter(x => x !== diaIso) : [...s.dias, diaIso] }
-    })
   }
 
   if (loading) {
@@ -386,7 +402,7 @@ export default function FolgasView({ podeEditar = false }) {
         <div className="flg-selbarra">
           <strong>{selecao.dias.length}</strong> {selecao.dias.length === 1 ? 'dia marcado' : 'dias marcados'}
           {selecao.pessoaId && <> · {pessoas.find(p => p.id === selecao.pessoaId)?.nome}</>}
-          <span className="flg-selbarra-dica">clique nos dias · shift para um intervalo</span>
+          <span className="flg-selbarra-dica">clique ou arraste sobre os dias · shift para um intervalo</span>
           <div style={{ flex: 1 }} />
           {categorias.map(c => (
             <button
@@ -468,7 +484,6 @@ export default function FolgasView({ podeEditar = false }) {
                           className={`flg-cel${marcado || naFaixa(p.id, diaIso) ? ' flg-cel-marcada' : ''}${podeEditar ? ' flg-cel-edita' : ''}${p.id === minhaPessoaId ? ' flg-eu' : ''}`}
                           style={estiloCelula(c)}
                           title={reg ? `${c?.nome || 'Categoria removida'}${reg.campeonato ? ` · ${reg.campeonato}` : ''}${reg.detalhe ? `\n${reg.detalhe}` : ''}` : 'vazio'}
-                          onClick={e => aoClicar(p.id, diaIso, e)}
                           onMouseDown={e => aoPressionar(p.id, diaIso, reg, e)}
                           onMouseEnter={() => aoEntrar(p.id, diaIso)}
                         >
