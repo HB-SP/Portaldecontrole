@@ -233,6 +233,9 @@ export default function FolgasView({ podeEditar = false }) {
   const [arrasto, setArrasto] = useState(null)
   const [selecao, setSelecao] = useState(null)        // { pessoaId, dias: [] }
   const [aba, setAba] = useState('grade')             // grade | resumo
+  // Linha em destaque, como numa planilha: clicar no dia acende a linha toda,
+  // para acompanhar um dia inteiro sem perder a conta de qual coluna é quem.
+  const [linhaFoco, setLinhaFoco] = useState(null)
 
   const feriadosSet = useMemo(() => new Map(feriados.map(f => [f.dia, f.nome])), [feriados])
   const feriadosChaves = useMemo(() => new Set(feriados.map(f => f.dia)), [feriados])
@@ -544,11 +547,15 @@ export default function FolgasView({ podeEditar = false }) {
                 const feriado = feriadosSet.get(diaIso)
                 const ehHoje = diaIso === hoje
                 return (
-                  <tr key={d} className={`flg-linha${fds || feriado ? ' flg-linha-descanso' : ''}${ehHoje ? ' flg-linha-hoje' : ''}`}>
-                    <td className="flg-fix flg-td-dia">
+                  <tr key={d} className={`flg-linha${fds || feriado ? ' flg-linha-descanso' : ''}${ehHoje ? ' flg-linha-hoje' : ''}${linhaFoco === diaIso ? ' flg-linha-foco' : ''}`}>
+                    <td
+                      className="flg-fix flg-td-dia"
+                      title={`${feriado ? feriado + ' · ' : ''}clique para destacar o dia inteiro`}
+                      onClick={() => setLinhaFoco(f => (f === diaIso ? null : diaIso))}
+                    >
                       <span className="flg-dia-num">{String(d).padStart(2, '0')}</span>
                       <span className="flg-dia-sem">{SEMANA_CURTA[new Date(ano, mes, d).getDay()]}</span>
-                      {feriado && <span className="flg-dia-feriado" title={feriado}>●</span>}
+                      {feriado && <span className="flg-dia-feriado">●</span>}
                     </td>
                     {visiveis.map(p => {
                       const reg = (diasDe.get(p.id) || new Map()).get(diaIso)

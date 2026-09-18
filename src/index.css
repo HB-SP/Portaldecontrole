@@ -4499,7 +4499,7 @@ body {
 }
 
 /* A minha coluna: quem abre a tela quer achar a si mesmo primeiro. */
-.flg-eu { background: var(--lm-green-bg) !important; }
+.flg-eu { background: var(--lm-green-bg); }
 .flg-tab th.flg-eu .flg-th-nome { font-weight: 800; }
 .flg-atirar { font-weight: 700; font-size: 12.5px; }
 
@@ -4508,9 +4508,21 @@ body {
 .flg-tab th.flg-fix { z-index: 40; background: var(--bg-surface); }
 
 .flg-linha > td { height: 26px; padding: 0 6px; border-bottom: 1px solid var(--border); border-left: 1px solid var(--border); }
-/* Fim de semana e feriado: o dia que GERA a folga de direito. */
+/* Fim de semana e feriado: o dia que GERA a folga de direito. Marcar a LINHA
+   INTEIRA, e não só a coluna do dia — é a linha que você percorre com o olho
+   para ver quem trabalhou no sábado. */
+.flg-linha-descanso > td { background: #F4F5F7; }
 .flg-linha-descanso > td.flg-td-dia { background: var(--bg-surface2); font-weight: 700; }
 .flg-linha-hoje > td { border-top: 2px solid var(--lm-green); }
+
+/* Linha em destaque: clicar no dia acende a linha toda, como a barra de
+   seleção de uma planilha. Vem depois das outras de propósito — com a mesma
+   especificidade, quem vem por último manda, e o destaque tem de vencer o fim
+   de semana e a coluna de quem está logado. */
+.flg-td-dia { cursor: pointer; }
+.flg-linha-foco > td { background: #E7EEF9; }
+.flg-linha-foco > td.flg-td-dia { background: #D6E3F5; }
+.flg-linha-foco > td:first-child { box-shadow: inset 3px 0 0 var(--blue); }
 .flg-td-dia { display: flex; align-items: center; gap: 6px; }
 .flg-dia-num { font-variant-numeric: tabular-nums; font-weight: 600; }
 .flg-dia-sem { color: var(--text-muted); font-size: 11px; }
