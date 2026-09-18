@@ -19,27 +19,14 @@ import {
 const CHAVE_TIME = 'folgas_time'
 
 // ── COR NA GRADE ─────────────────────────────────────────────────────────────
-// Pintar toda célula com a cor forte da categoria vira carnaval: com 18 colunas
-// e 31 linhas nada salta, porque tudo salta.
+// A cor vive na LETRA, não no fundo. Célula pintada vira uma coluna de blocos
+// que puxa o olho para o formato em vez do conteúdo — decisão da equipe
+// (18/09/2026): "a letra colorida é suficiente, a coluna chama muita atenção".
 //
-// Então só a AUSÊNCIA ganha cor de verdade — é dela que a tela trata, e é ela
-// que a conta de folga persegue. Dia de trabalho fica num tom lavado da própria
-// cor, o bastante para distinguir Casablanca de Escritório de relance, sem
-// competir com o vermelho da folga.
-const AUSENCIA = new Set(['folga', 'ferias', 'atestado'])
-
-// '#DC2626' -> 'rgba(220, 38, 38, 0.1)'
-function tom(hex, alfa) {
-  const h = String(hex || '#888888').replace('#', '')
-  const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16)
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alfa})`
-}
-
+// A folga é a única que ganha peso, porque é o que a conta persegue.
 function estiloCelula(cat) {
   if (!cat) return undefined
-  if (cat.id === 'folga') return { background: cat.cor, color: '#fff', fontWeight: 700 }
-  if (AUSENCIA.has(cat.id)) return { background: tom(cat.cor, 0.2), color: cat.cor, fontWeight: 600 }
-  return { background: tom(cat.cor, 0.09), color: 'var(--text)' }
+  return { color: cat.cor, fontWeight: cat.conta_folga ? 700 : 500 }
 }
 
 // ── Editor de um dia ─────────────────────────────────────────────────────────
