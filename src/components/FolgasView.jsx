@@ -19,14 +19,18 @@ import {
 const CHAVE_TIME = 'folgas_time'
 
 // ── COR NA GRADE ─────────────────────────────────────────────────────────────
-// A cor vive na LETRA, não no fundo. Célula pintada vira uma coluna de blocos
-// que puxa o olho para o formato em vez do conteúdo — decisão da equipe
-// (18/09/2026): "a letra colorida é suficiente, a coluna chama muita atenção".
+// A cor vive na LETRA, não no fundo: célula pintada vira uma coluna de blocos e
+// o olho vai para o formato em vez do conteúdo.
 //
-// A folga é a única que ganha peso, porque é o que a conta persegue.
+// E só a AUSÊNCIA é colorida. O dia a dia — escritório, Casablanca, home,
+// externa — é preto, porque é o normal: se o normal tem cor, a exceção deixa de
+// ter. Decisões da equipe em 18/09/2026.
+const AUSENCIA = new Set(['folga', 'ferias', 'atestado'])
+
 function estiloCelula(cat) {
   if (!cat) return undefined
-  return { color: cat.cor, fontWeight: cat.conta_folga ? 700 : 500 }
+  if (!AUSENCIA.has(cat.id)) return { color: 'var(--text)' }
+  return { color: cat.cor, fontWeight: cat.conta_folga ? 700 : 600 }
 }
 
 // ── Editor de um dia ─────────────────────────────────────────────────────────
@@ -105,11 +109,12 @@ function Editor({ atual, categorias, onSalvar, onFechar }) {
 }
 
 // ── O número que importa ─────────────────────────────────────────────────────
-// "-3" no cabeçalho não diz sozinho se é bom ou ruim. Em palavras, diz: "deve 3"
-// é dívida de folga, "a mais 3" é folga tirada adiantada.
+// "-3" não diz sozinho se é bom ou ruim, e "deve 3" dizia o contrário do que
+// acontece: quem tem folga acumulada não deve nada — a folga é DELA, ainda por
+// tirar. "3 a tirar" é o termo que a própria planilha da equipe usa.
 function emPalavras(n) {
-  if (n < 0) return `deve ${-n}`
-  if (n > 0) return `a mais ${n}`
+  if (n < 0) return `${-n} a tirar`
+  if (n > 0) return `${n} adiantada${n > 1 ? 's' : ''}`
   return 'em dia'
 }
 const corDoSaldo = n => (n < 0 ? 'var(--red)' : n > 0 ? 'var(--lm-green-dim)' : 'var(--text-dim)')
