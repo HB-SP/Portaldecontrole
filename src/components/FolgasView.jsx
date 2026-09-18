@@ -501,14 +501,6 @@ export default function FolgasView({ podeEditar = false }) {
         </div>
       )}
 
-      {aba === 'grade' && (
-        <div className="flg-legenda-cores">
-          {oferecidas.map(c => (
-            <span key={c.id} className="flg-chip" style={estiloCelula(c)}>{c.nome}</span>
-          ))}
-        </div>
-      )}
-
       {editando && createPortal(
         <MenuDia
           atual={dias.get(`${editando.pessoaId}|${editando.dia}`)}
