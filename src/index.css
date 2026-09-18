@@ -4521,7 +4521,10 @@ body {
 
 /* Menu de um dia — escolher já grava. */
 .flg-menu {
-  position: absolute; top: 100%; left: 0; z-index: 80;
+  /* A posição vem por style, de posicaoDoMenu: o menu nasce preso à TELA, fora
+     da grade. Dentro da célula ele abria e não aparecia — a célula corta o que
+     passa da borda (para truncar texto longo) e a grade também. */
+  z-index: 200;
   min-width: 190px; padding: 4px; text-align: left; cursor: default;
   background: var(--bg-card); color: var(--text);
   border: 1px solid var(--border-light); border-radius: 8px;

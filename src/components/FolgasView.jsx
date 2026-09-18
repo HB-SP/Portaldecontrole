@@ -10,6 +10,7 @@
 // — a conta vive em lib/folgas.js.
 
 import { useState, useMemo, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useFolgas } from '../hooks/useFolgas'
 import {
   MESES, SEMANA_CURTA, iso, diasNoMes, hojeIso, ehFimDeSemana,
@@ -17,6 +18,20 @@ import {
 } from '../lib/folgas'
 
 const CHAVE_TIME = 'folgas_time'
+
+// Onde desenhar o menu de um dia. Ele fica preso à TELA (position: fixed), e não
+// à célula, porque a célula corta o que passa da borda — era por isso que o menu
+// abria e não aparecia. Se não couber para baixo, abre para cima; se não couber
+// à direita, encosta pela direita.
+const ALTURA_MENU = 340
+function posicaoDoMenu(caixa) {
+  if (!caixa) return { position: 'fixed', left: 0, top: 0 }
+  const paraCima = caixa.bottom + ALTURA_MENU > window.innerHeight && caixa.top > ALTURA_MENU
+  const esquerda = Math.min(caixa.left, window.innerWidth - 210)
+  return paraCima
+    ? { position: 'fixed', left: Math.max(8, esquerda), bottom: window.innerHeight - caixa.top + 2, top: 'auto' }
+    : { position: 'fixed', left: Math.max(8, esquerda), top: caixa.bottom + 2 }
+}
 
 // ── COR NA GRADE ─────────────────────────────────────────────────────────────
 // A cor vive na LETRA, não no fundo: célula pintada vira uma coluna de blocos e
@@ -40,7 +55,7 @@ function estiloCelula(cat) {
 //
 // O descritivo continua ali, mas num segundo passo, para quem quer: ele é a
 // exceção, não o caminho principal.
-function MenuDia({ atual, categorias, onSalvar, onFechar }) {
+function MenuDia({ atual, categorias, onSalvar, onFechar, ancora }) {
   // 'lista' = escolher a categoria. 'texto' = escrever o descritivo daquela.
   const [modo, setModo] = useState('lista')
   const [cat, setCat] = useState(atual?.categoria_id || '')
@@ -67,7 +82,7 @@ function MenuDia({ atual, categorias, onSalvar, onFechar }) {
   if (modo === 'texto') {
     const falta = def?.exige_detalhe && !detalhe.trim()
     return (
-      <div className="flg-menu" ref={ref} onMouseDown={e => e.stopPropagation()}>
+      <div className="flg-menu" ref={ref} style={ancora} onMouseDown={e => e.stopPropagation()}>
         <div className="flg-menu-topo">
           <button className="flg-menu-voltar" onClick={() => setModo('lista')}>‹</button>
           <span>{def?.nome || 'Descritivo'}</span>
@@ -102,7 +117,7 @@ function MenuDia({ atual, categorias, onSalvar, onFechar }) {
   }
 
   return (
-    <div className="flg-menu" ref={ref} onMouseDown={e => e.stopPropagation()}>
+    <div className="flg-menu" ref={ref} style={ancora} onMouseDown={e => e.stopPropagation()}>
       {categorias.map(c => (
         <button
           key={c.id}
@@ -292,6 +307,10 @@ export default function FolgasView({ podeEditar = false }) {
     if (selecao?.pessoaId && selecao.pessoaId !== pessoaId) return
     arrastoRef.current = {
       pessoaId, de: diaIso, ate: diaIso, moveu: false, shift: e.shiftKey,
+      // Onde a célula está na tela. O menu não pode nascer dentro dela: a
+      // célula corta o que passa da borda (para truncar texto longo) e a grade
+      // também. Ele nasce preso ao body, nesta posição.
+      caixa: e.currentTarget.getBoundingClientRect(),
       valor: reg ? { categoria_id: reg.categoria_id, detalhe: reg.detalhe, campeonato: reg.campeonato } : null,
     }
     setArrasto({ ...arrastoRef.current })
@@ -331,7 +350,7 @@ export default function FolgasView({ podeEditar = false }) {
         return
       }
 
-      if (!a.moveu) { setEditando({ pessoaId: a.pessoaId, dia: a.de }); return }
+      if (!a.moveu) { setEditando({ pessoaId: a.pessoaId, dia: a.de, caixa: a.caixa }); return }
       const alvo = faixa.filter(k => k !== a.de)
       if (!alvo.length) return
       const falha = await salvarVarios(a.pessoaId, alvo, a.valor)
@@ -340,6 +359,15 @@ export default function FolgasView({ podeEditar = false }) {
     document.addEventListener('mouseup', soltar)
     return () => document.removeEventListener('mouseup', soltar)
   }, [todosOsDias, salvarVarios, selecao])
+
+  // O menu é preso à tela, então rolar a grade o deixaria solto no ar.
+  useEffect(() => {
+    if (!editando) return
+    const fechar = () => setEditando(null)
+    window.addEventListener('scroll', fechar, true)
+    window.addEventListener('resize', fechar)
+    return () => { window.removeEventListener('scroll', fechar, true); window.removeEventListener('resize', fechar) }
+  }, [editando])
 
   // Está dentro da faixa que o arrasto vai pegar?
   const naFaixa = (pessoaId, diaIso) => {
@@ -434,6 +462,22 @@ export default function FolgasView({ podeEditar = false }) {
         </div>
       )}
 
+      {editando && createPortal(
+        <MenuDia
+          atual={dias.get(`${editando.pessoaId}|${editando.dia}`)}
+          categorias={categorias}
+          ancora={posicaoDoMenu(editando.caixa)}
+          onFechar={() => setEditando(null)}
+          onSalvar={async v => {
+            const { pessoaId, dia } = editando
+            setEditando(null)
+            const falha = await salvarDia(pessoaId, dia, v)
+            if (falha) alert('Não deu para salvar: ' + falha)
+          }}
+        />,
+        document.body
+      )}
+
       {aba === 'grade' ? (
         <div className="flg-wrap">
           <table className="flg-tab">
@@ -489,17 +533,6 @@ export default function FolgasView({ podeEditar = false }) {
                         >
                           {texto}
                           {reg?.detalhe && !c?.exige_detalhe && <span className="flg-nota" title={reg.detalhe}>·</span>}
-                          {editando && editando.pessoaId === p.id && editando.dia === diaIso && (
-                            <MenuDia
-                              atual={reg} categorias={categorias}
-                              onFechar={() => setEditando(null)}
-                              onSalvar={async v => {
-                                setEditando(null)
-                                const falha = await salvarDia(p.id, diaIso, v)
-                                if (falha) alert('Não deu para salvar: ' + falha)
-                              }}
-                            />
-                          )}
                         </td>
                       )
                     })}
