@@ -4649,3 +4649,16 @@ body {
 .flg-jogo:hover { outline: 2px solid var(--text); outline-offset: 1px; }
 /* Vazada: a escala tem o jogo, o Controle não — não há ficha para abrir. */
 .flg-jogo-sem { background: transparent; border: 1.5px solid; cursor: help; }
+/* O jogo escrito na célula: quando ninguém preencheu o dia, ele É o conteúdo.
+   Fica na cor do campeonato e sublinhado pontilhado — assim se distingue do
+   que foi digitado aqui, e se lê como link. */
+.flg-dejogo {
+  padding: 0; border: none; background: none; cursor: pointer;
+  font-family: inherit; font-size: 11px; font-weight: 600;
+  text-decoration: underline dotted; text-underline-offset: 2px;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.flg-dejogo:hover { text-decoration: underline solid; }
+/* Sem ficha no Portal: nada para abrir, então nem parece clicável. */
+.flg-dejogo-sem { cursor: help; opacity: 0.75; text-decoration: none; font-style: italic; }
+.flg-dejogo-sem:hover { text-decoration: none; }

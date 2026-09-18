@@ -43,6 +43,17 @@ function posicaoDoMenu(caixa) {
 // ter. Decisões da equipe em 18/09/2026.
 const AUSENCIA = new Set(['folga', 'ferias', 'atestado'])
 
+// O jogo escrito curto, para caber na coluna: "Mirassol × Botafogo" vira
+// "MIR × BOT". Quando não é uma partida de dois lados — um plantão sobre
+// vários jogos, um Media Day — vai o texto como está, e a coluna corta o que
+// passar; o nome inteiro está no title.
+const sigla = t => String(t || '').trim().split(/\s+/)[0].slice(0, 3).toUpperCase()
+function jogoCurto(confronto) {
+  const lados = String(confronto || '').split(' × ')
+  const partida = lados.length === 2 && lados.every(x => x.trim() && !/\sx\s/i.test(x))
+  return partida ? `${sigla(lados[0])} × ${sigla(lados[1])}` : confronto
+}
+
 function estiloCelula(cat) {
   if (!cat) return undefined
   if (!AUSENCIA.has(cat.id)) return { color: 'var(--text)' }
@@ -586,6 +597,12 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
                       const texto = !reg ? ''
                         : (c?.exige_detalhe && reg.detalhe) ? reg.detalhe
                         : (c?.nome || 'Categoria removida')
+                      // A ordem de trabalho é: escala o jogo, depois preenche
+                      // folga/home. Então dia com jogo JÁ ESTÁ DITO — a célula
+                      // mostra o jogo em vez de ficar vazia pedindo o que já se
+                      // sabe. Marcar por cima continua possível: quem escolhe
+                      // uma categoria manda, e o jogo volta a ser só a marca.
+                      const jogos = jogosPorDia.get(`${p.id}|${diaIso}`) || []
                       return (
                         <td
                           key={p.id}
@@ -597,7 +614,22 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
                         >
                           {texto}
                           {reg?.detalhe && !c?.exige_detalhe && <span className="flg-nota" title={reg.detalhe}>·</span>}
-                          {(jogosPorDia.get(`${p.id}|${diaIso}`) || []).map((j, i) => (
+
+                          {/* Sem nada preenchido, o jogo É o conteúdo do dia. */}
+                          {!reg && jogos.map((j, i) => (
+                            <button
+                              key={i}
+                              className={`flg-dejogo${j.compId ? '' : ' flg-dejogo-sem'}`}
+                              style={{ color: j.cor }}
+                              title={`${j.compLabel} · ${j.confronto}\n${j.funcao}${j.compId ? ' — clique para abrir o jogo' : ' — este jogo não tem ficha no Portal'}`}
+                              onMouseDown={e => e.stopPropagation()}
+                              onClick={e => { e.stopPropagation(); if (j.compId) onAbrirJogo?.(j.compId, j.jogo) }}
+                            >{jogoCurto(j.confronto)}</button>
+                          ))}
+
+                          {/* Com algo preenchido, quem manda é o preenchimento
+                              e o jogo volta a ser só a marca ao lado. */}
+                          {reg && jogos.map((j, i) => (
                             <button
                               key={i} className={`flg-jogo${j.compId ? '' : ' flg-jogo-sem'}`}
                               title={`${j.compLabel} · ${j.confronto}\n${j.funcao}${j.compId ? ' — clique para abrir o jogo' : ' — este jogo não tem ficha no Portal'}`}
