@@ -137,6 +137,10 @@ const PEDE_JOGO = new Set(['externa', 'monitoracao', 'casablanca'])
 // Os campos que apagam o jogo apontado. Escrever à mão depois de ter escolhido
 // um jogo tem de LIMPAR a escolha, senão a célula continua mostrando o jogo
 // antigo e ninguém entende por quê.
+//
+// Só são enviados quando o dia REALMENTE tinha um jogo: mandar a chave para
+// uma coluna que o banco ainda não tem faz o PostgREST recusar a gravação
+// inteira, e a grade pararia de salvar por causa de um campo que ninguém usou.
 const SEM_JOGO = {
   jogo_comp_id: null, jogo_id: null, jogo_camp: null,
   jogo_data: null, jogo_mandante: null, jogo_visitante: null,
@@ -159,11 +163,12 @@ function MenuDia({ atual, categorias, onSalvar, onFechar, ancora, quantos = 1, j
   }, [onFechar])
 
   const def = categorias.find(c => c.id === cat)
+  const limpaJogo = (atual?.jogo_mandante || atual?.jogo_comp_id) ? SEM_JOGO : {}
 
   // "Outro" não diz nada sem o texto, então ele é o único que não grava direto.
   const escolher = c => {
     if (c.exige_detalhe) { setCat(c.id); setDetalhe(atual?.categoria_id === c.id ? (atual.detalhe || '') : ''); setModo('texto'); return }
-    onSalvar({ categoria_id: c.id, detalhe: atual?.categoria_id === c.id ? (atual.detalhe || null) : null, campeonato: null, ...SEM_JOGO })
+    onSalvar({ categoria_id: c.id, detalhe: atual?.categoria_id === c.id ? (atual.detalhe || null) : null, campeonato: null, ...limpaJogo })
   }
 
   if (modo === 'texto') {
@@ -221,12 +226,12 @@ function MenuDia({ atual, categorias, onSalvar, onFechar, ancora, quantos = 1, j
           placeholder={def?.dica_detalhe || 'o que será feito no dia'}
           value={detalhe} onChange={e => setDetalhe(e.target.value)}
           onKeyDown={e => {
-            if (e.key === 'Enter' && !falta) onSalvar({ categoria_id: cat, detalhe: detalhe.trim() || null, campeonato: camp || null, ...SEM_JOGO })
+            if (e.key === 'Enter' && !falta) onSalvar({ categoria_id: cat, detalhe: detalhe.trim() || null, campeonato: camp || null, ...limpaJogo })
           }}
         />
         <button
           className="flg-menu-ok" disabled={falta}
-          onClick={() => onSalvar({ categoria_id: cat, detalhe: detalhe.trim() || null, campeonato: camp || null, ...SEM_JOGO })}
+          onClick={() => onSalvar({ categoria_id: cat, detalhe: detalhe.trim() || null, campeonato: camp || null, ...limpaJogo })}
         >{falta ? 'Falta o descritivo' : 'Salvar'}</button>
       </div>
     )
@@ -720,6 +725,18 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
                         confronto: [reg.jogo_mandante, reg.jogo_visitante].filter(Boolean).join(' × '),
                         jogo: { data: reg.jogo_data, mandante: reg.jogo_mandante, visitante: reg.jogo_visitante, id: reg.jogo_id },
                       } : null
+                      // DIA DE TRABALHO COM JOGO: o jogo é o que diz mais.
+                      // "Externa" sozinho não conta onde a pessoa esteve; "BR26
+                      // - MIR × BOT" conta (equipe, 21/09/2026). Vale para o
+                      // jogo apontado à mão e para o lido da escala.
+                      //
+                      // AUSÊNCIA é o contrário: se o dia é folga, férias ou
+                      // atestado, quem manda é a ausência, e o jogo vira a marca
+                      // ao lado — que ali serve de aviso, porque alguém está
+                      // escalado num dia em que não vai estar.
+                      const ehTrabalho = !!c && !AUSENCIA.has(c.id)
+                      const noTexto = posto ? [posto] : (!reg || ehTrabalho) ? jogos : []
+                      const soMarca = noTexto.length ? [] : jogos
                       return (
                         <td
                           key={p.id}
@@ -729,34 +746,21 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
                           onMouseDown={e => aoPressionar(p.id, diaIso, e)}
                           onMouseOver={() => aoEntrar(p.id, diaIso)}
                         >
-                          {posto ? (
-                            <button
-                              className={`flg-dejogo${posto.compId ? '' : ' flg-dejogo-sem'}`}
-                              style={{ color: c?.cor || 'var(--text)' }}
-                              title={`${c?.nome || ''} · ${posto.compLabel || ''} · ${posto.confronto}${posto.compId ? '\nclique para abrir o jogo' : ''}`}
-                              onMouseDown={e => e.stopPropagation()}
-                              onClick={e => { e.stopPropagation(); if (posto.compId) onAbrirJogo?.(posto.compId, posto.jogo) }}
-                            ><span className="flg-dejogo-camp">{siglaCamp(posto.compLabel)}</span>
-                              {' - '}{jogoCurto(posto.confronto)}</button>
-                          ) : texto}
-                          {reg?.detalhe && !c?.exige_detalhe && <span className="flg-nota" title={reg.detalhe}>·</span>}
-
-                          {/* Sem nada preenchido, o jogo É o conteúdo do dia. */}
-                          {!reg && jogos.map((j, i) => (
+                          {!noTexto.length && texto}
+                          {noTexto.map((j, i) => (
                             <button
                               key={i}
                               className={`flg-dejogo${j.compId ? '' : ' flg-dejogo-sem'}`}
-                              style={{ color: j.cor }}
-                              title={`${j.compLabel} · ${j.confronto}\n${j.funcao}${j.compId ? ' — clique para abrir o jogo' : ' — este jogo não tem ficha no Portal'}`}
+                              style={{ color: c?.cor || j.cor }}
+                              title={`${c?.nome ? c.nome + ' · ' : ''}${j.compLabel || ''} · ${j.confronto}${j.funcao ? '\n' + j.funcao : ''}${j.compId ? ' — clique para abrir o jogo' : ' — este jogo não tem ficha no Portal'}`}
                               onMouseDown={e => e.stopPropagation()}
                               onClick={e => { e.stopPropagation(); if (j.compId) onAbrirJogo?.(j.compId, j.jogo) }}
                             ><span className="flg-dejogo-camp">{siglaCamp(j.compLabel)}</span>
                               {' - '}{jogoCurto(j.confronto)}</button>
                           ))}
+                          {reg?.detalhe && !c?.exige_detalhe && <span className="flg-nota" title={reg.detalhe}>·</span>}
 
-                          {/* Com algo preenchido, quem manda é o preenchimento
-                              e o jogo volta a ser só a marca ao lado. */}
-                          {reg && !posto && jogos.map((j, i) => (
+                          {soMarca.map((j, i) => (
                             <button
                               key={i} className={`flg-jogo${j.compId ? '' : ' flg-jogo-sem'}`}
                               title={`${j.compLabel} · ${j.confronto}\n${j.funcao}${j.compId ? ' — clique para abrir o jogo' : ' — este jogo não tem ficha no Portal'}`}

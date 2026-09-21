@@ -105,19 +105,27 @@ export function useFolgas(ano) {
 // As colunas que uma linha de dia grava. Fica numa função só porque TRÊS
 // caminhos gravam — salvar um dia, salvar vários e desfazer — e um campo novo
 // esquecido em um deles some sem erro nenhum.
-const linhaDia = (pessoaId, dia, v, quem) => ({
-  pessoa_id: pessoaId, dia,
-  categoria_id: v.categoria_id,
-  detalhe: v.detalhe || null,
-  campeonato: v.campeonato || null,
-  jogo_comp_id: v.jogo_comp_id || null,
-  jogo_id: v.jogo_id || null,
-  jogo_camp: v.jogo_camp || null,
-  jogo_data: v.jogo_data || null,
-  jogo_mandante: v.jogo_mandante || null,
-  jogo_visitante: v.jogo_visitante || null,
-  updated_at: new Date().toISOString(), updated_by: quem,
-})
+const linhaDia = (pessoaId, dia, v, quem) => {
+  const linha = {
+    pessoa_id: pessoaId, dia,
+    categoria_id: v.categoria_id,
+    detalhe: v.detalhe || null,
+    campeonato: v.campeonato || null,
+    updated_at: new Date().toISOString(), updated_by: quem,
+  }
+  // As colunas do jogo só entram quando o valor fala delas. Mandar uma chave
+  // para coluna que o banco ainda não tem faz o PostgREST recusar a gravação
+  // INTEIRA — a grade pararia de salvar por causa de um campo que ninguém usou.
+  if (Object.keys(v).some(k => k.startsWith('jogo_'))) Object.assign(linha, {
+    jogo_comp_id: v.jogo_comp_id || null,
+    jogo_id: v.jogo_id || null,
+    jogo_camp: v.jogo_camp || null,
+    jogo_data: v.jogo_data || null,
+    jogo_mandante: v.jogo_mandante || null,
+    jogo_visitante: v.jogo_visitante || null,
+  })
+  return linha
+}
 
   // ── gravar um dia ──
   // Categoria vazia = apagar o dia. Devolve null se deu certo, ou a mensagem.
