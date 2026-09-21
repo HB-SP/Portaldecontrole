@@ -43,6 +43,32 @@ function posicaoDoMenu(caixa) {
 // ter. Decisões da equipe em 18/09/2026.
 const AUSENCIA = new Set(['folga', 'ferias', 'atestado'])
 
+// ── A FAIXA DO ANO ──────────────────────────────────────────────────────────
+// Só AUSÊNCIA LONGA pinta a faixa. A folga do dia a dia ficou de fora de
+// propósito: como todo mundo folga toda semana, ela pintava o ano inteiro de
+// vermelho e escondia justamente o que se quer enxergar — quem está de férias
+// quando (equipe, 21/09/2026). Do futuro entram só as folgas JÁ MARCADAS, que
+// são as que ainda dá para remanejar.
+const BLOCO_ANO = new Set(['ferias', 'atestado'])
+const ddmm = chave => `${chave.slice(8)}/${chave.slice(5, 7)}`
+
+// Dias seguidos da mesma categoria viram UM retângulo: 20 dias de férias são um
+// bloco com a data escrita dentro, e não 20 risquinhos de 2px que ninguém lê.
+function blocosDoAno(meus, diasDoAno) {
+  const fora = []
+  let atual = null
+  diasDoAno.forEach((d, i) => {
+    const cat = meus.get(d.chave)?.categoria_id
+    const vale = BLOCO_ANO.has(cat) ? cat : null
+    if (atual && (!vale || atual.cat !== vale)) { fora.push(atual); atual = null }
+    if (!vale) return
+    if (atual) { atual.fim = i; atual.ate = d.chave; atual.dias++ }
+    else atual = { cat: vale, ini: i, fim: i, de: d.chave, ate: d.chave, dias: 1 }
+  })
+  if (atual) fora.push(atual)
+  return fora
+}
+
 // O jogo escrito curto, para caber na coluna: "Mirassol × Botafogo" vira
 // "MIR × BOT". Quando não é uma partida de dois lados — um plantão sobre
 // vários jogos, um Media Day — vai o texto como está, e a coluna corta o que
@@ -298,6 +324,13 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
     }
     return fora
   }, [ano])
+
+  // Onde o dia de hoje cai na faixa, em % do ano: é a linha que separa o que já
+  // aconteceu do que ainda vem. Fora do ano que está na tela, não existe.
+  const hojePct = useMemo(() => {
+    const i = diasDoAno.findIndex(d => d.chave === hoje)
+    return i < 0 ? null : ((i + 0.5) / diasDoAno.length) * 100
+  }, [diasDoAno, hoje])
 
   const total = diasNoMes(ano, mes)
   const listaDias = useMemo(() => Array.from({ length: total }, (_, i) => i + 1), [total])
@@ -647,11 +680,13 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
             <span className="flg-ano-nome" />
             <span className="flg-ano-num" title="Folgas devidas que ainda não têm data marcada">a agendar</span>
             <span className="flg-ano-num" title="Dias de férias no ano">férias</span>
-            <span className="flg-ano-num" title="Folgas já tiradas ou já marcadas no ano">folgas</span>
             <div className="flg-ano-barra">
-              {MESES.map((m, i) => (
-                <span key={i} className="flg-ano-mes" style={{ flexGrow: diasNoMes(ano, i) }}>{m.slice(0, 3)}</span>
-              ))}
+              <div className="flg-ano-meses">
+                {MESES.map((m, i) => (
+                  <span key={i} className="flg-ano-mes" style={{ flexGrow: diasNoMes(ano, i) }}>{m.slice(0, 3)}</span>
+                ))}
+              </div>
+              {hojePct !== null && <span className="flg-ano-hoje-rot" style={{ left: `${hojePct}%` }}>hoje</span>}
             </div>
           </div>
 
@@ -660,11 +695,10 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
             if (!sal) return null
             const meus = diasDe.get(p.id) || new Map()
             const aAgendar = -sal.ano.aTirar - (sal.ano.marcadasGastam || 0)
-            let ferias = 0, folgas = 0
-            for (const [, reg] of meus) {
-              if (reg.categoria_id === 'ferias') ferias++
-              if (ehFolga(reg.categoria_id)) folgas++
-            }
+            const blocos = blocosDoAno(meus, diasDoAno)
+            const ferias = blocos.filter(b => b.cat === 'ferias').reduce((s, b) => s + b.dias, 0)
+            const folgasVindo = diasDoAno.flatMap((d, i) =>
+              d.chave > hoje && ehFolga(meus.get(d.chave)?.categoria_id) ? [{ ...d, i }] : [])
             return (
               <div key={p.id} className={`flg-ano-linha${p.id === minhaPessoaId ? ' flg-eu' : ''}`}>
                 <span className="flg-ano-nome" title={times.find(t => t.id === p.time_id)?.nome || ''}>
@@ -674,36 +708,55 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
                   {aAgendar > 0 ? aAgendar : aAgendar < 0 ? `+${-aAgendar}` : '—'}
                 </span>
                 <span className="flg-ano-num">{ferias || '—'}</span>
-                <span className="flg-ano-num">{folgas || '—'}</span>
+
                 <div className="flg-ano-barra">
-                  {diasDoAno.map(d => {
-                    const reg = meus.get(d.chave)
-                    const cat = reg ? catPorId.get(reg.categoria_id) : null
-                    const ausencia = cat && AUSENCIA.has(cat.id)
-                    const temJogo = !reg && (jogosPorDia.get(`${p.id}|${d.chave}`) || []).length
+                  <div className="flg-ano-meses">
+                    {MESES.map((m, i) => (
+                      <span key={i} className="flg-ano-mes" style={{ flexGrow: diasNoMes(ano, i) }} />
+                    ))}
+                  </div>
+
+                  {/* Folga que ainda vem: um fio fino, só para dizer que já tem data. */}
+                  {folgasVindo.map(d => (
+                    <i
+                      key={d.chave}
+                      className="flg-ano-folga"
+                      style={{ left: `${(d.i / diasDoAno.length) * 100}%` }}
+                      title={`Folga marcada em ${ddmm(d.chave)}`}
+                    />
+                  ))}
+
+                  {blocos.map(b => {
+                    const cat = catPorId.get(b.cat)
+                    const larg = (b.dias / diasDoAno.length) * 100
                     return (
-                      <i
-                        key={d.chave}
-                        className={`flg-ano-dia${d.dia === 1 ? ' flg-ano-virada' : ''}`}
+                      <span
+                        key={b.de}
+                        className="flg-ano-bloco"
                         style={{
-                          background: ausencia ? cat.cor : (reg || temJogo) ? 'var(--border-light)' : 'transparent',
-                          opacity: d.chave > hoje ? 0.5 : 1,
+                          left: `${(b.ini / diasDoAno.length) * 100}%`,
+                          width: `${larg}%`,
+                          background: cat?.cor || 'var(--text-muted)',
+                          opacity: b.ate < hoje ? 0.55 : 1,
                         }}
-                        title={`${String(d.dia).padStart(2, '0')}/${String(d.mes + 1).padStart(2, '0')} — ${cat?.nome || (temJogo ? 'jogo escalado' : 'em branco')}${reg?.detalhe ? `: ${reg.detalhe}` : ''}`}
-                      />
+                        title={`${cat?.nome || b.cat} · ${ddmm(b.de)} a ${ddmm(b.ate)} · ${b.dias} dia${b.dias === 1 ? '' : 's'}`}
+                      >{larg >= 3.4 ? ddmm(b.de) : ''}</span>
                     )
                   })}
+
+                  {hojePct !== null && <span className="flg-ano-hoje" style={{ left: `${hojePct}%` }} />}
                 </div>
               </div>
             )
           })}
 
           <div className="flg-legenda">
-            Cada risquinho é um dia do ano, e só a AUSÊNCIA tem cor:{' '}
-            <b style={{ color: 'var(--red)' }}>folga</b>, <b style={{ color: '#7C3AED' }}>férias</b>,{' '}
-            <b style={{ color: '#B45309' }}>atestado</b>. Cinza é dia de trabalho preenchido ou com jogo
-            escalado; em branco é dia sem nada. O que ainda não chegou fica mais claro.
-            A lista vem de quem tem mais folga a agendar para quem tem menos.
+            A faixa mostra só quem fica fora vários dias seguidos:{' '}
+            <b style={{ color: '#7C3AED' }}>férias</b> e <b style={{ color: '#B45309' }}>atestado</b>, cada
+            período num bloco, com a data de início escrita dentro quando cabe. Os fios{' '}
+            <b style={{ color: 'var(--red)' }}>vermelhos</b> são folgas já marcadas daqui pra frente. A linha
+            escura é hoje, e o que está à esquerda dela já aconteceu. A ordem vai de quem tem mais folga a
+            agendar para quem tem menos.
           </div>
         </div>
       )}

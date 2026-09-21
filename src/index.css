@@ -4626,16 +4626,21 @@ body {
 .flg-dejogo-sem:hover { text-decoration: none; }
 
 /* ─── VISÃO DO ANO ─────────────────────────────────────────────────────────
-   Uma linha por pessoa, o ano inteiro em risquinhos. Responde de relance o que
-   a tabela de números não respondia: quem está de férias quando, e se as
-   ausências do time se empilham na mesma semana. */
+   Uma linha por pessoa e o ano inteiro numa faixa. Responde o que a tabela de
+   números não respondia: quem está de férias quando, e se as ausências do time
+   se empilham na mesma semana.
+
+   A faixa NÃO é mais um elemento por dia. Em 365 dias cada um ficava com 2px:
+   dia solto sumia, e a folga semanal pintava o ano todo de vermelho por cima do
+   que interessava (equipe, 21/09/2026). Agora cada ausência longa é um retângulo
+   posicionado em PORCENTAGEM do ano, com a data dentro quando cabe. */
 .flg-ano-wrap { padding: 4px 0 0; }
 .flg-ano-cab, .flg-ano-linha {
   display: flex; align-items: center; gap: 8px;
-  padding: 0 12px; height: 26px;
+  padding: 0 12px; height: 30px;
 }
 .flg-ano-cab {
-  position: sticky; top: 0; z-index: 10; height: 28px;
+  position: sticky; top: 0; z-index: 10; height: 30px;
   background: var(--bg-surface); box-shadow: 0 1px 0 var(--border-light);
   font-size: 10px; font-weight: 700; color: var(--text-muted);
   letter-spacing: 0.04em; text-transform: uppercase;
@@ -4653,14 +4658,46 @@ body {
 }
 .flg-ano-cab .flg-ano-num { font-size: 9px; }
 
-/* A régua: um elemento por dia, todos do mesmo tamanho. */
-.flg-ano-barra { flex: 1; display: flex; align-items: stretch; min-width: 420px; height: 16px; }
-.flg-ano-dia { flex: 1 1 0; min-width: 0; border-radius: 1px; }
-.flg-ano-dia:hover { outline: 1px solid var(--text); outline-offset: -1px; }
-/* Virada de mês: um fio claro, para dar para contar os meses sem legenda. */
-.flg-ano-virada { box-shadow: inset 1px 0 0 var(--border-gray); }
+/* A faixa: fundo neutro, e tudo por cima posicionado em %. */
+.flg-ano-barra {
+  position: relative; flex: 1; min-width: 420px; height: 20px;
+  border-radius: 3px; background: var(--bg-hover);
+}
+.flg-ano-cab .flg-ano-barra { background: none; }
+
+/* As divisórias de mês, no fundo: dá para contar os meses sem legenda. */
+.flg-ano-meses { position: absolute; inset: 0; display: flex; }
 .flg-ano-mes {
-  flex: 1 1 0; min-width: 0; text-align: center;
-  border-left: 1px solid var(--border); overflow: hidden;
+  flex-basis: 0; min-width: 0; overflow: hidden;
+  text-align: center; line-height: 20px;
+  border-left: 1px solid var(--border);
 }
 .flg-ano-mes:first-child { border-left: none; }
+
+/* Um período de ausência. A data só entra quando o bloco é largo o bastante
+   para ela caber inteira — texto cortado pela metade atrapalha mais que ajuda. */
+.flg-ano-bloco {
+  position: absolute; top: 2px; bottom: 2px; min-width: 3px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 2px; overflow: hidden;
+  font-size: 9px; font-weight: 700; color: #fff;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.flg-ano-bloco:hover { outline: 1px solid var(--text); outline-offset: 1px; }
+
+/* Folga já marcada para depois de hoje: fio fino, sem peso de bloco. */
+.flg-ano-folga {
+  position: absolute; top: 4px; bottom: 4px; width: 2px;
+  background: var(--red); border-radius: 1px;
+}
+
+/* Hoje, atravessando a faixa inteira. */
+.flg-ano-hoje {
+  position: absolute; top: -3px; bottom: -3px; width: 1px;
+  background: var(--text); z-index: 3;
+}
+.flg-ano-hoje-rot {
+  position: absolute; bottom: 0; transform: translateX(-50%);
+  font-size: 8px; font-weight: 700; color: var(--text);
+  text-transform: none; letter-spacing: 0;
+}
