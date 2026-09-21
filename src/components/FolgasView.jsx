@@ -169,14 +169,16 @@ const corDoSaldo = n => (n < 0 ? 'var(--red)' : n > 0 ? 'var(--lm-green-dim)' : 
 // calendário, mesmo que sejam de um mês à frente — sem isso, marcar uma folga
 // não mexia em nada e a tela não servia para planejar (equipe, 18/09/2026).
 //
-// A linha de baixo mostra quantas já têm data. As duas juntas reconstroem o
-// saldo bruto, que é o número que a planilha antiga guardava:
+// Só desconta as folgas marcadas em DIA ÚTIL. Folga marcada num sábado, num
+// domingo ou num feriado não gasta nada: ela anula o dia, e o dia também não ia
+// gerar folga (equipe, 21/09/2026). As duas pontas reconstroem o saldo bruto,
+// que é o número que a planilha antiga guardava:
 //
-//     a agendar  +  já marcadas  =  saldo devido hoje
+//     a agendar  +  já marcadas em dia útil  =  saldo devido hoje
 //
 function Placar({ mes, ano }) {
-  const devidas = -ano.aTirar                    // o saldo de hoje, como a planilha conta
-  const aAgendar = devidas - (ano.marcadas || 0) // o que ainda não tem data
+  const devidas = -ano.aTirar                          // o saldo de hoje, como a planilha conta
+  const aAgendar = devidas - (ano.marcadasGastam || 0) // o que ainda não tem data
 
   const palavra = aAgendar > 0 ? `${aAgendar} a agendar`
     : aAgendar < 0 ? `${-aAgendar} adiantada${aAgendar < -1 ? 's' : ''}`
@@ -185,7 +187,7 @@ function Placar({ mes, ano }) {
   const explicacao = ano.desde === null
     ? 'Sem nenhum dia preenchido neste ano'
     : `Deve ${devidas} folga${devidas === 1 ? '' : 's'} até hoje` +
-      (ano.marcadas ? `, e ${ano.marcadas} já ${ano.marcadas === 1 ? 'está marcada' : 'estão marcadas'} no calendário` : '') +
+      (ano.marcadasGastam ? `, e ${ano.marcadasGastam} já ${ano.marcadasGastam === 1 ? 'está marcada' : 'estão marcadas'} no calendário` : '') +
       `. Tirou ${ano.usadas} de ${ano.direito} a que teve direito.`
 
   // A linha de baixo acompanha o MÊS que está na tela: quantas folgas a pessoa
@@ -657,7 +659,7 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
             const sal = saldos.get(p.id)
             if (!sal) return null
             const meus = diasDe.get(p.id) || new Map()
-            const aAgendar = -sal.ano.aTirar - (sal.ano.marcadas || 0)
+            const aAgendar = -sal.ano.aTirar - (sal.ano.marcadasGastam || 0)
             let ferias = 0, folgas = 0
             for (const [, reg] of meus) {
               if (reg.categoria_id === 'ferias') ferias++

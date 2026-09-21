@@ -74,7 +74,8 @@ function primeiroRegistro(dias) {
 }
 
 function contar(dias, feriados, ehFolga, suspende, deIso, ateIso, corte) {
-  let direito = 0, usadas = 0, deslocamentos = 0, emBranco = 0, suspensos = 0, marcadas = 0
+  let direito = 0, usadas = 0, deslocamentos = 0, emBranco = 0, suspensos = 0
+  let marcadas = 0, marcadasGastam = 0
   const desde = primeiroRegistro(dias)
   const [a0, m0, d0] = deIso.split('-').map(Number)
   const inicio = new Date(a0, m0 - 1, d0)
@@ -88,7 +89,16 @@ function contar(dias, feriados, ehFolga, suspende, deIso, ateIso, corte) {
     // fins de semana que ainda vêm também não entrou — mas é contada à parte:
     // é ela que diz quanto do saldo já tem data marcada.
     if (chave > corte) {
-      if (reg && ehFolga(reg.categoria_id)) marcadas++
+      if (reg && ehFolga(reg.categoria_id)) {
+        marcadas++
+        // ...mas nem toda folga marcada GASTA saldo. Folga em fim de semana ou
+        // feriado só ANULA o dia: aquele dia também não ia gerar folga nenhuma,
+        // então o acumulado fica onde está (equipe, 21/09/2026). É a mesma régua
+        // que os dias já passados usam — lá o direito e a folga se cancelam
+        // sozinhos. Sem esta linha, o dia chegava, o desconto sumia, e o número
+        // pulava de um dia para o outro sem ninguém ter feito nada.
+        if (!geraFolga(d.getFullYear(), d.getMonth(), d.getDate(), feriados)) marcadasGastam++
+      }
       continue
     }
     if (desde === null || chave < desde) continue
@@ -107,7 +117,7 @@ function contar(dias, feriados, ehFolga, suspende, deIso, ateIso, corte) {
     // preenchido — e não entra no saldo.
     if (!reg) emBranco++
   }
-  return { direito, usadas, deslocamentos, emBranco, suspensos, marcadas, desde }
+  return { direito, usadas, deslocamentos, emBranco, suspensos, marcadas, marcadasGastam, desde }
 }
 
 // Saldo do MÊS. `hoje` entra como parâmetro para o cálculo ser testável.
