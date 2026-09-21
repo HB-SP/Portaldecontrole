@@ -74,6 +74,40 @@ function blocosDoAno(meus, diasDoAno) {
 // vários jogos, um Media Day — vai o texto como está, e a coluna corta o que
 // passar; o nome inteiro está no title.
 const sigla = t => String(t || '').trim().split(/\s+/)[0].slice(0, 3).toUpperCase()
+
+// O campeonato em sigla, do jeito que a casa JÁ escreve nos rótulos dos
+// periféricos: "Brasileirão 26" vira BR26, "Paulistão Fem. 26" vira PF26.
+// Sem isso a célula dizia só "MIR × BOT" e não dava para saber de que
+// campeonato era o jogo (equipe, 21/09/2026).
+// A ORDEM IMPORTA: a primeira que casar manda. "Paulistão A1 26" contém
+// "paulist", então A1 tem de vir antes; "Host Broadcast" começa com "Br", então
+// o Brasileirão exige um número depois do BR para não roubar o nome dele.
+// Nada de \w no meio das palavras: \w não casa o "ã" de Paulistão.
+const SIGLAS = [
+  [/^mm\b/i, 'MM'],
+  [/a1/i, 'A1'],
+  [/copinha/i, 'COP'],
+  [/s[ée]rie\s*b/i, 'SB'],
+  [/fem|\bp?f\s*\d/i, 'PF'],
+  [/brasileir|\bbr\s*\d/i, 'BR'],
+  [/paulist/i, 'PAU'],
+  [/media\s*day/i, 'MD'],
+  [/host\s*broadcast/i, 'HB'],
+]
+function siglaCamp(label) {
+  // "Periférico BR26" é o mesmo campeonato do "Brasileirão 26": a palavra
+  // Periférico diz onde o dado mora, não que jogo é.
+  const t = String(label || '').replace(/perif[ée]rico/i, '').trim()
+  if (!t) return ''
+  const ano = (t.match(/(\d{2})\s*$/) || [])[1] || ''
+  const achou = SIGLAS.find(([re]) => re.test(t))
+  // A1 já termina em número: sem o espaço sairia "A126", que ninguém lê.
+  if (achou) return achou[1] + (/\d$/.test(achou[1]) ? ' ' : '') + ano
+  // Campeonato que ainda não tem regra: as iniciais das palavras.
+  const ini = t.replace(/\d+/g, ' ').trim().split(/\s+/)
+    .map(x => x[0] || '').join('').toUpperCase().slice(0, 3)
+  return ini + ano
+}
 function jogoCurto(confronto) {
   const lados = String(confronto || '').split(' × ')
   const partida = lados.length === 2 && lados.every(x => x.trim() && !/\sx\s/i.test(x))
@@ -651,7 +685,8 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
                               title={`${j.compLabel} · ${j.confronto}\n${j.funcao}${j.compId ? ' — clique para abrir o jogo' : ' — este jogo não tem ficha no Portal'}`}
                               onMouseDown={e => e.stopPropagation()}
                               onClick={e => { e.stopPropagation(); if (j.compId) onAbrirJogo?.(j.compId, j.jogo) }}
-                            >{jogoCurto(j.confronto)}</button>
+                            ><span className="flg-dejogo-camp">{siglaCamp(j.compLabel)}</span>
+                              {' - '}{jogoCurto(j.confronto)}</button>
                           ))}
 
                           {/* Com algo preenchido, quem manda é o preenchimento

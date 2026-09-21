@@ -4620,6 +4620,9 @@ body {
   text-decoration: underline dotted; text-underline-offset: 2px;
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+/* A sigla do campeonato vem antes do confronto, mais apagada: ela situa,
+   mas quem se lê primeiro é o jogo. */
+.flg-dejogo-camp { opacity: 0.65; font-weight: 700; }
 .flg-dejogo:hover { text-decoration: underline solid; }
 /* Sem ficha no Portal: nada para abrir, então nem parece clicável. */
 .flg-dejogo-sem { cursor: help; opacity: 0.75; text-decoration: none; font-style: italic; }
