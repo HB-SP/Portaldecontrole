@@ -127,7 +127,22 @@ function estiloCelula(cat) {
 //
 // O descritivo continua ali, mas num segundo passo, para quem quer: ele é a
 // exceção, não o caminho principal.
-function MenuDia({ atual, categorias, onSalvar, onFechar, ancora, quantos = 1 }) {
+// Categorias em que faz sentido dizer PARA QUE JOGO foi o dia. Tem gente do
+// time que vai ao jogo sem ter função na escala dele — não é produtor nem
+// cinegrafista, então não aparece em lugar nenhum da escala do jogo. Antes
+// disso ela escrevia o confronto à mão, cada um de um jeito, e nada virava
+// link. Externa, Monitoração e Casablanca, escolhidas pela equipe (21/09/2026).
+const PEDE_JOGO = new Set(['externa', 'monitoracao', 'casablanca'])
+
+// Os campos que apagam o jogo apontado. Escrever à mão depois de ter escolhido
+// um jogo tem de LIMPAR a escolha, senão a célula continua mostrando o jogo
+// antigo e ninguém entende por quê.
+const SEM_JOGO = {
+  jogo_comp_id: null, jogo_id: null, jogo_camp: null,
+  jogo_data: null, jogo_mandante: null, jogo_visitante: null,
+}
+
+function MenuDia({ atual, categorias, onSalvar, onFechar, ancora, quantos = 1, jogos = [] }) {
   // 'lista' = escolher a categoria. 'texto' = escrever o descritivo daquela.
   const [modo, setModo] = useState('lista')
   const [cat, setCat] = useState(atual?.categoria_id || '')
@@ -148,7 +163,7 @@ function MenuDia({ atual, categorias, onSalvar, onFechar, ancora, quantos = 1 })
   // "Outro" não diz nada sem o texto, então ele é o único que não grava direto.
   const escolher = c => {
     if (c.exige_detalhe) { setCat(c.id); setDetalhe(atual?.categoria_id === c.id ? (atual.detalhe || '') : ''); setModo('texto'); return }
-    onSalvar({ categoria_id: c.id, detalhe: atual?.categoria_id === c.id ? (atual.detalhe || null) : null, campeonato: null })
+    onSalvar({ categoria_id: c.id, detalhe: atual?.categoria_id === c.id ? (atual.detalhe || null) : null, campeonato: null, ...SEM_JOGO })
   }
 
   if (modo === 'texto') {
@@ -159,6 +174,35 @@ function MenuDia({ atual, categorias, onSalvar, onFechar, ancora, quantos = 1 })
           <button className="flg-menu-voltar" onClick={() => setModo('lista')}>‹</button>
           <span>{def?.nome || 'Descritivo'}</span>
         </div>
+        {/* Os jogos daquele dia. Um clique grava: não há o que digitar, e o
+            confronto sai escrito igual em todo mundo. Só para um dia de cada
+            vez — numa faixa de dias, um jogo só não serve para todos. */}
+        {PEDE_JOGO.has(cat) && quantos === 1 && jogos.length > 0 && (
+          <div className="flg-menu-jogos">
+            <div className="flg-menu-rot">Jogos deste dia</div>
+            {jogos.map((j, i) => {
+              const posto = atual?.jogo_mandante === j.jogo.mandante && atual?.jogo_data === j.jogo.data
+              return (
+                <button
+                  key={i}
+                  className={`flg-menu-jogo${posto ? ' is-on' : ''}`}
+                  onClick={() => onSalvar({
+                    categoria_id: cat, detalhe: null, campeonato: j.compLabel,
+                    jogo_comp_id: j.compId, jogo_id: j.jogo.id ? String(j.jogo.id) : null,
+                    jogo_camp: j.compLabel, jogo_data: j.jogo.data,
+                    jogo_mandante: j.jogo.mandante, jogo_visitante: j.jogo.visitante,
+                  })}
+                >
+                  <span className="flg-menu-cor" style={{ background: j.cor }} />
+                  <b className="flg-menu-jogo-camp">{siglaCamp(j.compLabel)}</b>
+                  <span className="flg-menu-jogo-nome">{j.confronto}</span>
+                  {j.hora && <span className="flg-menu-jogo-hora">{j.hora}</span>}
+                </button>
+              )
+            })}
+            <div className="flg-menu-rot">ou escrever à mão</div>
+          </div>
+        )}
         {def?.presets?.length > 0 && (
           <div className="flg-menu-presets">
             {def.presets.map(x => (
@@ -177,12 +221,12 @@ function MenuDia({ atual, categorias, onSalvar, onFechar, ancora, quantos = 1 })
           placeholder={def?.dica_detalhe || 'o que será feito no dia'}
           value={detalhe} onChange={e => setDetalhe(e.target.value)}
           onKeyDown={e => {
-            if (e.key === 'Enter' && !falta) onSalvar({ categoria_id: cat, detalhe: detalhe.trim() || null, campeonato: camp || null })
+            if (e.key === 'Enter' && !falta) onSalvar({ categoria_id: cat, detalhe: detalhe.trim() || null, campeonato: camp || null, ...SEM_JOGO })
           }}
         />
         <button
           className="flg-menu-ok" disabled={falta}
-          onClick={() => onSalvar({ categoria_id: cat, detalhe: detalhe.trim() || null, campeonato: camp || null })}
+          onClick={() => onSalvar({ categoria_id: cat, detalhe: detalhe.trim() || null, campeonato: camp || null, ...SEM_JOGO })}
         >{falta ? 'Falta o descritivo' : 'Salvar'}</button>
       </div>
     )
@@ -279,7 +323,7 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
 
   // Os jogos em que o time está escalado. Vêm de outra escala, preenchida por
   // outra gente: aqui são só LIDOS.
-  const { jogosPorDia } = useJogosDoTime(pessoas, competitions, ano)
+  const { jogosPorDia, jogosDoDia } = useJogosDoTime(pessoas, competitions, ano)
 
   const [fTime, setFTime] = useState(() => {
     try { return localStorage.getItem(CHAVE_TIME) || '' } catch { return '' }
@@ -594,6 +638,7 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
           atual={dias.get(`${editando.pessoaId}|${editando.dia}`)}
           categorias={oferecidas}
           quantos={editando.faixa?.length || 1}
+          jogos={jogosDoDia.get(editando.dia) || []}
           ancora={posicaoDoMenu(editando.caixa)}
           onFechar={() => setEditando(null)}
           onSalvar={async v => {
@@ -664,6 +709,17 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
                       // sabe. Marcar por cima continua possível: quem escolhe
                       // uma categoria manda, e o jogo volta a ser só a marca.
                       const jogos = jogosPorDia.get(`${p.id}|${diaIso}`) || []
+                      // Jogo APONTADO à mão: quem foi ao jogo sem ter função na
+                      // escala dele escolheu a partida no menu. Na célula não há
+                      // diferença nenhuma entre isso e o jogo lido da escala —
+                      // quem olha a grade não precisa saber por qual porta a
+                      // pessoa entrou.
+                      const posto = reg?.jogo_mandante ? {
+                        compId: reg.jogo_comp_id,
+                        compLabel: reg.jogo_camp,
+                        confronto: [reg.jogo_mandante, reg.jogo_visitante].filter(Boolean).join(' × '),
+                        jogo: { data: reg.jogo_data, mandante: reg.jogo_mandante, visitante: reg.jogo_visitante, id: reg.jogo_id },
+                      } : null
                       return (
                         <td
                           key={p.id}
@@ -673,7 +729,16 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
                           onMouseDown={e => aoPressionar(p.id, diaIso, e)}
                           onMouseOver={() => aoEntrar(p.id, diaIso)}
                         >
-                          {texto}
+                          {posto ? (
+                            <button
+                              className={`flg-dejogo${posto.compId ? '' : ' flg-dejogo-sem'}`}
+                              style={{ color: c?.cor || 'var(--text)' }}
+                              title={`${c?.nome || ''} · ${posto.compLabel || ''} · ${posto.confronto}${posto.compId ? '\nclique para abrir o jogo' : ''}`}
+                              onMouseDown={e => e.stopPropagation()}
+                              onClick={e => { e.stopPropagation(); if (posto.compId) onAbrirJogo?.(posto.compId, posto.jogo) }}
+                            ><span className="flg-dejogo-camp">{siglaCamp(posto.compLabel)}</span>
+                              {' - '}{jogoCurto(posto.confronto)}</button>
+                          ) : texto}
                           {reg?.detalhe && !c?.exige_detalhe && <span className="flg-nota" title={reg.detalhe}>·</span>}
 
                           {/* Sem nada preenchido, o jogo É o conteúdo do dia. */}
@@ -691,7 +756,7 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
 
                           {/* Com algo preenchido, quem manda é o preenchimento
                               e o jogo volta a ser só a marca ao lado. */}
-                          {reg && jogos.map((j, i) => (
+                          {reg && !posto && jogos.map((j, i) => (
                             <button
                               key={i} className={`flg-jogo${j.compId ? '' : ' flg-jogo-sem'}`}
                               title={`${j.compLabel} · ${j.confronto}\n${j.funcao}${j.compId ? ' — clique para abrir o jogo' : ' — este jogo não tem ficha no Portal'}`}

@@ -102,6 +102,23 @@ export function useFolgas(ano) {
     return () => { supabase.removeChannel(canal) }
   }, [carregarBase, carregarDias])
 
+// As colunas que uma linha de dia grava. Fica numa função só porque TRÊS
+// caminhos gravam — salvar um dia, salvar vários e desfazer — e um campo novo
+// esquecido em um deles some sem erro nenhum.
+const linhaDia = (pessoaId, dia, v, quem) => ({
+  pessoa_id: pessoaId, dia,
+  categoria_id: v.categoria_id,
+  detalhe: v.detalhe || null,
+  campeonato: v.campeonato || null,
+  jogo_comp_id: v.jogo_comp_id || null,
+  jogo_id: v.jogo_id || null,
+  jogo_camp: v.jogo_camp || null,
+  jogo_data: v.jogo_data || null,
+  jogo_mandante: v.jogo_mandante || null,
+  jogo_visitante: v.jogo_visitante || null,
+  updated_at: new Date().toISOString(), updated_by: quem,
+})
+
   // ── gravar um dia ──
   // Categoria vazia = apagar o dia. Devolve null se deu certo, ou a mensagem.
   const salvarDia = useCallback(async (pessoaId, dia, valor) => {
@@ -122,13 +139,8 @@ export function useFolgas(ano) {
     const quem = sessao?.user?.id || null
     const { error } = apagar
       ? await supabase.from('folgas_dias').delete().eq('pessoa_id', pessoaId).eq('dia', dia)
-      : await supabase.from('folgas_dias').upsert({
-          pessoa_id: pessoaId, dia,
-          categoria_id: valor.categoria_id,
-          detalhe: valor.detalhe || null,
-          campeonato: valor.campeonato || null,
-          updated_at: new Date().toISOString(), updated_by: quem,
-        }, { onConflict: 'pessoa_id,dia' })
+      : await supabase.from('folgas_dias')
+          .upsert(linhaDia(pessoaId, dia, valor, quem), { onConflict: 'pessoa_id,dia' })
 
     if (error) {
       // Desfaz: deixar na tela um dia que o banco recusou é pior que não ter
@@ -156,13 +168,7 @@ export function useFolgas(ano) {
     }
     const { data: sessao } = await supabase.auth.getUser()
     const quem = sessao?.user?.id || null
-    const linhas = listaDias.map(dia => ({
-      pessoa_id: pessoaId, dia,
-      categoria_id: valor.categoria_id,
-      detalhe: valor.detalhe || null,
-      campeonato: valor.campeonato || null,
-      updated_at: new Date().toISOString(), updated_by: quem,
-    }))
+    const linhas = listaDias.map(dia => linhaDia(pessoaId, dia, valor, quem))
     setDias(prev => { const m = new Map(prev); linhas.forEach(l => m.set(`${pessoaId}|${l.dia}`, l)); return m })
     if (!isConfigured) return null
     const { error } = await supabase.from('folgas_dias').upsert(linhas, { onConflict: 'pessoa_id,dia' })
@@ -194,11 +200,7 @@ export function useFolgas(ano) {
     }
     if (repor.length) {
       const { data: sessao } = await supabase.auth.getUser()
-      const linhas = repor.map(l => ({
-        pessoa_id: pessoaId, dia: l.dia,
-        categoria_id: l.categoria_id, detalhe: l.detalhe || null, campeonato: l.campeonato || null,
-        updated_at: new Date().toISOString(), updated_by: sessao?.user?.id || null,
-      }))
+      const linhas = repor.map(l => linhaDia(pessoaId, l.dia, l, sessao?.user?.id || null))
       const { error } = await supabase.from('folgas_dias').upsert(linhas, { onConflict: 'pessoa_id,dia' })
       if (error) { carregarDias(); return error.message }
     }

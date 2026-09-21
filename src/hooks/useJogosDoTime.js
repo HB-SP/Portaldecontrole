@@ -40,14 +40,19 @@ const pedacos = v => String(v || '').split('/').map(s => s.trim()).filter(Boolea
 export function useJogosDoTime(pessoas, competitions, ano) {
   // Map de 'pessoaId|aaaa-mm-dd' -> [{ compId, compLabel, cor, confronto, funcao, jogo }]
   const [jogosPorDia, setJogosPorDia] = useState(new Map())
+  // Map de 'aaaa-mm-dd' -> os jogos daquele dia, de TODO MUNDO. Nasce da mesma
+  // varredura, sem custo nenhum a mais, e é o que o menu oferece para escolher
+  // quando alguém vai a um jogo sem ter função na escala dele.
+  const [jogosDoDia, setJogosDoDia] = useState(new Map())
 
   useEffect(() => {
     const ligadas = (pessoas || []).filter(p => (p.nomes_escala || []).length)
-    if (!isConfigured || !ligadas.length || !ano) { setJogosPorDia(new Map()); return }
+    if (!isConfigured || !ano) { setJogosPorDia(new Map()); setJogosDoDia(new Map()); return }
 
     let cancelado = false
     ;(async () => {
       const mapa = new Map()
+      const doDia = new Map()
       const vistos = new Set()   // pessoa|dia|confronto — a mesma partida nas duas fontes
 
       const guardar = (pessoaId, dia, item) => {
@@ -98,6 +103,15 @@ export function useJogosDoTime(pessoas, competitions, ano) {
             if (!dia) continue
             const confronto = `${j.mandante} × ${j.visitante}`
 
+            // O jogo entra na lista do dia mesmo que ninguém do time esteja
+            // escalado nele: é justamente aí que alguém vai precisar apontar.
+            if (!doDia.has(dia)) doDia.set(dia, [])
+            doDia.get(dia).push({
+              compId: comp.id, compLabel: comp.label, cor: comp.accentColor,
+              confronto, jogo: j,
+              hora: String(j.hora || j.horario || j.hora_jogo || '').trim(),
+            })
+
             // as 4 funções de produção, da linha da escala casada com este jogo
             const escalados = []
             if (eg) {
@@ -138,11 +152,12 @@ export function useJogosDoTime(pessoas, competitions, ano) {
         anota({ dia, confronto, escalados, comp: null, jogo: r, campeonato: r.campeonato })
       }
 
-      if (!cancelado) setJogosPorDia(mapa)
+      for (const lista of doDia.values()) lista.sort((a, b) => (a.hora || 'zz').localeCompare(b.hora || 'zz'))
+      if (!cancelado) { setJogosPorDia(mapa); setJogosDoDia(doDia) }
     })()
 
     return () => { cancelado = true }
   }, [pessoas, competitions, ano])
 
-  return { jogosPorDia }
+  return { jogosPorDia, jogosDoDia }
 }
