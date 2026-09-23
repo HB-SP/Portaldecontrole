@@ -49,6 +49,27 @@ function posicaoDoMenu(caixa) {
 // ter. Decisões da equipe em 18/09/2026.
 const AUSENCIA = new Set(['folga', 'ferias', 'atestado'])
 
+// DÁ PARA CONTAR COM A PESSOA? Quem responde é a própria categoria, pela coluna
+// `disponivel`: folga, férias e atestado são as ausências (equipe, 23/09/2026 —
+// "atestado vira não contar com a pessoa").
+//
+// A lista acima fica como rede: enquanto a coluna não existir no banco, ela
+// vale, e a tela funciona igual antes e depois do SQL.
+const ehAusencia = cat =>
+  cat ? (cat.disponivel === undefined ? AUSENCIA.has(cat.id) : !cat.disponivel) : false
+
+// ONDE A PESSOA ESTÁ, quando está: casa, escritório ou rua. É o que separa os
+// grupos da aba Dia — que antes eram uma lista escrita à mão aqui, e que por
+// isso deixou a Assunção de fora até alguém reparar.
+const LUGAR_PADRAO = {
+  home: 'casa', monitoracao: 'casa',
+  escritorio: 'escritorio', casablanca: 'escritorio', assuncao: 'escritorio',
+  livekasa: 'escritorio', sportheca: 'escritorio',
+  externa: 'rua', deslocamento: 'rua',
+}
+const lugarDe = cat =>
+  cat ? (cat.lugar !== undefined ? cat.lugar : LUGAR_PADRAO[cat.id] || null) : null
+
 // ── A FAIXA DO ANO ──────────────────────────────────────────────────────────
 // Só AUSÊNCIA LONGA pinta a faixa. A folga do dia a dia ficou de fora de
 // propósito: como todo mundo folga toda semana, ela pintava o ano inteiro de
@@ -135,7 +156,7 @@ function jogoCurto(confronto) {
 // menu e na visão do ano; na grade ela só aparece quando significa ausência.
 function estiloCelula(cat) {
   if (!cat) return undefined
-  if (!AUSENCIA.has(cat.id)) return { color: 'var(--text-muted)' }
+  if (!ehAusencia(cat)) return { color: 'var(--text-muted)' }
   return { color: cat.cor, fontWeight: 700 }
 }
 
@@ -156,16 +177,21 @@ function estiloCelula(cat) {
 //
 // "Em jogo" saiu de propósito: quem vai a jogo está em Fora, e o confronto
 // aparece escrito na linha dele.
+// Os grupos agora são as respostas das duas perguntas, e não uma lista de
+// categorias escrita à mão: "rua", "casa" e "escritorio" são os lugares, e OFF
+// é a indisponibilidade. Categoria nova entra no grupo certo sozinha, bastando
+// dizer no banco o que ela é.
 const GRUPOS = [
-  { id: 'fora',       titulo: 'Fora',       cats: ['externa', 'deslocamento'] },
-  { id: 'home',       titulo: 'Home',       cats: ['home', 'monitoracao'] },
-  { id: 'presencial', titulo: 'Presencial', cats: ['escritorio', 'casablanca', 'assuncao'] },
-  { id: 'off',        titulo: 'OFF',        cats: ['folga', 'ferias', 'atestado'] },
+  { id: 'rua',        titulo: 'Fora',       dica: 'externa ou viagem' },
+  { id: 'casa',       titulo: 'Home',       dica: 'trabalhando de casa' },
+  { id: 'escritorio', titulo: 'Presencial', dica: 'Vila Olímpia, Casablanca, Assunção' },
+  { id: 'off',        titulo: 'OFF',        dica: 'folga, férias ou atestado' },
 ]
-const DE_CATEGORIA = new Map(GRUPOS.flatMap(g => g.cats.map(c => [c, g.id])))
-// Categoria que ainda não tem grupo vira grupo próprio, com o nome dela. É o
-// contrário de cair num "outros": nada some sem alguém reparar.
-const grupoDoDia = reg => (reg ? DE_CATEGORIA.get(reg.categoria_id) || reg.categoria_id : 'vazio')
+// Sem categoria: sem preenchimento. Ausência: OFF. Trabalho com lugar: o lugar.
+// Trabalho SEM lugar — o caso do "Outro", que é texto livre — vira grupo com o
+// nome da própria categoria: melhor aparecer sozinho do que sumir dentro de um
+// lugar que ninguém afirmou.
+const grupoDoDia = cat => (!cat ? 'vazio' : ehAusencia(cat) ? 'off' : lugarDe(cat) || cat.id)
 
 // ── Menu de um dia ───────────────────────────────────────────────────────────
 // Clicou na célula, escolheu, acabou. Preencher um dia tinha virado um
@@ -442,7 +468,7 @@ function Celula({
   // AUSÊNCIA é o contrário: se o dia é folga, férias ou atestado, quem manda é
   // a ausência, e o jogo vira a marca ao lado — que ali serve de aviso, porque
   // alguém está escalado num dia em que não vai estar.
-  const ehTrabalho = !!c && !AUSENCIA.has(c.id)
+  const ehTrabalho = !!c && !ehAusencia(c)
   const todos = posto ? [posto] : jogos
   const noTexto = compacta ? [] : (posto || !reg || ehTrabalho) ? todos : []
   const soMarca = noTexto.length ? [] : todos
@@ -494,7 +520,7 @@ function Celula({
         // ESTE é o conflito, e o único lugar da grade onde o vermelho aparece:
         // a pessoa está escalada num jogo num dia em que ela não vai estar.
         // Fora daqui, vermelho não significa nada nesta tela.
-        const bate = reg && AUSENCIA.has(c?.id)
+        const bate = reg && ehAusencia(c)
         const cor = bate ? 'var(--red)' : j.cor
         return (
           <button
@@ -957,9 +983,9 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
           <div className="flg-dia-grupos">
             {[
               ...GRUPOS,
-              // as que sobraram, na ordem que já têm no banco
-              ...oferecidas.filter(c => !DE_CATEGORIA.has(c.id)).map(c => ({ id: c.id, titulo: c.nome, cats: [c.id] })),
-              { id: 'vazio', titulo: 'Sem preencher', cats: [] },
+              // as que trabalham sem lugar declarado, na ordem que já têm no banco
+              ...oferecidas.filter(c => !ehAusencia(c) && !lugarDe(c)).map(c => ({ id: c.id, titulo: c.nome, dica: c.nome, junta: false })),
+              { id: 'vazio', titulo: 'Sem preencher', dica: 'ninguém disse o que foi feito no dia' },
             ].map(g => {
               const gente = visiveis
                 .map(pes => {
@@ -970,11 +996,11 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
                     : jogos
                   return { pes, reg, jogos: posto, cat: catPorId.get(reg?.categoria_id) }
                 })
-                .filter(x => grupoDoDia(x.reg) === g.id)
+                .filter(x => grupoDoDia(x.cat) === g.id)
               if (!gente.length) return null
               return (
                 <div key={g.id} className={`flg-dia-grupo flg-grupo-${g.id}`}>
-                  <div className="flg-dia-grupo-cab" title={g.cats.join(', ') || 'ninguém disse o que foi feito no dia'}>
+                  <div className="flg-dia-grupo-cab" title={g.dica}>
                     {g.titulo}<span className="flg-dia-quantos">{gente.length}</span>
                   </div>
                   {gente.map(({ pes, reg, jogos, cat }) => (
@@ -985,7 +1011,7 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
                         {/* Dentro de um grupo que junta categorias, QUAL delas
                             é continua importando: em OFF, folga e férias pedem
                             reações diferentes de quem está lendo. */}
-                        {cat && g.cats.length > 1 && (
+                        {cat && g.junta !== false && (
                           <b className="flg-dia-cat" style={{ color: cat.cor }}>{cat.nome}</b>
                         )}
                         {jogos.length ? jogos.map((j, i) => (
@@ -1116,7 +1142,7 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
           <div className="flg-chaves">
             {oferecidas.map(c => (
               <span key={c.id} className="flg-chave" title={c.nome}>
-                <b style={{ color: AUSENCIA.has(c.id) ? c.cor : 'var(--text-muted)', fontWeight: AUSENCIA.has(c.id) ? 700 : 500 }}>{c.curto || c.nome}</b>
+                <b style={{ color: ehAusencia(c) ? c.cor : 'var(--text-muted)', fontWeight: ehAusencia(c) ? 700 : 500 }}>{c.curto || c.nome}</b>
                 {c.nome}
               </span>
             ))}
@@ -1201,7 +1227,7 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
           <div className="flg-chaves">
             {oferecidas.map(c => (
               <span key={c.id} className="flg-chave" title={c.nome}>
-                <b style={{ color: AUSENCIA.has(c.id) ? c.cor : 'var(--text-muted)', fontWeight: AUSENCIA.has(c.id) ? 700 : 500 }}>{c.curto || c.nome}</b>
+                <b style={{ color: ehAusencia(c) ? c.cor : 'var(--text-muted)', fontWeight: ehAusencia(c) ? 700 : 500 }}>{c.curto || c.nome}</b>
                 {c.nome}
               </span>
             ))}
