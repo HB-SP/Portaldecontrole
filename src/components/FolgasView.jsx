@@ -24,6 +24,7 @@ const CHAVE_TIME = 'folgas_time'
 // visita (equipe, 23/09/2026: "ter no vertical e horizontal e a pessoa escolhe
 // a preferência dela").
 const CHAVE_ORIENT = 'folgas_orientacao'
+const CHAVE_DETALHE = 'folgas_detalhe'
 
 // Onde desenhar o menu de um dia. Ele fica preso à TELA (position: fixed), e não
 // à célula, porque a célula corta o que passa da borda — era por isso que o menu
@@ -335,11 +336,20 @@ const corDoSaldo = n => (n < 0 ? 'var(--amber)' : n > 0 ? 'var(--lm-green-dim)' 
 //
 //     a agendar  +  já marcadas em dia útil  =  saldo devido hoje
 //
-function Placar({ mes, ano }) {
+// O nome do número é "folgas pendentes", que é como a equipe fala (23/09/2026).
+// "A agendar" descrevia a tarefa de quem preenche, não um fato sobre a pessoa,
+// e só fazia sentido para quem já conhecia a regra da folga por fim de semana —
+// para todo mundo era um número solto embaixo de um nome.
+//
+// E o detalhe fica DOBRADO, como agrupar linhas numa planilha: o número que
+// interessa a todos fica sempre à vista, e quem quer o resto abre. Foi assim
+// que deu para atender os dois lados — "esses números não dizem nada, deviam
+// estar escondidos" e "todos deveriam ver quantas folgas pendentes têm".
+function Placar({ mes, ano, mesNome, aberto }) {
   const devidas = -ano.aTirar                          // o saldo de hoje, como a planilha conta
   const aAgendar = devidas - (ano.marcadasGastam || 0) // o que ainda não tem data
 
-  const palavra = aAgendar > 0 ? `${aAgendar} a agendar`
+  const palavra = aAgendar > 0 ? `${aAgendar} folga${aAgendar === 1 ? '' : 's'} pendente${aAgendar === 1 ? '' : 's'}`
     : aAgendar < 0 ? `${-aAgendar} adiantada${aAgendar < -1 ? 's' : ''}`
     : 'em dia'
 
@@ -363,9 +373,11 @@ function Placar({ mes, ano }) {
       <div className="flg-placar-total" style={{ color: corDoSaldo(-aAgendar) }} title={explicacao}>
         {ano.desde === null ? '—' : palavra}
       </div>
-      <div className="flg-placar-mes" title={`Folgas marcadas neste mês: ${noMes}`}>
-        {noMes ? `${noMes} folga${noMes === 1 ? '' : 's'} no mês` : 'sem folga no mês'}
-      </div>
+      {aberto && (
+        <div className="flg-placar-mes" title={`Folgas marcadas neste mês: ${noMes}`}>
+          {noMes ? `${noMes} folga${noMes === 1 ? '' : 's'} em ${mesNome}` : `sem folga em ${mesNome}`}
+        </div>
+      )}
     </div>
   )
 }
@@ -534,6 +546,13 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
   const [selecao, setSelecao] = useState(null)        // { pessoaId, dias: [] }
   const [aba, setAba] = useState('grade')             // grade | dia | resumo
   const [diaFoco, setDiaFoco] = useState(() => hojeIso())
+  const [detalhe, setDetalheRaw] = useState(() => {
+    try { return localStorage.getItem(CHAVE_DETALHE) === '1' } catch { return false }
+  })
+  const trocarDetalhe = () => setDetalheRaw(v => {
+    try { localStorage.setItem(CHAVE_DETALHE, v ? '0' : '1') } catch { /* sem storage */ }
+    return !v
+  })
   // Linha em destaque, como numa planilha: clicar no dia acende a linha toda,
   // para acompanhar um dia inteiro sem perder a conta de qual coluna é quem.
   const [linhaFoco, setLinhaFoco] = useState(null)
@@ -1111,13 +1130,23 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
           <table className="flg-tab">
             <thead>
               <tr>
-                <th className="flg-fix flg-th-dia">Dia</th>
+                <th className="flg-fix flg-th-dia">
+                  Dia
+                  {/* O mesmo gesto de agrupar linhas numa planilha: um controle
+                      só, no canto, que abre e fecha o detalhe de TODAS as
+                      pessoas de uma vez. */}
+                  <button
+                    className="flg-dobra"
+                    onClick={trocarDetalhe}
+                    title={detalhe ? 'Esconder as folgas do mês' : 'Mostrar as folgas do mês'}
+                  >{detalhe ? '−' : '+'}</button>
+                </th>
                 {visiveis.map(p => {
                   const s = saldos.get(p.id)
                   return (
                     <th key={p.id} className={`flg-th-pessoa${p.id === minhaPessoaId ? ' flg-eu' : ''}`}>
                       <div className="flg-th-nome">{p.nome}</div>
-                      {s && <Placar mes={s.mes} ano={s.ano} nome={p.nome} />}
+                      {s && <Placar mes={s.mes} ano={s.ano} mesNome={MESES[mes].toLowerCase()} aberto={detalhe} />}
                     </th>
                   )
                 })}

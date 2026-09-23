@@ -4713,6 +4713,16 @@ body {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
+/* O + de agrupar linhas, igual ao de uma planilha: abre e fecha o detalhe de
+   todas as pessoas de uma vez. */
+.flg-dobra {
+  margin-left: 6px; width: 16px; height: 16px; padding: 0;
+  border: 1px solid var(--border); border-radius: 3px; cursor: pointer;
+  background: var(--bg-card); color: var(--text-muted);
+  font-family: inherit; font-size: 12px; font-weight: 700; line-height: 1;
+}
+.flg-dobra:hover { color: var(--text); border-color: var(--text-muted); }
+
 /* ─── BUSCAR E FILTRAR ─────────────────────────────────────────────────────
    A busca tira gente da tela; o filtro NÃO tira dia nenhum. A grade é uma
    malha, e remover linhas ou colunas do meio junta o que não é vizinho: a
