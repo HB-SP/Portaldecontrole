@@ -460,6 +460,13 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
   })
   const trocarOrient = v => { setOrientRaw(v); try { localStorage.setItem(CHAVE_ORIENT, v) } catch { /* sem storage */ } }
 
+  const [busca, setBusca] = useState('')
+  // Filtrar aqui NÃO esconde dias. A grade é uma malha: tirar linhas ou colunas
+  // do meio junta coisas que não são vizinhas e a leitura mente. Então o filtro
+  // APAGA o que não interessa e deixa o resto aceso, e o mês continua inteiro
+  // embaixo — dá para ver o padrão das folgas sem perder onde elas caem.
+  const [filtro, setFiltro] = useState('')
+
   const [selecao, setSelecao] = useState(null)        // { pessoaId, dias: [] }
   const [aba, setAba] = useState('grade')             // grade | resumo
   // Linha em destaque, como numa planilha: clicar no dia acende a linha toda,
@@ -478,10 +485,14 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
   const oferecidas = useMemo(() => categorias.filter(c => !c.arquivada), [categorias])
   const ehFolga = id => !!catPorId.get(id)?.conta_folga
 
-  const visiveis = useMemo(
-    () => pessoas.filter(p => !fTime || p.time_id === fTime),
-    [pessoas, fTime]
-  )
+  // A busca é a única coisa que tira gente da tela: quem procura um nome quer
+  // ver aquela pessoa, não o time todo. Sem acento e sem caixa, porque ninguém
+  // digita "Laís" com o acento quando está com pressa.
+  const semAcento = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const visiveis = useMemo(() => {
+    const q = semAcento(busca).trim()
+    return pessoas.filter(p => (!fTime || p.time_id === fTime) && (!q || semAcento(p.nome).includes(q)))
+  }, [pessoas, fTime, busca])
 
   // Os dias de UMA pessoa, já com o que a conta precisa saber de cada dia.
   const diasDe = useMemo(() => {
@@ -535,6 +546,21 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
   }, [diasDoAno, hoje])
 
   const total = diasNoMes(ano, mes)
+  // Quantos dias de cada categoria o mês da tela tem. É o número no botão de
+  // filtro: sem ele, clicar num filtro que não tem nada parece a tela quebrada.
+  const contaNoMes = useMemo(() => {
+    const conta = new Map()
+    for (const p of visiveis) {
+      const meus = diasDe.get(p.id)
+      if (!meus) continue
+      for (let d = 1; d <= diasNoMes(ano, mes); d++) {
+        const cat = meus.get(iso(ano, mes, d))?.categoria_id
+        if (cat) conta.set(cat, (conta.get(cat) || 0) + 1)
+      }
+    }
+    return conta
+  }, [visiveis, diasDe, ano, mes])
+
   const listaDias = useMemo(() => Array.from({ length: total }, (_, i) => i + 1), [total])
 
   const andarMes = n => {
@@ -705,6 +731,18 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
         </div>
 
         {aba === 'grade' && (
+          <input
+            className="flg-busca"
+            placeholder="Buscar pessoa"
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+          />
+        )}
+        {aba === 'grade' && busca && !visiveis.length && (
+          <span className="flg-vazio">ninguém com esse nome</span>
+        )}
+
+        {aba === 'grade' && (
           <div className="flg-orient" title="Como você prefere ler a grade">
             {[['vertical', 'Dias ↓', 'Dias nas linhas, pessoas nas colunas — cabe o nome inteiro e o jogo escrito'],
               ['horizontal', 'Pessoas ↓', 'Pessoas nas linhas, dias nas colunas — o mês inteiro de uma pessoa de uma vez']]
@@ -791,6 +829,30 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
         document.body
       )}
 
+      {aba === 'grade' && (
+        <div className="flg-filtros">
+          <button
+            className={`flg-filtro${filtro === '' ? ' is-on' : ''}`}
+            onClick={() => setFiltro('')}
+          >Tudo</button>
+          {['folga', 'ferias', 'deslocamento', 'externa', 'atestado'].map(id => {
+            const c = catPorId.get(id)
+            if (!c) return null
+            const quantos = contaNoMes.get(id) || 0
+            return (
+              <button
+                key={id}
+                className={`flg-filtro${filtro === id ? ' is-on' : ''}`}
+                style={filtro === id ? { borderColor: c.cor, color: c.cor } : undefined}
+                onClick={() => setFiltro(f => (f === id ? '' : id))}
+                title={`${quantos} dia${quantos === 1 ? '' : 's'} de ${c.nome.toLowerCase()} neste mês`}
+              >{c.nome}<span className="flg-filtro-n">{quantos}</span></button>
+            )
+          })}
+          {filtro && <span className="flg-filtro-dica">o resto do mês continua aí, só apagado</span>}
+        </div>
+      )}
+
       {aba === 'grade' && orient === 'horizontal' ? (
         <div className="flg-wrap" ref={wrapRef}>
           <table className="flg-tab flg-tab-h">
@@ -845,7 +907,7 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
                           marcada={(selecao?.dias.includes(diaIso) && (!selecao.pessoaId || selecao.pessoaId === pes.id)) || naFaixa(pes.id, diaIso)}
                           podeEditar={podeEditar}
                           ehEu={pes.id === minhaPessoaId}
-                          extra={`${descanso ? ' flg-col-descanso' : ''}${diaIso === hoje ? ' flg-col-hoje' : ''}`}
+                          extra={`${descanso ? ' flg-col-descanso' : ''}${diaIso === hoje ? ' flg-col-hoje' : ''}${filtro && reg?.categoria_id !== filtro ? ' flg-cel-apaga' : ''}`}
                           onPressionar={e => aoPressionar(pes.id, diaIso, e)}
                           onEntrar={() => aoEntrar(pes.id, diaIso)}
                           onAbrirJogo={onAbrirJogo}
@@ -915,6 +977,7 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
                         marcada={(selecao?.dias.includes(diaIso) && (!selecao.pessoaId || selecao.pessoaId === p.id)) || naFaixa(p.id, diaIso)}
                         podeEditar={podeEditar}
                         ehEu={p.id === minhaPessoaId}
+                        extra={filtro && (diasDe.get(p.id) || new Map()).get(diaIso)?.categoria_id !== filtro ? ' flg-cel-apaga' : ''}
                         onPressionar={e => aoPressionar(p.id, diaIso, e)}
                         onEntrar={() => aoEntrar(p.id, diaIso)}
                         onAbrirJogo={onAbrirJogo}
