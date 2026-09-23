@@ -4728,7 +4728,7 @@ body {
 
 .flg-ano-folga {
   position: absolute; top: 4px; bottom: 4px; width: 2px;
-  background: #475569; border-radius: 1px;
+  background: var(--red); border-radius: 1px;
 }
 
 /* Hoje, atravessando a faixa inteira. */

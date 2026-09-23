@@ -895,7 +895,7 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
             A faixa mostra só quem fica fora vários dias seguidos:{' '}
             <b style={{ color: '#7C3AED' }}>férias</b> e <b style={{ color: '#B45309' }}>atestado</b>, cada
             período num bloco, com a data de início escrita dentro quando cabe. Os fios{' '}
-            <b style={{ color: catPorId.get('folga')?.cor || 'var(--text)' }}>escuros</b> são folgas já marcadas daqui pra frente. A linha
+            <b style={{ color: 'var(--red)' }}>vermelhos</b> são folgas já marcadas daqui pra frente. A linha
             escura é hoje, e o que está à esquerda dela já aconteceu. A ordem vai de quem tem mais folga a
             agendar para quem tem menos.
           </div>
