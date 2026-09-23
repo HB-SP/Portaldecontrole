@@ -146,23 +146,25 @@ function estiloCelula(cat) {
 //
 // A ordem é a da urgência de quem pergunta: primeiro quem já tem compromisso
 // de operação, por último quem não tem nada.
+// Os grupos e os nomes foram batidos com a equipe em 23/09/2026. O que caiu foi
+// "Não contar com", que era invenção minha — virou OFF, que é como se fala ali.
+//
+// OFF junta férias, folga e atestado porque, para quem procura alguém, os três
+// dizem a mesma coisa. QUAL dos três é continua na linha da pessoa, com a cor
+// de cada um: importa para quem lê, só não é o que separa os grupos.
+//
+// "Em jogo" saiu de propósito: quem vai a jogo está em Fora, e o confronto
+// aparece escrito na linha dele.
 const GRUPOS = [
-  { id: 'jogo',       titulo: 'Em jogo',        dica: 'escalados numa partida' },
-  { id: 'fora',       titulo: 'Fora',           dica: 'externa ou viagem' },
-  { id: 'presencial', titulo: 'Presencial',     dica: 'Vila Olímpia, Casablanca, Assunção' },
-  { id: 'home',       titulo: 'Home',           dica: 'trabalhando de casa' },
-  { id: 'off',        titulo: 'Não contar com', dica: 'folga, férias ou atestado' },
-  { id: 'vazio',      titulo: 'Sem preencher',  dica: 'ninguém disse o que foi feito no dia' },
+  { id: 'fora',       titulo: 'Fora',       cats: ['externa', 'deslocamento'] },
+  { id: 'home',       titulo: 'Home',       cats: ['home', 'monitoracao'] },
+  { id: 'presencial', titulo: 'Presencial', cats: ['escritorio', 'casablanca', 'assuncao'] },
+  { id: 'off',        titulo: 'OFF',        cats: ['folga', 'ferias', 'atestado'] },
 ]
-const FORA = new Set(['externa', 'deslocamento'])
-function grupoDoDia(reg, temJogo) {
-  if (!reg) return temJogo ? 'jogo' : 'vazio'
-  if (AUSENCIA.has(reg.categoria_id)) return 'off'
-  if (temJogo) return 'jogo'
-  if (FORA.has(reg.categoria_id)) return 'fora'
-  if (reg.categoria_id === 'home') return 'home'
-  return 'presencial'
-}
+const DE_CATEGORIA = new Map(GRUPOS.flatMap(g => g.cats.map(c => [c, g.id])))
+// Categoria que ainda não tem grupo vira grupo próprio, com o nome dela. É o
+// contrário de cair num "outros": nada some sem alguém reparar.
+const grupoDoDia = reg => (reg ? DE_CATEGORIA.get(reg.categoria_id) || reg.categoria_id : 'vazio')
 
 // ── Menu de um dia ───────────────────────────────────────────────────────────
 // Clicou na célula, escolheu, acabou. Preencher um dia tinha virado um
@@ -934,7 +936,12 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
           </div>
 
           <div className="flg-dia-grupos">
-            {GRUPOS.map(g => {
+            {[
+              ...GRUPOS,
+              // as que sobraram, na ordem que já têm no banco
+              ...oferecidas.filter(c => !DE_CATEGORIA.has(c.id)).map(c => ({ id: c.id, titulo: c.nome, cats: [c.id] })),
+              { id: 'vazio', titulo: 'Sem preencher', cats: [] },
+            ].map(g => {
               const gente = visiveis
                 .map(pes => {
                   const reg = (diasDe.get(pes.id) || new Map()).get(diaFoco)
@@ -944,18 +951,24 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
                     : jogos
                   return { pes, reg, jogos: posto, cat: catPorId.get(reg?.categoria_id) }
                 })
-                .filter(x => grupoDoDia(x.reg, x.jogos.length) === g.id)
+                .filter(x => grupoDoDia(x.reg) === g.id)
               if (!gente.length) return null
               return (
                 <div key={g.id} className={`flg-dia-grupo flg-grupo-${g.id}`}>
-                  <div className="flg-dia-grupo-cab" title={g.dica}>
+                  <div className="flg-dia-grupo-cab" title={g.cats.join(', ') || 'ninguém disse o que foi feito no dia'}>
                     {g.titulo}<span className="flg-dia-quantos">{gente.length}</span>
                   </div>
                   {gente.map(({ pes, reg, jogos, cat }) => (
                     <div key={pes.id} className={`flg-dia-linha${pes.id === minhaPessoaId ? ' flg-eu' : ''}`}>
                       <span className="flg-ponto" style={{ background: pes.cor }} />
                       <span className="flg-dia-quem">{pes.nome}</span>
-                      <span className="flg-dia-oque" style={cat && AUSENCIA.has(cat.id) ? { color: cat.cor, fontWeight: 700 } : undefined}>
+                      <span className="flg-dia-oque">
+                        {/* Dentro de um grupo que junta categorias, QUAL delas
+                            é continua importando: em OFF, folga e férias pedem
+                            reações diferentes de quem está lendo. */}
+                        {cat && g.cats.length > 1 && (
+                          <b className="flg-dia-cat" style={{ color: cat.cor }}>{cat.nome}</b>
+                        )}
                         {jogos.length ? jogos.map((j, i) => (
                           <button
                             key={i}
@@ -963,9 +976,8 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
                             title={`${j.compLabel || ''} · ${j.confronto}${j.funcao ? '\n' + j.funcao : ''}`}
                             onClick={() => j.compId && onAbrirJogo?.(j.compId, j.jogo)}
                           ><span className="flg-dejogo-camp">{siglaCamp(j.compLabel)}</span>{' - '}{jogoCurto(j.confronto)}</button>
-                        )) : (cat?.nome || '—')}
+                        )) : null}
                         {reg?.detalhe && <em className="flg-dia-detalhe">{reg.detalhe}</em>}
-                        {jogos.length > 0 && cat && <em className="flg-dia-detalhe">{cat.nome.toLowerCase()}</em>}
                       </span>
                     </div>
                   ))}

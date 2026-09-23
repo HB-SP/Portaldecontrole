@@ -4691,7 +4691,10 @@ body {
 /* Quem não dá para contar tem uma faixa na borda — é o grupo que muda a
    decisão de quem está lendo. */
 .flg-grupo-off .flg-dia-grupo-cab { box-shadow: inset 3px 0 0 #C0504D; }
-.flg-grupo-jogo .flg-dia-grupo-cab { box-shadow: inset 3px 0 0 var(--lm-green); }
+
+/* O nome da categoria dentro de um grupo que junta varias: em OFF, saber se e
+   folga ou ferias muda a reacao de quem le. */
+.flg-dia-cat { font-size: 11px; font-weight: 700; margin-right: 5px; }
 .flg-grupo-vazio { border-style: dashed; }
 
 .flg-dia-linha {
