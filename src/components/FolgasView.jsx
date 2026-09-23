@@ -342,6 +342,31 @@ function Placar({ mes, ano }) {
   )
 }
 
+// ── O PALPITE DE UM DIA VAZIO ────────────────────────────────────────────────
+// O que a pessoa fez no MESMO DIA DA SEMANA, sete dias antes. Se aquele dia
+// também estiver vazio, tenta catorze.
+//
+// Isso acerta 64% das vezes — medido contra setembro, com as nove pessoas que
+// preenchem a escala com regularidade (23/09/2026). É pouco para preencher o
+// mês inteiro de uma vez: uma aceitação em bloco deixaria um em cada três dias
+// errado, e a grade passaria a afirmar coisa que ninguém conferiu.
+//
+// Mas é MUITO para um palpite que só aparece quando o mouse passa e só entra
+// se alguém clicar. Errar não custa nada: a pessoa simplesmente não clica.
+const MENOS = (iso, dias) => {
+  const d = new Date(iso + 'T12:00:00')
+  d.setDate(d.getDate() - dias)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+function palpiteDoDia(meus, diaIso) {
+  if (!meus) return null
+  for (const atras of [7, 14]) {
+    const reg = meus.get(MENOS(diaIso, atras))
+    if (reg?.categoria_id) return { categoria_id: reg.categoria_id, deQuandoAtras: atras }
+  }
+  return null
+}
+
 // ── A CÉLULA DE UM DIA ───────────────────────────────────────────────────────
 // Uma só para as DUAS visões: a vertical (dias nas linhas, pessoas nas colunas)
 // e a horizontal (pessoas nas linhas, dias nas colunas). Duplicar isto em duas
@@ -356,7 +381,7 @@ function Placar({ mes, ano }) {
 // visão e não na outra (equipe, 23/09/2026).
 function Celula({
   reg, cat, jogos = [], compacta, marcada, podeEditar, ehEu, extra = '',
-  onPressionar, onEntrar, onAbrirJogo,
+  palpite, catPalpite, onPressionar, onEntrar, onAbrirJogo, onAceitar,
 }) {
   const c = cat
 
@@ -401,6 +426,17 @@ function Celula({
       onMouseOver={onEntrar}
     >
       {!noTexto.length && texto}
+
+      {/* O palpite. Só existe em dia VAZIO, só aparece quando o mouse passa, e
+          só entra na grade se alguém clicar. */}
+      {!reg && palpite && catPalpite && podeEditar && (
+        <button
+          className="flg-palpite"
+          title={`Na \u00faltima \u00e9poca a pessoa esteve em "${catPalpite.nome}" neste dia da semana (h\u00e1 ${palpite.deQuandoAtras} dias). Clique para usar.`}
+          onMouseDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); onAceitar?.(palpite.categoria_id) }}
+        >{compacta ? (catPalpite.curto || catPalpite.nome) : catPalpite.nome}</button>
+      )}
       {noTexto.map((j, i) => (
         <button
           key={i}
@@ -560,6 +596,31 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
     }
     return conta
   }, [visiveis, diasDe, ano, mes])
+
+  // Só conta o que JÁ PASSOU. O futuro está quase todo vazio por natureza — a
+  // escala é registro do que aconteceu, não planejamento com meses de
+  // antecedência (83% dos dias à frente estavam em branco em 23/09/2026).
+  // Chamar isso de pendência seria transformar o modo de trabalhar em falha.
+  const emBrancoNoMes = useMemo(() => {
+    let n = 0
+    for (const p of visiveis) {
+      const meus = diasDe.get(p.id)
+      for (let d = 1; d <= diasNoMes(ano, mes); d++) {
+        const chave = iso(ano, mes, d)
+        if (chave <= hoje && !meus?.get(chave)) n++
+      }
+    }
+    return n
+  }, [visiveis, diasDe, ano, mes, hoje])
+
+  // Quem fica apagado pelo filtro. "Em branco" é o contrário dos outros: ele
+  // acende justamente o que NÃO tem nada, e é como se vê o que falta fechar no
+  // mês sem precisar que a tela adivinhe o conteúdo.
+  const apaga = (reg, diaIso) => {
+    if (!filtro) return false
+    if (filtro === 'vazio') return !!reg || diaIso > hoje
+    return reg?.categoria_id !== filtro
+  }
 
   const listaDias = useMemo(() => Array.from({ length: total }, (_, i) => i + 1), [total])
 
@@ -849,6 +910,12 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
               >{c.nome}<span className="flg-filtro-n">{quantos}</span></button>
             )
           })}
+          <button
+            className={`flg-filtro${filtro === 'vazio' ? ' is-on' : ''}`}
+            style={filtro === 'vazio' ? { borderColor: 'var(--amber)', color: 'var(--amber)' } : undefined}
+            onClick={() => setFiltro(f => (f === 'vazio' ? '' : 'vazio'))}
+            title="Dias que ainda não foram preenchidos, até hoje"
+          >Em branco<span className="flg-filtro-n">{emBrancoNoMes}</span></button>
           {filtro && <span className="flg-filtro-dica">o resto do mês continua aí, só apagado</span>}
         </div>
       )}
@@ -907,9 +974,12 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
                           marcada={(selecao?.dias.includes(diaIso) && (!selecao.pessoaId || selecao.pessoaId === pes.id)) || naFaixa(pes.id, diaIso)}
                           podeEditar={podeEditar}
                           ehEu={pes.id === minhaPessoaId}
-                          extra={`${descanso ? ' flg-col-descanso' : ''}${diaIso === hoje ? ' flg-col-hoje' : ''}${filtro && reg?.categoria_id !== filtro ? ' flg-cel-apaga' : ''}`}
+                          extra={`${descanso ? ' flg-col-descanso' : ''}${diaIso === hoje ? ' flg-col-hoje' : ''}${apaga(reg, diaIso) ? ' flg-cel-apaga' : ''}`}
+                          palpite={palpiteDoDia(meus, diaIso)}
+                          catPalpite={catPorId.get(palpiteDoDia(meus, diaIso)?.categoria_id)}
                           onPressionar={e => aoPressionar(pes.id, diaIso, e)}
                           onEntrar={() => aoEntrar(pes.id, diaIso)}
+                          onAceitar={cat => salvarDia(pes.id, diaIso, { categoria_id: cat })}
                           onAbrirJogo={onAbrirJogo}
                         />
                       )
@@ -977,9 +1047,12 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
                         marcada={(selecao?.dias.includes(diaIso) && (!selecao.pessoaId || selecao.pessoaId === p.id)) || naFaixa(p.id, diaIso)}
                         podeEditar={podeEditar}
                         ehEu={p.id === minhaPessoaId}
-                        extra={filtro && (diasDe.get(p.id) || new Map()).get(diaIso)?.categoria_id !== filtro ? ' flg-cel-apaga' : ''}
+                        extra={apaga((diasDe.get(p.id) || new Map()).get(diaIso), diaIso) ? ' flg-cel-apaga' : ''}
+                        palpite={palpiteDoDia(diasDe.get(p.id), diaIso)}
+                        catPalpite={catPorId.get(palpiteDoDia(diasDe.get(p.id), diaIso)?.categoria_id)}
                         onPressionar={e => aoPressionar(p.id, diaIso, e)}
                         onEntrar={() => aoEntrar(p.id, diaIso)}
+                        onAceitar={cat => salvarDia(p.id, diaIso, { categoria_id: cat })}
                         onAbrirJogo={onAbrirJogo}
                       />
                     ))}

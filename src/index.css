@@ -4679,6 +4679,20 @@ body {
 }
 .flg-filtro-dica { font-size: 10.5px; color: var(--text-dim); font-style: italic; }
 
+/* O PALPITE: só em dia vazio, só no hover, e só entra se alguém clicar.
+   Fica pontilhado e apagado de proposito - tem de parecer sugestao, nunca
+   conteudo. Acerta 64% das vezes, e errar nao custa nada: nao se clica. */
+.flg-palpite {
+  opacity: 0; padding: 0 3px; border: none; border-radius: 3px;
+  background: none; color: var(--text-dim); cursor: pointer;
+  font-family: inherit; font-size: inherit; font-style: italic;
+  border-bottom: 1px dotted var(--text-dim);
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  transition: opacity 0.12s;
+}
+.flg-cel:hover .flg-palpite { opacity: 0.75; }
+.flg-palpite:hover { opacity: 1 !important; color: var(--lm-green-dim); border-bottom-color: var(--lm-green); }
+
 /* Apagado, não escondido: o dia continua clicável e no lugar dele. */
 .flg-cel-apaga { opacity: 0.16; }
 .flg-cel-apaga:hover { opacity: 0.5; }
