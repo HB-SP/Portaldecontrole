@@ -19,6 +19,11 @@ import {
 } from '../lib/folgas'
 
 const CHAVE_TIME = 'folgas_time'
+// Vertical ou horizontal: é preferência de leitura, e cada um tem a sua. Fica
+// guardada como o filtro de time — quem prefere uma não quer reescolher a cada
+// visita (equipe, 23/09/2026: "ter no vertical e horizontal e a pessoa escolhe
+// a preferência dela").
+const CHAVE_ORIENT = 'folgas_orientacao'
 
 // Onde desenhar o menu de um dia. Ele fica preso à TELA (position: fixed), e não
 // à célula, porque a célula corta o que passa da borda — era por isso que o menu
@@ -337,6 +342,98 @@ function Placar({ mes, ano }) {
   )
 }
 
+// ── A CÉLULA DE UM DIA ───────────────────────────────────────────────────────
+// Uma só para as DUAS visões: a vertical (dias nas linhas, pessoas nas colunas)
+// e a horizontal (pessoas nas linhas, dias nas colunas). Duplicar isto em duas
+// tabelas seria garantir que uma ia divergir da outra na primeira mudança.
+//
+// O que muda entre elas é `compacta`:
+//   vertical   → a célula tem 140px. Cabe o nome por extenso e o jogo escrito,
+//                "BR26 - MIR × BOT", que é a informação mais útil do dia.
+//   horizontal → a coluna tem 44px. Só cabe a sigla, e o jogo vira marca.
+//
+// A abreviação não é gosto: é consequência da largura. Por isso ela existe numa
+// visão e não na outra (equipe, 23/09/2026).
+function Celula({
+  reg, cat, jogos = [], compacta, marcada, podeEditar, ehEu, extra = '',
+  onPressionar, onEntrar, onAbrirJogo,
+}) {
+  const c = cat
+
+  // Jogo APONTADO à mão: quem foi ao jogo sem ter função na escala dele
+  // escolheu a partida no menu. Na célula não há diferença nenhuma entre isso e
+  // o jogo lido da escala — quem olha a grade não precisa saber por qual porta
+  // a pessoa entrou.
+  const posto = reg?.jogo_mandante ? {
+    compId: reg.jogo_comp_id,
+    compLabel: reg.jogo_camp,
+    confronto: [reg.jogo_mandante, reg.jogo_visitante].filter(Boolean).join(' × '),
+    jogo: { data: reg.jogo_data, mandante: reg.jogo_mandante, visitante: reg.jogo_visitante, id: reg.jogo_id },
+  } : null
+
+  // DIA DE TRABALHO COM JOGO: o jogo é o que diz mais. "Externa" sozinho não
+  // conta onde a pessoa esteve; "BR26 - MIR × BOT" conta (equipe, 21/09/2026).
+  //
+  // AUSÊNCIA é o contrário: se o dia é folga, férias ou atestado, quem manda é
+  // a ausência, e o jogo vira a marca ao lado — que ali serve de aviso, porque
+  // alguém está escalado num dia em que não vai estar.
+  const ehTrabalho = !!c && !AUSENCIA.has(c.id)
+  const todos = posto ? [posto] : jogos
+  const noTexto = compacta ? [] : (posto || !reg || ehTrabalho) ? todos : []
+  const soMarca = noTexto.length ? [] : todos
+
+  // O texto: a célula diz O QUÊ. O descritivo do dia não toma o lugar dela —
+  // vira uma marca, e o texto inteiro aparece ao passar o mouse. Antes o texto
+  // livre substituía a categoria, e a coluna do Sinal Inter virava um campo de
+  // anotação em vez de uma escala. Exceção: em "Outro" o nome da categoria não
+  // diz nada, e ali o descritivo É a informação.
+  const texto = !reg ? ''
+    : compacta ? (c?.curto || c?.nome || '?')
+    : (c?.exige_detalhe && reg.detalhe) ? reg.detalhe
+    : (c?.nome || 'Categoria removida')
+
+  return (
+    <td
+      className={`flg-cel${compacta ? ' flg-cel-min' : ''}${marcada ? ' flg-cel-marcada' : ''}${podeEditar ? ' flg-cel-edita' : ''}${ehEu ? ' flg-eu' : ''}${extra}`}
+      style={estiloCelula(c)}
+      title={reg ? `${c?.nome || 'Categoria removida'}${reg.campeonato ? ` · ${reg.campeonato}` : ''}${reg.detalhe ? `\n${reg.detalhe}` : ''}` : 'vazio'}
+      onMouseDown={onPressionar}
+      onMouseOver={onEntrar}
+    >
+      {!noTexto.length && texto}
+      {noTexto.map((j, i) => (
+        <button
+          key={i}
+          className={`flg-dejogo${j.compId ? '' : ' flg-dejogo-sem'}`}
+          style={{ color: c?.cor || j.cor }}
+          title={`${c?.nome ? c.nome + ' · ' : ''}${j.compLabel || ''} · ${j.confronto}${j.funcao ? '\n' + j.funcao : ''}${j.compId ? ' — clique para abrir o jogo' : ' — este jogo não tem ficha no Portal'}`}
+          onMouseDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); if (j.compId) onAbrirJogo?.(j.compId, j.jogo) }}
+        ><span className="flg-dejogo-camp">{siglaCamp(j.compLabel)}</span>
+          {' - '}{jogoCurto(j.confronto)}</button>
+      ))}
+      {reg?.detalhe && !c?.exige_detalhe && !compacta && <span className="flg-nota" title={reg.detalhe}>·</span>}
+
+      {soMarca.map((j, i) => {
+        // ESTE é o conflito, e o único lugar da grade onde o vermelho aparece:
+        // a pessoa está escalada num jogo num dia em que ela não vai estar.
+        // Fora daqui, vermelho não significa nada nesta tela.
+        const bate = reg && AUSENCIA.has(c?.id)
+        const cor = bate ? 'var(--red)' : j.cor
+        return (
+          <button
+            key={i} className={`flg-jogo${j.compId ? '' : ' flg-jogo-sem'}${bate ? ' flg-jogo-conflito' : ''}`}
+            title={`${bate ? `CONFLITO: escalado em ${c?.nome?.toLowerCase()}\n` : ''}${j.compLabel} · ${j.confronto}${j.funcao ? '\n' + j.funcao : ''}${j.compId ? ' — clique para abrir o jogo' : ' — este jogo não tem ficha no Portal'}`}
+            onMouseDown={e => e.stopPropagation()}
+            onClick={e => { e.stopPropagation(); if (j.compId) onAbrirJogo?.(j.compId, j.jogo) }}
+            style={j.compId || bate ? { background: cor } : { borderColor: cor }}
+          />
+        )
+      })}
+    </td>
+  )
+}
+
 export default function FolgasView({ podeEditar = false, competitions = [], onAbrirJogo }) {
   const hoje = hojeIso()
   const [ano, setAno] = useState(() => Number(hoje.slice(0, 4)))
@@ -358,6 +455,11 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
   // React re-renderiza; o estado é só para desenhar a faixa.
   const arrastoRef = useRef(null)
   const [arrasto, setArrasto] = useState(null)
+  const [orient, setOrientRaw] = useState(() => {
+    try { return localStorage.getItem(CHAVE_ORIENT) || 'vertical' } catch { return 'vertical' }
+  })
+  const trocarOrient = v => { setOrientRaw(v); try { localStorage.setItem(CHAVE_ORIENT, v) } catch { /* sem storage */ } }
+
   const [selecao, setSelecao] = useState(null)        // { pessoaId, dias: [] }
   const [aba, setAba] = useState('grade')             // grade | resumo
   // Linha em destaque, como numa planilha: clicar no dia acende a linha toda,
@@ -602,6 +704,20 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
           <button className={`flg-aba${aba === 'resumo' ? ' is-on' : ''}`} onClick={() => setAba('resumo')}>Ano</button>
         </div>
 
+        {aba === 'grade' && (
+          <div className="flg-orient" title="Como você prefere ler a grade">
+            {[['vertical', 'Dias ↓', 'Dias nas linhas, pessoas nas colunas — cabe o nome inteiro e o jogo escrito'],
+              ['horizontal', 'Pessoas ↓', 'Pessoas nas linhas, dias nas colunas — o mês inteiro de uma pessoa de uma vez']]
+              .map(([v, rotulo, dica]) => (
+                <button
+                  key={v} title={dica}
+                  className={`flg-orient-btn${orient === v ? ' is-on' : ''}`}
+                  onClick={() => trocarOrient(v)}
+                >{rotulo}</button>
+              ))}
+          </div>
+        )}
+
         <div style={{ flex: 1 }} />
 
         {podeEditar && aba === 'grade' && (
@@ -675,7 +791,86 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
         document.body
       )}
 
-      {aba === 'grade' ? (
+      {aba === 'grade' && orient === 'horizontal' ? (
+        <div className="flg-wrap" ref={wrapRef}>
+          <table className="flg-tab flg-tab-h">
+            <thead>
+              <tr>
+                <th className="flg-fix flg-h-cab">Pessoa</th>
+                {listaDias.map(d => {
+                  const diaIso = iso(ano, mes, d)
+                  const descanso = ehFimDeSemana(ano, mes, d) || feriadosSet.has(diaIso)
+                  return (
+                    <th
+                      key={d}
+                      className={`flg-h-dia${descanso ? ' flg-col-descanso' : ''}${diaIso === hoje ? ' flg-col-hoje' : ''}`}
+                      title={feriadosSet.get(diaIso) || ''}
+                    >
+                      <span className="flg-h-num">{String(d).padStart(2, '0')}</span>
+                      <span className="flg-h-sem">{SEMANA_CURTA[new Date(ano, mes, d).getDay()]}</span>
+                    </th>
+                  )
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {visiveis.map(pes => {
+                const sal = saldos.get(pes.id)
+                const aAgendar = sal ? -sal.ano.aTirar - (sal.ano.marcadasGastam || 0) : 0
+                const meus = diasDe.get(pes.id) || new Map()
+                return (
+                  <tr key={pes.id} className={`flg-linha${pes.id === minhaPessoaId ? ' flg-eu' : ''}`}>
+                    <th className="flg-fix flg-h-pessoa">
+                      <span className="flg-ponto" style={{ background: pes.cor }} />
+                      <span className="flg-h-nome">{pes.nome}</span>
+                      {sal && (
+                        <span
+                          className="flg-h-saldo"
+                          style={{ color: corDoSaldo(-aAgendar) }}
+                          title={`${aAgendar > 0 ? aAgendar + ' folga(s) a agendar' : aAgendar < 0 ? (-aAgendar) + ' adiantada(s)' : 'em dia'}`}
+                        >{aAgendar > 0 ? aAgendar : aAgendar < 0 ? `+${-aAgendar}` : '—'}</span>
+                      )}
+                    </th>
+                    {listaDias.map(d => {
+                      const diaIso = iso(ano, mes, d)
+                      const reg = meus.get(diaIso)
+                      const descanso = ehFimDeSemana(ano, mes, d) || feriadosSet.has(diaIso)
+                      return (
+                        <Celula
+                          key={d}
+                          compacta
+                          reg={reg}
+                          cat={catPorId.get(reg?.categoria_id)}
+                          jogos={jogosPorDia.get(`${pes.id}|${diaIso}`) || []}
+                          marcada={(selecao?.dias.includes(diaIso) && (!selecao.pessoaId || selecao.pessoaId === pes.id)) || naFaixa(pes.id, diaIso)}
+                          podeEditar={podeEditar}
+                          ehEu={pes.id === minhaPessoaId}
+                          extra={`${descanso ? ' flg-col-descanso' : ''}${diaIso === hoje ? ' flg-col-hoje' : ''}`}
+                          onPressionar={e => aoPressionar(pes.id, diaIso, e)}
+                          onEntrar={() => aoEntrar(pes.id, diaIso)}
+                          onAbrirJogo={onAbrirJogo}
+                        />
+                      )
+                    })}
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+
+          <div className="flg-chaves">
+            {oferecidas.map(c => (
+              <span key={c.id} className="flg-chave" title={c.nome}>
+                <b style={{ color: AUSENCIA.has(c.id) ? c.cor : 'var(--text-muted)', fontWeight: AUSENCIA.has(c.id) ? 700 : 500 }}>{c.curto || c.nome}</b>
+                {c.nome}
+              </span>
+            ))}
+            <span className="flg-chave">
+              <b className="flg-chave-conflito" />conflito: escalado num dia de ausência
+            </span>
+          </div>
+        </div>
+      ) : aba === 'grade' ? (
         <div className="flg-wrap" ref={wrapRef}>
           <table className="flg-tab">
             <thead>
@@ -711,96 +906,20 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
                       {feriado && <span className="flg-dia-feriado">●</span>}
                       {ehHoje && <span className="flg-dia-hoje">hoje</span>}
                     </td>
-                    {visiveis.map(p => {
-                      const reg = (diasDe.get(p.id) || new Map()).get(diaIso)
-                      const c = reg ? catPorId.get(reg.categoria_id) : null
-                      const marcado = selecao?.dias.includes(diaIso) && (!selecao.pessoaId || selecao.pessoaId === p.id)
-                      // A célula diz O QUÊ, sempre igual e por extenso. O descritivo
-                      // do dia não toma o lugar dela: vira uma marca, e o texto
-                      // inteiro aparece ao passar o mouse. Antes o texto livre
-                      // substituía a categoria, e a coluna do Sinal Inter virava
-                      // um campo de anotação em vez de uma escala.
-                      // Exceção: em "Outro" o nome da categoria não diz nada — ali o
-                      // descritivo É a informação, e por isso ele aparece na célula.
-                      // A sigla, não o nome: "VO" no lugar de "Vila Olímpia".
-                      // A célula divide espaço com o jogo, e o nome inteiro
-                      // continua no passar do mouse e na legenda.
-                      const texto = !reg ? ''
-                        : (c?.exige_detalhe && reg.detalhe) ? reg.detalhe
-                        : (c?.curto || c?.nome || 'Categoria removida')
-                      // A ordem de trabalho é: escala o jogo, depois preenche
-                      // folga/home. Então dia com jogo JÁ ESTÁ DITO — a célula
-                      // mostra o jogo em vez de ficar vazia pedindo o que já se
-                      // sabe. Marcar por cima continua possível: quem escolhe
-                      // uma categoria manda, e o jogo volta a ser só a marca.
-                      const jogos = jogosPorDia.get(`${p.id}|${diaIso}`) || []
-                      // Jogo APONTADO à mão: quem foi ao jogo sem ter função na
-                      // escala dele escolheu a partida no menu. Na célula não há
-                      // diferença nenhuma entre isso e o jogo lido da escala —
-                      // quem olha a grade não precisa saber por qual porta a
-                      // pessoa entrou.
-                      const posto = reg?.jogo_mandante ? {
-                        compId: reg.jogo_comp_id,
-                        compLabel: reg.jogo_camp,
-                        confronto: [reg.jogo_mandante, reg.jogo_visitante].filter(Boolean).join(' × '),
-                        jogo: { data: reg.jogo_data, mandante: reg.jogo_mandante, visitante: reg.jogo_visitante, id: reg.jogo_id },
-                      } : null
-                      // DIA DE TRABALHO COM JOGO: o jogo é o que diz mais.
-                      // "Externa" sozinho não conta onde a pessoa esteve; "BR26
-                      // - MIR × BOT" conta (equipe, 21/09/2026). Vale para o
-                      // jogo apontado à mão e para o lido da escala.
-                      //
-                      // AUSÊNCIA é o contrário: se o dia é folga, férias ou
-                      // atestado, quem manda é a ausência, e o jogo vira a marca
-                      // ao lado — que ali serve de aviso, porque alguém está
-                      // escalado num dia em que não vai estar.
-                      const ehTrabalho = !!c && !AUSENCIA.has(c.id)
-                      const noTexto = posto ? [posto] : (!reg || ehTrabalho) ? jogos : []
-                      const soMarca = noTexto.length ? [] : jogos
-                      return (
-                        <td
-                          key={p.id}
-                          className={`flg-cel${marcado || naFaixa(p.id, diaIso) ? ' flg-cel-marcada' : ''}${podeEditar ? ' flg-cel-edita' : ''}${p.id === minhaPessoaId ? ' flg-eu' : ''}`}
-                          style={estiloCelula(c)}
-                          title={reg ? `${c?.nome || 'Categoria removida'}${reg.campeonato ? ` · ${reg.campeonato}` : ''}${reg.detalhe ? `\n${reg.detalhe}` : ''}` : 'vazio'}
-                          onMouseDown={e => aoPressionar(p.id, diaIso, e)}
-                          onMouseOver={() => aoEntrar(p.id, diaIso)}
-                        >
-                          {!noTexto.length && texto}
-                          {noTexto.map((j, i) => (
-                            <button
-                              key={i}
-                              className={`flg-dejogo${j.compId ? '' : ' flg-dejogo-sem'}`}
-                              style={{ color: c?.cor || j.cor }}
-                              title={`${c?.nome ? c.nome + ' · ' : ''}${j.compLabel || ''} · ${j.confronto}${j.funcao ? '\n' + j.funcao : ''}${j.compId ? ' — clique para abrir o jogo' : ' — este jogo não tem ficha no Portal'}`}
-                              onMouseDown={e => e.stopPropagation()}
-                              onClick={e => { e.stopPropagation(); if (j.compId) onAbrirJogo?.(j.compId, j.jogo) }}
-                            ><span className="flg-dejogo-camp">{siglaCamp(j.compLabel)}</span>
-                              {' - '}{jogoCurto(j.confronto)}</button>
-                          ))}
-                          {reg?.detalhe && !c?.exige_detalhe && <span className="flg-nota" title={reg.detalhe}>·</span>}
-
-                          {soMarca.map((j, i) => {
-                            // ESTE é o conflito, e o único lugar da grade onde o
-                            // vermelho aparece: a pessoa está escalada num jogo
-                            // num dia em que ela não vai estar — folga, férias
-                            // ou atestado. Fora daqui, vermelho não significa
-                            // nada nesta tela.
-                            const bate = reg && AUSENCIA.has(c?.id)
-                            const cor = bate ? 'var(--red)' : j.cor
-                            return (
-                              <button
-                                key={i} className={`flg-jogo${j.compId ? '' : ' flg-jogo-sem'}${bate ? ' flg-jogo-conflito' : ''}`}
-                                title={`${bate ? `CONFLITO: escalado em ${c?.nome?.toLowerCase()}\n` : ''}${j.compLabel} · ${j.confronto}\n${j.funcao}${j.compId ? ' — clique para abrir o jogo' : ' — este jogo não tem ficha no Portal'}`}
-                                onMouseDown={e => e.stopPropagation()}
-                                onClick={e => { e.stopPropagation(); if (j.compId) onAbrirJogo?.(j.compId, j.jogo) }}
-                                style={j.compId || bate ? { background: cor } : { borderColor: cor }}
-                              />
-                            )
-                          })}
-                        </td>
-                      )
-                    })}
+                    {visiveis.map(p => (
+                      <Celula
+                        key={p.id}
+                        reg={(diasDe.get(p.id) || new Map()).get(diaIso)}
+                        cat={catPorId.get((diasDe.get(p.id) || new Map()).get(diaIso)?.categoria_id)}
+                        jogos={jogosPorDia.get(`${p.id}|${diaIso}`) || []}
+                        marcada={(selecao?.dias.includes(diaIso) && (!selecao.pessoaId || selecao.pessoaId === p.id)) || naFaixa(p.id, diaIso)}
+                        podeEditar={podeEditar}
+                        ehEu={p.id === minhaPessoaId}
+                        onPressionar={e => aoPressionar(p.id, diaIso, e)}
+                        onEntrar={() => aoEntrar(p.id, diaIso)}
+                        onAbrirJogo={onAbrirJogo}
+                      />
+                    ))}
                   </tr>
                 )
               })}

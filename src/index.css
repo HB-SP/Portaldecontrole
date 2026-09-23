@@ -4646,6 +4646,63 @@ body {
 .flg-dejogo-sem { cursor: help; opacity: 0.75; text-decoration: none; font-style: italic; }
 .flg-dejogo-sem:hover { text-decoration: none; }
 
+/* ─── ESCOLHA DE ORIENTAÇÃO ────────────────────────────────────────────────
+   Vertical e horizontal mostram o MESMO dado: muda só por onde o olho entra.
+   Vertical responde "quem está onde hoje"; horizontal responde "como foi o mês
+   desta pessoa". Cada um prefere um, então a escolha fica guardada. */
+.flg-orient {
+  display: inline-flex; gap: 3px; padding: 3px;
+  border-radius: 8px; background: var(--bg-surface2); border: 1px solid var(--border);
+}
+.flg-orient-btn {
+  padding: 4px 10px; border: none; border-radius: 6px; cursor: pointer;
+  background: transparent; color: var(--text-muted);
+  font-family: inherit; font-size: 11.5px; font-weight: 600;
+  transition: background 0.15s, color 0.15s;
+}
+.flg-orient-btn:hover { color: var(--text); }
+.flg-orient-btn.is-on { background: var(--bg-card); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+
+/* ─── A GRADE HORIZONTAL ───────────────────────────────────────────────────
+   Pessoas nas linhas, dias nas colunas. São 31 colunas, então cada uma fica
+   estreita de propósito e a célula mostra só a sigla — é daí que a abreviação
+   ganha sentido, e é por isso que ela não existe na vertical. */
+.flg-tab-h { table-layout: fixed; }
+.flg-tab-h th, .flg-tab-h td { border-left: 1px solid var(--border); }
+
+.flg-h-cab, .flg-h-pessoa {
+  width: 168px; min-width: 168px; max-width: 168px;
+  text-align: left; padding: 0 8px;
+}
+.flg-h-pessoa {
+  display: flex; align-items: center; gap: 6px; height: 28px;
+  font-size: 12.5px; font-weight: 600; border-bottom: 1px solid var(--border);
+}
+.flg-h-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.flg-h-saldo { font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.flg-h-dia {
+  width: 44px; min-width: 44px; padding: 3px 0;
+  text-align: center; line-height: 1.15;
+}
+.flg-h-num { display: block; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.flg-h-sem { display: block; font-size: 8.5px; color: var(--text-muted); text-transform: uppercase; }
+
+/* A célula mínima: só a sigla, centralizada, sem espaço para mais nada. */
+.flg-cel-min {
+  width: 44px; min-width: 44px; height: 28px; padding: 0 2px;
+  text-align: center; font-size: 10px; letter-spacing: 0.01em;
+}
+/* Na horizontal o jogo não cabe escrito, então ele é só a marca — e ela sobe
+   para o canto para não empurrar a sigla. */
+.flg-cel-min .flg-jogo { position: absolute; top: 2px; right: 2px; }
+
+/* Fim de semana e feriado marcam a COLUNA aqui, não a linha: é a coluna que o
+   olho percorre para ver quem trabalhou no sábado. */
+.flg-col-descanso { background: #F4F5F7; }
+.flg-tab-h th.flg-col-descanso { background: var(--bg-surface2); }
+.flg-col-hoje { box-shadow: inset 2px 0 0 var(--lm-green), inset -2px 0 0 var(--lm-green); }
+
 /* A legenda das siglas, embaixo da grade. Discreta: quem já sabe ler a grade
    não precisa dela, e quem não sabe acha sem procurar. */
 .flg-chaves {
