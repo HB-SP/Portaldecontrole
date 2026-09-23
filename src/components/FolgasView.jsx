@@ -349,7 +349,7 @@ function Placar({ mes, ano, mesNome, aberto }) {
   const devidas = -ano.aTirar                          // o saldo de hoje, como a planilha conta
   const aAgendar = devidas - (ano.marcadasGastam || 0) // o que ainda não tem data
 
-  const palavra = aAgendar > 0 ? `${aAgendar} folga${aAgendar === 1 ? '' : 's'} pendente${aAgendar === 1 ? '' : 's'}`
+  const palavra = aAgendar > 0 ? `${aAgendar} folga${aAgendar === 1 ? '' : 's'}`
     : aAgendar < 0 ? `${-aAgendar} adiantada${aAgendar < -1 ? 's' : ''}`
     : 'em dia'
 
@@ -375,7 +375,7 @@ function Placar({ mes, ano, mesNome, aberto }) {
       </div>
       {aberto && (
         <div className="flg-placar-mes" title={`Folgas marcadas neste mês: ${noMes}`}>
-          {noMes ? `${noMes} folga${noMes === 1 ? '' : 's'} em ${mesNome}` : `sem folga em ${mesNome}`}
+          {noMes ? `${noMes} em ${mesNome}` : `nenhuma em ${mesNome}`}
         </div>
       )}
     </div>
