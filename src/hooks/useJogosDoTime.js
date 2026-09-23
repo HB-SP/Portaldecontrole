@@ -34,6 +34,23 @@ import { parseData } from '../lib/datas'
 import { iso } from '../lib/folgas'
 
 const pessoalDaConfig = cfg => (cfg?.columns || []).filter(c => c.group === 'Pessoal')
+
+// O ANO DO CAMPEONATO, tirado do rótulo: "Copinha 26" é 2026.
+//
+// A data dos jogos quase sempre vem sem ano — "15/01" — e quem completava era o
+// ano da TELA. Resultado: virando para 2027, a Copinha e o Paulistão de 2026
+// reapareciam inteiros em janeiro, como se fossem jogos novos (equipe,
+// 23/09/2026). O campeonato sabe de que ano ele é; a tela não tem como saber.
+//
+// Sem ano no rótulo — "Media Day", "Host Broadcast" — não dá para afirmar nada,
+// e aí o ano da tela segue valendo, como antes.
+const anoDoCamp = label => {
+  const t = String(label || '')
+  const m = t.match(/\b(20\d{2})\b/) || t.match(/(\d{2})\s*$/)
+  if (!m) return null
+  const n = Number(m[1])
+  return n < 100 ? 2000 + n : n
+}
 // "Fulano / Ciclano" e "Fulano / 11 99999-9999" — cada pedaço é candidato.
 const pedacos = v => String(v || '').split('/').map(s => s.trim()).filter(Boolean)
 
@@ -76,8 +93,10 @@ export function useJogosDoTime(pessoas, competitions, ano) {
           })
         }
       }
-      const diaDe = valor => {
-        const d = parseData(valor, ano)
+      // `anoBase` completa a data quando ela vem sem ano. Depois disso o dia
+      // ainda precisa cair no ano da tela para entrar na grade.
+      const diaDe = (valor, anoBase) => {
+        const d = parseData(valor, anoBase || ano)
         if (!d || d.getFullYear() !== Number(ano)) return null
         return iso(d.getFullYear(), d.getMonth(), d.getDate())
       }
@@ -91,6 +110,8 @@ export function useJogosDoTime(pessoas, competitions, ano) {
       const jogoDaEscala = new Map()   // id da linha da escala -> { jogo, comp }
       await Promise.all((competitions || []).map(async comp => {
         try {
+          const anoComp = anoDoCamp(comp.label)
+          if (anoComp && anoComp !== Number(ano)) return   // campeonato de outro ano
           const res = await carregarCompeticao(comp)
           if (!res) return
           const colunas = pessoalDaConfig(res.cfg)
@@ -99,7 +120,7 @@ export function useJogosDoTime(pessoas, competitions, ano) {
             const eg = acharEscala(j, res.idxEscala)?.escala
             if (eg?.id) jogoDaEscala.set(eg.id, { jogo: j, comp })
 
-            const dia = diaDe(j.data)
+            const dia = diaDe(j.data, anoComp)
             if (!dia) continue
             const confronto = `${j.mandante} × ${j.visitante}`
 
@@ -140,7 +161,9 @@ export function useJogosDoTime(pessoas, competitions, ano) {
       const { data: eg } = await supabase.from('escala_geral').select('*')
       for (const r of eg || []) {
         if (!r.mandante || jogoDaEscala.has(r.id)) continue
-        const dia = diaDe(r.data)
+        const anoLinha = anoDoCamp(r.campeonato)
+        if (anoLinha && anoLinha !== Number(ano)) continue
+        const dia = diaDe(r.data, anoLinha)
         if (!dia) continue
         const escalados = []
         for (const fn of FUNCOES_ESCALA) {
