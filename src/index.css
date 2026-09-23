@@ -4783,9 +4783,12 @@ body {
 /* Conflito: escalado num dia de ausencia. E o unico vermelho da grade. */
 .flg-jogo-conflito { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 3px var(--red); }
 
+/* O mesmo vermelho amaciado da folga na grade. O var(--red) vivo ficou
+   reservado ao conflito — se os dois usassem o mesmo tom, a folga de todo
+   sábado teria o peso de um problema. */
 .flg-ano-folga {
   position: absolute; top: 4px; bottom: 4px; width: 2px;
-  background: var(--red); border-radius: 1px;
+  background: #C0504D; border-radius: 1px;
 }
 
 /* Hoje, atravessando a faixa inteira. */
