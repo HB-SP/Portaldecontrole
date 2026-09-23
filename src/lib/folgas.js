@@ -22,6 +22,12 @@
 //    com o saldo parado, que é o comportamento que a equipe descreveu.
 
 export const SEMANA_CURTA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
+// Por extenso, para o título de uma tela que fala de um dia só — ali "qua" fica
+// telegráfico demais.
+export const SEMANA_LONGA = [
+  'domingo', 'segunda-feira', 'terça-feira', 'quarta-feira',
+  'quinta-feira', 'sexta-feira', 'sábado',
+]
 export const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 

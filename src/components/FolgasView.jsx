@@ -14,7 +14,7 @@ import { createPortal } from 'react-dom'
 import { useFolgas } from '../hooks/useFolgas'
 import { useJogosDoTime } from '../hooks/useJogosDoTime'
 import {
-  MESES, SEMANA_CURTA, iso, diasNoMes, hojeIso, ehFimDeSemana,
+  MESES, SEMANA_CURTA, SEMANA_LONGA, iso, diasNoMes, hojeIso, ehFimDeSemana,
   saldoDoMes, saldoDoAno,
 } from '../lib/folgas'
 
@@ -136,6 +136,32 @@ function estiloCelula(cat) {
   if (!cat) return undefined
   if (!AUSENCIA.has(cat.id)) return { color: 'var(--text-muted)' }
   return { color: cat.cor, fontWeight: 700 }
+}
+
+// ── OS GRUPOS DO DIA ─────────────────────────────────────────────────────────
+// A grade mostra o que cada um JÁ TEM. Esta visão vira isso do avesso e
+// responde a pergunta que ninguém conseguia fazer à tela: "preciso de alguém
+// no sábado — quem está onde?". Hoje isso se responde lendo a coluna nome por
+// nome (equipe e Lucas, 23/09/2026; a visão é para quem só lê a escala).
+//
+// A ordem é a da urgência de quem pergunta: primeiro quem já tem compromisso
+// de operação, por último quem não tem nada.
+const GRUPOS = [
+  { id: 'jogo',       titulo: 'Em jogo',        dica: 'escalados numa partida' },
+  { id: 'fora',       titulo: 'Fora',           dica: 'externa ou viagem' },
+  { id: 'presencial', titulo: 'Presencial',     dica: 'Vila Olímpia, Casablanca, Assunção' },
+  { id: 'home',       titulo: 'Home',           dica: 'trabalhando de casa' },
+  { id: 'off',        titulo: 'Não contar com', dica: 'folga, férias ou atestado' },
+  { id: 'vazio',      titulo: 'Sem preencher',  dica: 'ninguém disse o que foi feito no dia' },
+]
+const FORA = new Set(['externa', 'deslocamento'])
+function grupoDoDia(reg, temJogo) {
+  if (!reg) return temJogo ? 'jogo' : 'vazio'
+  if (AUSENCIA.has(reg.categoria_id)) return 'off'
+  if (temJogo) return 'jogo'
+  if (FORA.has(reg.categoria_id)) return 'fora'
+  if (reg.categoria_id === 'home') return 'home'
+  return 'presencial'
 }
 
 // ── Menu de um dia ───────────────────────────────────────────────────────────
@@ -504,7 +530,8 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
   const [filtro, setFiltro] = useState('')
 
   const [selecao, setSelecao] = useState(null)        // { pessoaId, dias: [] }
-  const [aba, setAba] = useState('grade')             // grade | resumo
+  const [aba, setAba] = useState('grade')             // grade | dia | resumo
+  const [diaFoco, setDiaFoco] = useState(() => hojeIso())
   // Linha em destaque, como numa planilha: clicar no dia acende a linha toda,
   // para acompanhar um dia inteiro sem perder a conta de qual coluna é quem.
   const [linhaFoco, setLinhaFoco] = useState(null)
@@ -788,6 +815,7 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
 
         <div className="flg-abas">
           <button className={`flg-aba${aba === 'grade' ? ' is-on' : ''}`} onClick={() => setAba('grade')}>Grade</button>
+          <button className={`flg-aba${aba === 'dia' ? ' is-on' : ''}`} onClick={() => setAba('dia')}>Dia</button>
           <button className={`flg-aba${aba === 'resumo' ? ' is-on' : ''}`} onClick={() => setAba('resumo')}>Ano</button>
         </div>
 
@@ -888,6 +916,70 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
           }}
         />,
         document.body
+      )}
+
+      {aba === 'dia' && (
+        <div className="flg-dia-wrap">
+          <div className="flg-dia-topo">
+            <button className="flg-seta" onClick={() => setDiaFoco(d => MENOS(d, 1))} title="Dia anterior">‹</button>
+            <span className="flg-dia-titulo">
+              {SEMANA_LONGA[new Date(diaFoco + 'T12:00:00').getDay()]},{' '}
+              <strong>{Number(diaFoco.slice(8))}</strong> de {MESES[Number(diaFoco.slice(5, 7)) - 1].toLowerCase()}
+              {feriadosSet.get(diaFoco) && <em className="flg-dia-feriado-nome"> · {feriadosSet.get(diaFoco)}</em>}
+            </span>
+            <button className="flg-seta" onClick={() => setDiaFoco(d => MENOS(d, -1))} title="Próximo dia">›</button>
+            {diaFoco !== hoje && (
+              <button className="flg-dia-volta" onClick={() => setDiaFoco(hoje)}>voltar para hoje</button>
+            )}
+          </div>
+
+          <div className="flg-dia-grupos">
+            {GRUPOS.map(g => {
+              const gente = visiveis
+                .map(pes => {
+                  const reg = (diasDe.get(pes.id) || new Map()).get(diaFoco)
+                  const jogos = jogosPorDia.get(`${pes.id}|${diaFoco}`) || []
+                  const posto = reg?.jogo_mandante
+                    ? [{ compId: reg.jogo_comp_id, compLabel: reg.jogo_camp, confronto: [reg.jogo_mandante, reg.jogo_visitante].filter(Boolean).join(' × '), jogo: { data: reg.jogo_data, mandante: reg.jogo_mandante, visitante: reg.jogo_visitante } }]
+                    : jogos
+                  return { pes, reg, jogos: posto, cat: catPorId.get(reg?.categoria_id) }
+                })
+                .filter(x => grupoDoDia(x.reg, x.jogos.length) === g.id)
+              if (!gente.length) return null
+              return (
+                <div key={g.id} className={`flg-dia-grupo flg-grupo-${g.id}`}>
+                  <div className="flg-dia-grupo-cab" title={g.dica}>
+                    {g.titulo}<span className="flg-dia-quantos">{gente.length}</span>
+                  </div>
+                  {gente.map(({ pes, reg, jogos, cat }) => (
+                    <div key={pes.id} className={`flg-dia-linha${pes.id === minhaPessoaId ? ' flg-eu' : ''}`}>
+                      <span className="flg-ponto" style={{ background: pes.cor }} />
+                      <span className="flg-dia-quem">{pes.nome}</span>
+                      <span className="flg-dia-oque" style={cat && AUSENCIA.has(cat.id) ? { color: cat.cor, fontWeight: 700 } : undefined}>
+                        {jogos.length ? jogos.map((j, i) => (
+                          <button
+                            key={i}
+                            className={`flg-dejogo${j.compId ? '' : ' flg-dejogo-sem'}`}
+                            title={`${j.compLabel || ''} · ${j.confronto}${j.funcao ? '\n' + j.funcao : ''}`}
+                            onClick={() => j.compId && onAbrirJogo?.(j.compId, j.jogo)}
+                          ><span className="flg-dejogo-camp">{siglaCamp(j.compLabel)}</span>{' - '}{jogoCurto(j.confronto)}</button>
+                        )) : (cat?.nome || '—')}
+                        {reg?.detalhe && <em className="flg-dia-detalhe">{reg.detalhe}</em>}
+                        {jogos.length > 0 && cat && <em className="flg-dia-detalhe">{cat.nome.toLowerCase()}</em>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="flg-legenda">
+            Esta tela responde “quem está onde” num dia — é a grade virada do avesso, para quem
+            precisa achar alguém e não quer ler coluna por coluna. Ela só mostra; para mudar
+            alguma coisa, é na aba Grade.
+          </div>
+        </div>
       )}
 
       {aba === 'grade' && (
