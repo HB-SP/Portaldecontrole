@@ -14,6 +14,9 @@ const NOME_TABELA = {
   paulistao_feminino_jogos: 'Controle PF', perifericos_paulistao: 'Periféricos PF',
   escala_geral: 'Escala Geral', escala_confirmacoes: 'Confirmação de presença',
   prestador_links: 'Links externos',
+  folgas_dias: 'Escala interna', folgas_pessoas: 'Escala interna · pessoas',
+  folgas_categorias: 'Escala interna · categorias', folgas_feriados: 'Feriados',
+  folgas_ajustes: 'Escala interna · saldo',
 }
 const NOME_CAMPO = {
   um: 'UM', sng: 'SNG', sng_premiere: 'SNG Premiere', sng_host: 'SNG Host', gerador: 'Gerador',
@@ -22,6 +25,12 @@ const NOME_CAMPO = {
   coordenador_um: 'Coordenador UM', produtor_um: 'Produtor UM', produtor_campo: 'Produtor Campo',
   monitoracao: 'Monitoração', escala_publicada: 'publicação da escala', credenciamento: 'Credenciamento',
   status: 'Status', obs: 'Observações', hub_jogo_id: 'vínculo com o Hub',
+  categoria_id: 'o que a pessoa fez no dia', detalhe: 'descritivo do dia',
+  campeonato: 'campeonato', jogo_mandante: 'jogo apontado', jogo_visitante: 'jogo apontado',
+  jogo_camp: 'campeonato do jogo', jogo_comp_id: 'jogo apontado', jogo_data: 'data do jogo',
+  delta: 'saldo trazido de antes', vale_de: 'a partir de quando vale', motivo: 'motivo',
+  nomes_escala: 'nomes na escala dos jogos', ativo: 'ativa/inativa',
+  conta_folga: 'consome folga', curto: 'sigla', cor: 'cor', ordem: 'posição na lista',
 }
 const nomeCampo = c => NOME_CAMPO[c] || c.replace(/^fornecedor_/, '').replace(/_/g, ' ')
 
