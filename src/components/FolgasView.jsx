@@ -1181,7 +1181,7 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
             </span>
           </div>
         </div>
-      ) : (
+      ) : aba === 'resumo' ? (
         <div className="flg-wrap flg-ano-wrap">
           <div className="flg-ano-cab">
             <span className="flg-ano-nome" />
@@ -1266,7 +1266,7 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
             agendar para quem tem menos.
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }
