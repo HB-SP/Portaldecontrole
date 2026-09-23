@@ -114,16 +114,23 @@ function jogoCurto(confronto) {
   return partida ? `${sigla(lados[0])} × ${sigla(lados[1])}` : confronto
 }
 
-// A COR DE CADA DIA. A lógica é uma só: o dia normal quase não tem cor, o que
-// foge do padrão tem cor suave, e a ausência tem peso. VERMELHO não aparece
-// aqui — ficou reservado para problema de verdade, que é o jogo caindo num dia
-// em que a pessoa não vai estar.
+// A COR DE CADA DIA, e ela obedece a uma hierarquia: o que salta é SE DÁ PARA
+// CONTAR COM A PESSOA, não onde ela está.
 //
-// Antes disto, folga era vermelha: uma semana comum deixava a grade piscando
-// como se algo estivesse errado, quando era só gente tirando o que tem direito.
+//   ausência  → cor própria e negrito. Folga, férias e atestado são o aviso de
+//               "não conte com esta pessoa hoje", e é isso que se procura ao
+//               bater o olho na grade.
+//   trabalho  → cinza, sem cor. Vila Olímpia, home, externa, viagem: é detalhe
+//               de onde, e detalhe não pode competir com o aviso.
+//
+// Colorir tudo inverte a leitura — foi o que o mockup da proposta fazia, e o
+// que eu repeti por engano em 23/09/2026: "viagem, ext e home me chamam mais
+// atenção que folga" (equipe). A cor da categoria continua viva na legenda, no
+// menu e na visão do ano; na grade ela só aparece quando significa ausência.
 function estiloCelula(cat) {
   if (!cat) return undefined
-  return { color: cat.cor, fontWeight: AUSENCIA.has(cat.id) ? 700 : 500 }
+  if (!AUSENCIA.has(cat.id)) return { color: 'var(--text-muted)' }
+  return { color: cat.cor, fontWeight: 700 }
 }
 
 // ── Menu de um dia ───────────────────────────────────────────────────────────
@@ -806,7 +813,7 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
           <div className="flg-chaves">
             {oferecidas.map(c => (
               <span key={c.id} className="flg-chave" title={c.nome}>
-                <b style={{ color: c.cor, fontWeight: AUSENCIA.has(c.id) ? 700 : 500 }}>{c.curto || c.nome}</b>
+                <b style={{ color: AUSENCIA.has(c.id) ? c.cor : 'var(--text-muted)', fontWeight: AUSENCIA.has(c.id) ? 700 : 500 }}>{c.curto || c.nome}</b>
                 {c.nome}
               </span>
             ))}
