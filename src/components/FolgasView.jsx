@@ -114,10 +114,16 @@ function jogoCurto(confronto) {
   return partida ? `${sigla(lados[0])} × ${sigla(lados[1])}` : confronto
 }
 
+// A COR DE CADA DIA. A lógica é uma só: o dia normal quase não tem cor, o que
+// foge do padrão tem cor suave, e a ausência tem peso. VERMELHO não aparece
+// aqui — ficou reservado para problema de verdade, que é o jogo caindo num dia
+// em que a pessoa não vai estar.
+//
+// Antes disto, folga era vermelha: uma semana comum deixava a grade piscando
+// como se algo estivesse errado, quando era só gente tirando o que tem direito.
 function estiloCelula(cat) {
   if (!cat) return undefined
-  if (!AUSENCIA.has(cat.id)) return { color: 'var(--text)' }
-  return { color: cat.cor, fontWeight: cat.conta_folga ? 700 : 600 }
+  return { color: cat.cor, fontWeight: AUSENCIA.has(cat.id) ? 700 : 500 }
 }
 
 // ── Menu de um dia ───────────────────────────────────────────────────────────
@@ -265,7 +271,11 @@ function MenuDia({ atual, categorias, onSalvar, onFechar, ancora, quantos = 1, j
 
 // A cor do saldo: vermelho quando ainda falta agendar, verde quando a pessoa
 // tirou mais do que devia, cinza quando está em dia.
-const corDoSaldo = n => (n < 0 ? 'var(--red)' : n > 0 ? 'var(--lm-green-dim)' : 'var(--text-dim)')
+// Ter folga a agendar NÃO é problema: é direito acumulado, e sair em vermelho
+// fazia a pessoa com mais folga a tirar parecer a mais em falta. Âmbar diz
+// "tem coisa a resolver" sem dizer "alguém errou"; verde segue para quem está
+// adiantado, e o vermelho saiu daqui de vez.
+const corDoSaldo = n => (n < 0 ? 'var(--amber)' : n > 0 ? 'var(--lm-green-dim)' : 'var(--text-dim)')
 
 // A ressalva de "coluna com muito dia em branco" saiu junto com a tabela do
 // Resumo, e não faz falta: a visão do ano MOSTRA os buracos — a linha da pessoa
@@ -705,9 +715,12 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
                       // um campo de anotação em vez de uma escala.
                       // Exceção: em "Outro" o nome da categoria não diz nada — ali o
                       // descritivo É a informação, e por isso ele aparece na célula.
+                      // A sigla, não o nome: "VO" no lugar de "Vila Olímpia".
+                      // A célula divide espaço com o jogo, e o nome inteiro
+                      // continua no passar do mouse e na legenda.
                       const texto = !reg ? ''
                         : (c?.exige_detalhe && reg.detalhe) ? reg.detalhe
-                        : (c?.nome || 'Categoria removida')
+                        : (c?.curto || c?.nome || 'Categoria removida')
                       // A ordem de trabalho é: escala o jogo, depois preenche
                       // folga/home. Então dia com jogo JÁ ESTÁ DITO — a célula
                       // mostra o jogo em vez de ficar vazia pedindo o que já se
@@ -760,15 +773,24 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
                           ))}
                           {reg?.detalhe && !c?.exige_detalhe && <span className="flg-nota" title={reg.detalhe}>·</span>}
 
-                          {soMarca.map((j, i) => (
-                            <button
-                              key={i} className={`flg-jogo${j.compId ? '' : ' flg-jogo-sem'}`}
-                              title={`${j.compLabel} · ${j.confronto}\n${j.funcao}${j.compId ? ' — clique para abrir o jogo' : ' — este jogo não tem ficha no Portal'}`}
-                              onMouseDown={e => e.stopPropagation()}
-                              onClick={e => { e.stopPropagation(); if (j.compId) onAbrirJogo?.(j.compId, j.jogo) }}
-                              style={j.compId ? { background: j.cor } : { borderColor: j.cor }}
-                            />
-                          ))}
+                          {soMarca.map((j, i) => {
+                            // ESTE é o conflito, e o único lugar da grade onde o
+                            // vermelho aparece: a pessoa está escalada num jogo
+                            // num dia em que ela não vai estar — folga, férias
+                            // ou atestado. Fora daqui, vermelho não significa
+                            // nada nesta tela.
+                            const bate = reg && AUSENCIA.has(c?.id)
+                            const cor = bate ? 'var(--red)' : j.cor
+                            return (
+                              <button
+                                key={i} className={`flg-jogo${j.compId ? '' : ' flg-jogo-sem'}${bate ? ' flg-jogo-conflito' : ''}`}
+                                title={`${bate ? `CONFLITO: escalado em ${c?.nome?.toLowerCase()}\n` : ''}${j.compLabel} · ${j.confronto}\n${j.funcao}${j.compId ? ' — clique para abrir o jogo' : ' — este jogo não tem ficha no Portal'}`}
+                                onMouseDown={e => e.stopPropagation()}
+                                onClick={e => { e.stopPropagation(); if (j.compId) onAbrirJogo?.(j.compId, j.jogo) }}
+                                style={j.compId || bate ? { background: cor } : { borderColor: cor }}
+                              />
+                            )
+                          })}
                         </td>
                       )
                     })}
@@ -777,6 +799,21 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
               })}
             </tbody>
           </table>
+
+          {/* A sigla precisa de onde ser lida. Nasce das próprias categorias,
+              então uma categoria nova aparece aqui sozinha — e na mesma cor que
+              a grade usa, que é o que faz a legenda servir para alguma coisa. */}
+          <div className="flg-chaves">
+            {oferecidas.map(c => (
+              <span key={c.id} className="flg-chave" title={c.nome}>
+                <b style={{ color: c.cor, fontWeight: AUSENCIA.has(c.id) ? 700 : 500 }}>{c.curto || c.nome}</b>
+                {c.nome}
+              </span>
+            ))}
+            <span className="flg-chave">
+              <b className="flg-chave-conflito" />conflito: escalado num dia de ausência
+            </span>
+          </div>
         </div>
       ) : (
         <div className="flg-wrap flg-ano-wrap">
@@ -858,7 +895,7 @@ export default function FolgasView({ podeEditar = false, competitions = [], onAb
             A faixa mostra só quem fica fora vários dias seguidos:{' '}
             <b style={{ color: '#7C3AED' }}>férias</b> e <b style={{ color: '#B45309' }}>atestado</b>, cada
             período num bloco, com a data de início escrita dentro quando cabe. Os fios{' '}
-            <b style={{ color: 'var(--red)' }}>vermelhos</b> são folgas já marcadas daqui pra frente. A linha
+            <b style={{ color: catPorId.get('folga')?.cor || 'var(--text)' }}>escuros</b> são folgas já marcadas daqui pra frente. A linha
             escura é hoje, e o que está à esquerda dela já aconteceu. A ordem vai de quem tem mais folga a
             agendar para quem tem menos.
           </div>

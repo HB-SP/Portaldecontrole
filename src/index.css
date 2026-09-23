@@ -4646,6 +4646,22 @@ body {
 .flg-dejogo-sem { cursor: help; opacity: 0.75; text-decoration: none; font-style: italic; }
 .flg-dejogo-sem:hover { text-decoration: none; }
 
+/* A legenda das siglas, embaixo da grade. Discreta: quem já sabe ler a grade
+   não precisa dela, e quem não sabe acha sem procurar. */
+.flg-chaves {
+  display: flex; flex-wrap: wrap; gap: 4px 14px;
+  padding: 10px 12px 14px; font-size: 10.5px; color: var(--text-muted);
+}
+.flg-chave { display: inline-flex; align-items: center; gap: 5px; }
+.flg-chave b {
+  min-width: 26px; padding: 1px 4px; border-radius: 3px; text-align: center;
+  background: var(--bg-hover); font-size: 9.5px; letter-spacing: 0.02em;
+}
+.flg-chave-conflito {
+  min-width: 10px; width: 10px; height: 10px; padding: 0;
+  border-radius: 50%; background: var(--red);
+}
+
 /* ─── VISÃO DO ANO ─────────────────────────────────────────────────────────
    Uma linha por pessoa e o ano inteiro numa faixa. Responde o que a tabela de
    números não respondia: quem está de férias quando, e se as ausências do time
@@ -4707,9 +4723,12 @@ body {
 .flg-ano-bloco:hover { outline: 1px solid var(--text); outline-offset: 1px; }
 
 /* Folga já marcada para depois de hoje: fio fino, sem peso de bloco. */
+/* Conflito: escalado num dia de ausencia. E o unico vermelho da grade. */
+.flg-jogo-conflito { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 3px var(--red); }
+
 .flg-ano-folga {
   position: absolute; top: 4px; bottom: 4px; width: 2px;
-  background: var(--red); border-radius: 1px;
+  background: #475569; border-radius: 1px;
 }
 
 /* Hoje, atravessando a faixa inteira. */

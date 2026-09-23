@@ -96,16 +96,21 @@ const TIMES = [
   { id: 'operacoes',   nome: 'Operações',   cor: '#65B32E', ordem: 2 },
 ]
 
+// O nome do arquivo baixado muda a cada download (" (1)", " (2)"...), entao os
+// dois caminhos podem vir por argumento:
+//   --sinal="...Time Sinal Inter (1).csv"   --oper="...ESCALA (2).csv"
+const argDe = chave => (process.argv.find(a => a.startsWith(`--${chave}=`)) || '').split('=').slice(1).join('=')
+
 const PLANILHAS = [
   {
     time: 'sinal-inter',
-    arquivo: 'Planejamento HB LiveMode - Time Sinal Inter.csv',
+    arquivo: argDe('sinal') || 'Planejamento HB LiveMode - Time Sinal Inter.csv',
     colunas: [2, 4, 6, 8, 10, 12, 14],
     anoInicial: 2024,
   },
   {
     time: 'operacoes',
-    arquivo: 'ESCALA - Equipe HB OPERAÇÕES - ESCALA (1).csv',
+    arquivo: argDe('oper') || 'ESCALA - Equipe HB OPERAÇÕES - ESCALA (1).csv',
     colunas: [3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23],
     anoInicial: 2026,
   },
@@ -159,6 +164,16 @@ function campeonatoDe(bruto) {
   return null
 }
 
+// O mesmo lugar escrito de outro jeito. A planilha diz "Escritório", mas a
+// categoria passou a se chamar "Vila Olímpia" (equipe, 17/09/2026), e a planilha
+// diz "Home-office" onde a categoria é "Home". Sem isto, o texto deixa de bater
+// com o nome e vira descritivo: 1011 células com um dizer que não acrescenta
+// nada, e um pontinho de nota em cada uma.
+const SO_O_NOME = {
+  escritorio: [/^escritorio$/, /^vila olimpia$/],
+  home: [/^home[\s-]*office$/],
+}
+
 function classificar(bruto) {
   const v = norm(bruto)
   if (!v || v === '-' || v === '--') return null
@@ -167,6 +182,7 @@ function classificar(bruto) {
     // O detalhe só entra quando o texto diz mais que o nome da categoria.
     const cd = CATEGORIAS.find(c => c.id === cat)
     const soONome = norm(cd.nome) === v || norm(cd.curto) === v
+      || (SO_O_NOME[cat] || []).some(re2 => re2.test(v))
     return {
       categoria_id: cat,
       detalhe: soONome ? null : String(bruto).trim(),
@@ -176,11 +192,16 @@ function classificar(bruto) {
   return { categoria_id: 'outro', detalhe: String(bruto).trim() }
 }
 
+// Colunas da planilha que NÃO viram pessoa do Portal (equipe, 21/09/2026:
+// "tirar fernanda"). A planilha é de quem o time acompanha; o Portal é de quem
+// tem escala aqui, e os dois nem sempre coincidem.
+const FORA = ['fernanda']
+
 // ── lê as planilhas ──────────────────────────────────────────────────────────
 function lerPlanilha(p) {
   const linhas = lerCsv(`${PASTA}/${p.arquivo}`)
   const pessoas = p.colunas.map((i, k) => ({ col: i, nome: (linhas[0][i] || '').trim(), ordem: k + 1 }))
-    .filter(x => x.nome)
+    .filter(x => x.nome && !FORA.includes(norm(x.nome)))
   let ano = p.anoInicial, mesAnterior = null
   const dias = []
   for (const l of linhas) {
@@ -302,6 +323,10 @@ if (gravar) {
 // ── confere: relê do banco e compara com o CSV, célula a célula ──────────────
 console.log(`\n${'═'.repeat(76)}\nCONFERÊNCIA (relendo do banco)\n${'═'.repeat(76)}`)
 const pessoasBanco = await api('folgas_pessoas?select=id,nome,time_id')
+// Guarda cada divergência para dar um RESUMO no fim. Listar as 8 primeiras e
+// um total não diz nada quando são mil: o que importa é de que TIPO elas são —
+// dia que só existe no CSV, categoria trocada, ou descritivo diferente.
+const achados = []
 let divergencias = 0, conferidas = 0
 for (const p of lidas) {
   const doTime = pessoasBanco.filter(x => x.time_id === p.time)
@@ -324,12 +349,37 @@ for (const p of lidas) {
     const k = `${idDe(d.pessoa)}|${d.dia}`
     const no = mapa.get(k)
     conferidas++
-    if (!no) { divergencias++; if (divergencias <= 8) console.log(`  FALTA  ${p.time} ${d.pessoa} ${d.dia} = ${d.bruto}`); continue }
-    if (no.categoria_id !== d.categoria_id || (no.detalhe || null) !== (d.detalhe || null)) {
+    if (!no) {
       divergencias++
-      if (divergencias <= 8) console.log(`  DIFERE ${p.time} ${d.pessoa} ${d.dia}: banco=${no.categoria_id}/${no.detalhe} csv=${d.categoria_id}/${d.detalhe}`)
+      achados.push({ tipo: 'SÓ NO CSV', time: p.time, pessoa: d.pessoa, dia: d.dia, banco: null, csv: d.categoria_id, bruto: d.bruto })
+      continue
+    }
+    if (no.categoria_id !== d.categoria_id) {
+      divergencias++
+      achados.push({ tipo: 'CATEGORIA', time: p.time, pessoa: d.pessoa, dia: d.dia, banco: no.categoria_id, csv: d.categoria_id, bruto: d.bruto })
+    } else if ((no.detalhe || null) !== (d.detalhe || null)) {
+      divergencias++
+      achados.push({ tipo: 'descritivo', time: p.time, pessoa: d.pessoa, dia: d.dia, banco: no.detalhe, csv: d.detalhe, bruto: d.bruto })
     }
   }
   console.log(`  ${p.time}: ${linhas.length} dias no banco`)
 }
+
 console.log(`\n  ${conferidas} células conferidas · ${divergencias} divergências`)
+
+const porTipo = {}
+achados.forEach(a => { porTipo[a.tipo] = (porTipo[a.tipo] || 0) + 1 })
+console.log(`  por tipo: ${Object.entries(porTipo).map(([k, v]) => `${k}=${v}`).join('  ')}`)
+
+// O que MUDA a conta de folga é só a categoria virar folga, ou deixar de ser.
+const mexeNoSaldo = achados.filter(a => a.tipo !== 'descritivo' && (a.banco === 'folga') !== (a.csv === 'folga'))
+console.log(`  dessas, ${mexeNoSaldo.length} mexem no saldo de folga`)
+
+if (process.argv.includes('--tudo')) {
+  for (const tipo of Object.keys(porTipo)) {
+    console.log(`\n── ${tipo} (${porTipo[tipo]}) ──`)
+    achados.filter(a => a.tipo === tipo)
+      .sort((a, b) => a.pessoa.localeCompare(b.pessoa) || a.dia.localeCompare(b.dia))
+      .forEach(a => console.log(`  ${a.dia}  ${a.pessoa.padEnd(11)} banco=${String(a.banco).padEnd(12)} csv=${String(a.csv).padEnd(12)} "${a.bruto || ''}"`))
+  }
+}
