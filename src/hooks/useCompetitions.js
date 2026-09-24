@@ -119,12 +119,19 @@ export function useCompetitions() {
   const [loading, setLoading] = useState(isConfigured)
   const [error, setError] = useState(null)
   const [competitions, setCompetitions] = useState(isConfigured ? [] : HARDCODED_FALLBACK)
+  // Campeonato ENCERRADO não é campeonato apagado: ele sai da tela inicial e do
+  // menu, e continua inteiro para consulta na tela de Campeonatos — jogos,
+  // periféricos, escala, tudo (equipe, 24/09/2026: "na real não é nem
+  // arquivado. é ele ficar como histórico só. ele é para consulta").
+  //
+  // Por isso o hook carrega os dois e separa aqui, em vez de filtrar na busca.
+  const [encerrados, setEncerrados] = useState([])
 
   const load = useCallback(async () => {
     if (!isConfigured) return
     setLoading(true)
     const [compRes, colsRes] = await Promise.all([
-      supabase.from('competitions').select('*').eq('archived', false).order('sort_order'),
+      supabase.from('competitions').select('*').order('sort_order'),
       supabase.from('competition_columns').select('*').order('sort_order'),
     ])
     const firstError = compRes.error || colsRes.error
@@ -134,7 +141,7 @@ export function useCompetitions() {
       return
     }
 
-    const rows = compRes.data || []
+    const todas = compRes.data || []
     const cols = colsRes.data || []
     const columnsByCompId = new Map()
     for (const c of cols) {
@@ -142,27 +149,28 @@ export function useCompetitions() {
       columnsByCompId.get(c.competition_id).push(c)
     }
 
-    // Agrupa: parents (sem parent_competition_id) + children (com parent)
-    const parents = rows.filter(r => !r.parent_competition_id)
+    // Agrupa: parents (sem parent_competition_id) + children (com parent).
+    // O FILHO ACOMPANHA O PAI: Controle e Periférico são sempre um par, e um
+    // periférico sozinho na tela não quer dizer nada.
     const childrenByParent = new Map()
-    for (const r of rows.filter(rr => rr.parent_competition_id)) {
+    for (const r of todas.filter(rr => rr.parent_competition_id)) {
       if (!childrenByParent.has(r.parent_competition_id)) childrenByParent.set(r.parent_competition_id, [])
       childrenByParent.get(r.parent_competition_id).push(r)
     }
 
-    const list = parents.map(parent => {
-      const children = childrenByParent.get(parent.id) || []
-      return {
-        id: parent.slug,
-        competitionId: parent.id,
-        label: parent.label,
-        accentColor: parent.accent_color,
-        accentBg: parent.accent_bg,
-        sections: buildSectionsForCompetition(parent, children, columnsByCompId),
-      }
+    const monta = parent => ({
+      id: parent.slug,
+      competitionId: parent.id,
+      label: parent.label,
+      accentColor: parent.accent_color,
+      accentBg: parent.accent_bg,
+      encerrado: !!parent.archived,
+      sections: buildSectionsForCompetition(parent, childrenByParent.get(parent.id) || [], columnsByCompId),
     })
 
-    setCompetitions(list)
+    const parents = todas.filter(r => !r.parent_competition_id)
+    setCompetitions(parents.filter(r => !r.archived).map(monta))
+    setEncerrados(parents.filter(r => r.archived).map(monta))
     setError(null)
     setLoading(false)
   }, [])
@@ -178,5 +186,18 @@ export function useCompetitions() {
     return () => { supabase.removeChannel(channel) }
   }, [load])
 
-  return { competitions, loading, error, reload: load }
+  // Encerrar e reabrir. O periférico vai junto: são sempre um par.
+  const marcarEncerrado = useCallback(async (competitionId, encerrado) => {
+    if (!isConfigured) return 'sem conexão'
+    const { error: e1 } = await supabase.from('competitions')
+      .update({ archived: encerrado }).eq('id', competitionId)
+    if (e1) return e1.message
+    const { error: e2 } = await supabase.from('competitions')
+      .update({ archived: encerrado }).eq('parent_competition_id', competitionId)
+    if (e2) return e2.message
+    await load()
+    return null
+  }, [load])
+
+  return { competitions, encerrados, loading, error, reload: load, marcarEncerrado }
 }

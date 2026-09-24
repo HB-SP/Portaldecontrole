@@ -4929,3 +4929,76 @@ body {
   font-size: 8px; font-weight: 700; color: var(--text);
   text-transform: none; letter-spacing: 0;
 }
+
+/* ─── CAMPEONATOS ───────────────────────────────────────────────────────────
+   A tela inicial mostra o que está correndo; aqui está tudo, com o que já
+   acabou descendo para o histórico. Não é arquivo morto: é consulta, e o
+   campeonato continua inteiro e editável do outro lado do clique. */
+.cmp-wrap { max-width: 900px; }
+.cmp-intro {
+  padding: 12px 14px; margin-bottom: 18px;
+  border: 1px solid var(--border); border-radius: 9px; background: var(--bg-surface2);
+  font-size: 12.5px; color: var(--text-muted); line-height: 1.55;
+}
+.cmp-erro {
+  padding: 10px 12px; margin-bottom: 14px; border-radius: 8px;
+  background: #FDECEA; color: #8A1C12; font-size: 12.5px;
+}
+
+.cmp-secao { margin-bottom: 26px; }
+.cmp-secao-cab {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  font-size: 11px; font-weight: 800; color: var(--text-muted);
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.cmp-quantos {
+  padding: 1px 7px; border-radius: 999px;
+  background: var(--bg-surface2); border: 1px solid var(--border);
+  font-size: 10px; font-variant-numeric: tabular-nums; letter-spacing: 0;
+}
+.cmp-vazio { font-size: 12.5px; color: var(--text-dim); font-style: italic; padding: 4px 2px; }
+
+/* O ano separa as edições: é assim que se procura uma passada — "o Paulistão
+   de 26" — e não pela ordem em que os campeonatos foram criados. */
+.cmp-ano { margin-bottom: 14px; }
+.cmp-ano-cab {
+  margin-bottom: 6px; font-size: 12px; font-weight: 800; color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.cmp-lista { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.cmp-card {
+  display: flex; align-items: stretch; gap: 6px;
+  border: 1px solid var(--border); border-radius: 9px;
+  background: var(--bg-card); overflow: hidden;
+}
+.cmp-card:hover { border-color: var(--ac); }
+.cmp-card-abrir {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px;
+  padding: 11px 12px; border: none; background: none; cursor: pointer;
+  font-family: inherit; text-align: left; color: var(--text);
+}
+.cmp-card-cor { flex: 0 0 4px; align-self: stretch; border-radius: 2px; }
+.cmp-card-corpo { min-width: 0; }
+.cmp-card-nome {
+  display: block; font-size: 13.5px; font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cmp-card-sub { display: block; font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+.cmp-acao {
+  align-self: center; margin-right: 10px; padding: 4px 9px;
+  border: 1px solid var(--border); border-radius: 999px; cursor: pointer;
+  background: var(--bg-surface2); color: var(--text-muted);
+  font-family: inherit; font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+.cmp-acao:hover { color: var(--text); border-color: var(--text-muted); }
+.cmp-confirma { display: flex; align-items: center; gap: 4px; }
+.cmp-acao-sim { background: var(--lm-green); border-color: var(--lm-green); color: #fff; }
+.cmp-acao-sim:hover { color: #fff; }
+
+/* O histórico é o mesmo cartão, um tom abaixo: continua clicável, só não
+   disputa atenção com o que está correndo. */
+.cmp-secao-hist .cmp-card { background: var(--bg-surface2); }
+.cmp-secao-hist .cmp-card-nome { font-weight: 600; color: var(--text-muted); }
+.cmp-secao-hist .cmp-card:hover .cmp-card-nome { color: var(--text); }

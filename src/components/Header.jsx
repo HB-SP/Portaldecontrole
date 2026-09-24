@@ -9,7 +9,7 @@ import LiveClock from './LiveClock'
 // `titulo` e `relogio` são usados pela tela inicial: antes viviam numa faixa
 // própria dentro dela ("PORTAL DE CONTROLE / Host Broadcast" + hora), que
 // gastava uma linha inteira da página para dizer pouco. Subiram para cá.
-export default function Header({ activeView, onHomeClick, onFornecedoresClick, onEscalarClick, onFolgasClick, onLinksClick, onUsuariosClick, onSair, onNewCompetition, onNewJogo, accentColor, user, userNome, viewLabel, titulo, relogio }) {
+export default function Header({ activeView, onHomeClick, onFornecedoresClick, onEscalarClick, onFolgasClick, onCampeonatosClick, onLinksClick, onUsuariosClick, onSair, onNewCompetition, onNewJogo, accentColor, user, userNome, viewLabel, titulo, relogio }) {
   const [expandido, setExpandido] = useState(() => {
     try { return localStorage.getItem('header_expandido') === '1' } catch { return false }
   })
@@ -52,6 +52,13 @@ export default function Header({ activeView, onHomeClick, onFornecedoresClick, o
         <path d="M2 6.5h12M5.5 2v2.5M10.5 2v2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
         <circle cx="6" cy="9.5" r="1" fill="currentColor"/>
         <circle cx="10" cy="11.5" r="1" fill="currentColor"/>
+      </svg>
+    ) },
+    onCampeonatosClick && { key: 'campeonatos', label: 'Campeonatos', onClick: onCampeonatosClick, icon: (
+      <svg viewBox="0 0 16 16" fill="none" width="14" height="14">
+        <path d="M4.5 2h7v4a3.5 3.5 0 01-7 0V2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+        <path d="M4.5 3H2.5v1a2.5 2.5 0 002.5 2.5M11.5 3h2v1A2.5 2.5 0 0111 6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+        <path d="M8 9.5V12M5.5 14h5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
       </svg>
     ) },
     { key: 'fornecedores', label: 'Fornecedores', onClick: onFornecedoresClick, icon: (

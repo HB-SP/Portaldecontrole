@@ -7,6 +7,7 @@ import FornecedoresPage from './components/FornecedoresPage'
 import EscalaGeralView from './components/EscalaGeralView'
 import EscalarView from './components/EscalarView'
 import FolgasView from './components/FolgasView'
+import CampeonatosView from './components/CampeonatosView'
 import NewCompetitionDialog from './components/NewCompetitionDialog'
 import LoginGate, { PendentePortal } from './components/LoginGate'
 import UsuariosPortal from './components/UsuariosPortal'
@@ -34,7 +35,7 @@ function cleanComp(label) {
 }
 
 export default function App() {
-  const { competitions, loading: compsLoading, error: compsError } = useCompetitions()
+  const { competitions, encerrados, loading: compsLoading, error: compsError, marcarEncerrado } = useCompetitions()
   const [activeView,    setActiveView]    = useState('home')
   const [activeComp,    setActiveComp]    = useState(null)
   const [activeSection, setActiveSection] = useState(null)
@@ -179,6 +180,7 @@ export default function App() {
           onFornecedoresClick={handleFornecedoresClick}
           onEscalarClick={() => setActiveView('escalar')}
           onFolgasClick={() => setActiveView('folgas')}
+          onCampeonatosClick={() => setActiveView('campeonatos')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -204,6 +206,7 @@ export default function App() {
           onFornecedoresClick={handleFornecedoresClick}
           onEscalarClick={() => setActiveView('escalar')}
           onFolgasClick={() => setActiveView('folgas')}
+          onCampeonatosClick={() => setActiveView('campeonatos')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -219,6 +222,37 @@ export default function App() {
     )
   }
 
+  if (activeView === 'campeonatos') {
+    return (
+      <div className="app">
+        <Header
+          activeView="campeonatos"
+          user={user} userNome={userNome} viewLabel={'Campeonatos'}
+          onHomeClick={handleHomeClick}
+          onFornecedoresClick={handleFornecedoresClick}
+          onEscalarClick={() => setActiveView('escalar')}
+          onFolgasClick={() => setActiveView('folgas')}
+          onCampeonatosClick={() => setActiveView('campeonatos')}
+          onLinksClick={() => setActiveView('links')}
+          onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
+          onSair={isConfigured ? sair : undefined}
+        />
+        <main className="main-content" style={{ paddingTop: 84 }}>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>Campeonatos</div>
+          </div>
+          <CampeonatosView
+            competitions={competitions}
+            encerrados={encerrados}
+            podeEditar={portalRole === 'admin' || portalRole === 'equipe'}
+            onCompSelect={handleCompSelect}
+            onMarcarEncerrado={marcarEncerrado}
+          />
+        </main>
+      </div>
+    )
+  }
+
   if (activeView === 'folgas') {
     return (
       <div className="app">
@@ -229,6 +263,7 @@ export default function App() {
           onFornecedoresClick={handleFornecedoresClick}
           onEscalarClick={() => setActiveView('escalar')}
           onFolgasClick={() => setActiveView('folgas')}
+          onCampeonatosClick={() => setActiveView('campeonatos')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -257,6 +292,7 @@ export default function App() {
           onFornecedoresClick={handleFornecedoresClick}
           onEscalarClick={() => setActiveView('escalar')}
           onFolgasClick={() => setActiveView('folgas')}
+          onCampeonatosClick={() => setActiveView('campeonatos')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -287,6 +323,7 @@ export default function App() {
           onFornecedoresClick={handleFornecedoresClick}
           onEscalarClick={() => setActiveView('escalar')}
           onFolgasClick={() => setActiveView('folgas')}
+          onCampeonatosClick={() => setActiveView('campeonatos')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -312,6 +349,7 @@ export default function App() {
           onFornecedoresClick={handleFornecedoresClick}
           onEscalarClick={() => setActiveView('escalar')}
           onFolgasClick={() => setActiveView('folgas')}
+          onCampeonatosClick={() => setActiveView('campeonatos')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -340,6 +378,7 @@ export default function App() {
           onFornecedoresClick={handleFornecedoresClick}
           onEscalarClick={() => setActiveView('escalar')}
           onFolgasClick={() => setActiveView('folgas')}
+          onCampeonatosClick={() => setActiveView('campeonatos')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -365,6 +404,7 @@ export default function App() {
           onFornecedoresClick={handleFornecedoresClick}
           onEscalarClick={() => setActiveView('escalar')}
           onFolgasClick={() => setActiveView('folgas')}
+          onCampeonatosClick={() => setActiveView('campeonatos')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
@@ -408,6 +448,7 @@ export default function App() {
         onFornecedoresClick={handleFornecedoresClick}
           onEscalarClick={() => setActiveView('escalar')}
           onFolgasClick={() => setActiveView('folgas')}
+          onCampeonatosClick={() => setActiveView('campeonatos')}
           onLinksClick={() => setActiveView('links')}
           onUsuariosClick={portalRole === 'admin' ? () => setActiveView('usuarios') : undefined}
           onSair={isConfigured ? sair : undefined}
