@@ -1,5 +1,5 @@
 -- ============================================================
--- Portal de Controle - FFU Transmissões
+-- Portal de Controle - Host Broadcast
 -- Supabase Setup SQL
 -- ============================================================
 -- ⚠ ORDEM OBRIGATÓRIA: este arquivo cria as tabelas, mas quem
