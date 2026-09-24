@@ -25,7 +25,11 @@ const GRAVAR = process.argv.includes('--gravar')
 const CANDIDATOS = new Set([
   'teleporto', 'satelite', 'banda', 'aspecto', 'compressao', 'transmissao',
   'modulacao', 'sr', 'symbol_rate', 'fec', 'total_horas', 'total_de_horas',
-  'audio_1_2', 'audio_3_4', 'padrao', 'detentor', 'um', 'gerador',
+  'audio_1_2', 'audio_3_4',
+  // 'detentor', 'gerador', 'um' e 'padrao' FICARAM DE FORA: eles calharam de
+  // ser iguais em alguns campeonatos, mas sao do jogo, nao regra tecnica
+  // (equipe, 24/09/2026). Campo que hoje nao varia por acaso volta a variar
+  // amanha, e ai o jogo novo ja nasce com a resposta errada.
 ])
 
 const c = new pg.Client({ connectionString: url, ssl: { rejectUnauthorized: false } })
@@ -55,13 +59,13 @@ for (const comp of comps) {
     campos = (await c.query(
       'SELECT column_name FROM information_schema.columns WHERE table_name = $1', [comp.legacy_table]
     )).rows.map(r => r.column_name).filter(k => CANDIDATOS.has(k))
-    if (!campos.length) continue
+    if (!campos.length) campos = []
     linhas = (await c.query(`SELECT ${campos.join(', ')} FROM ${comp.legacy_table}`)).rows
   } else {
     campos = (await c.query(
       'SELECT key FROM competition_columns WHERE competition_id = $1', [comp.id]
     )).rows.map(r => r.key).filter(k => CANDIDATOS.has(k))
-    if (!campos.length) continue
+    if (!campos.length) campos = []
     linhas = (await c.query(
       'SELECT data FROM competition_events WHERE competition_id = $1', [comp.id]
     )).rows.map(r => r.data || {})
@@ -76,11 +80,15 @@ for (const comp of comps) {
   }
 
   console.log(`\n══ ${comp.label} — ${linhas.length} jogos ══`)
-  if (!Object.keys(padrao).length) { console.log('   nada é igual em todos'); continue }
-  for (const [k, v] of Object.entries(padrao)) console.log(`   ${k.padEnd(18)} ${v}`)
+  const achou = Object.keys(padrao).length
+  if (achou) for (const [k, v] of Object.entries(padrao)) console.log(`   ${k.padEnd(18)} ${v}`)
+  else console.log('   nada é igual em todos')
 
+  // Grava SEMPRE, inclusive o vazio. Pular quando não acha nada deixaria o
+  // padrão anterior no lugar — foi assim que 'detentor' e 'gerador' ficaram
+  // para trás depois de saírem da lista de candidatos.
   if (GRAVAR) {
-    await c.query('UPDATE competitions SET padrao_tecnico = $1 WHERE id = $2', [padrao, comp.id])
+    await c.query('UPDATE competitions SET padrao_tecnico = $1 WHERE id = $2', [achou ? padrao : null, comp.id])
   }
 }
 
