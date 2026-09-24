@@ -51,6 +51,7 @@ export const MATCH = {
   fornecedor_internet_led: f => /internet|led/i.test(f.funcao),
   fornecedor_cadeirao:     f => /cadeir|pratic[áa]vel|loca[çc][ãa]o/i.test(f.funcao),
   // Escala Geral (funções de UM/produção)
+  producao_executiva:      f => /produ[çc][ãa]o executiva|executiv/i.test(f.funcao),
   coordenador_um:          f => /coordenador/i.test(f.funcao),
   produtor_um:             f => /produtor/i.test(f.funcao),
   produtor_campo:          f => /produtor/i.test(f.funcao),
@@ -79,6 +80,7 @@ export const FUNCAO_DA_COLUNA = {
   liveu_1: 'LiveU', liveu_2: 'LiveU', dtv: 'DTV', op_vmix: 'Vmix', op_audio: 'Áudio',
   teleporto: 'Teleporto', coordenador: 'Coordenador', coordenador_um: 'Coordenador UM',
   produtor_um: 'Produtor UM', produtor_campo: 'Produtor de Campo', monitoracao: 'Monitoração',
+  producao_executiva: 'Produção Executiva',
   fornecedor_drone: 'Drone', drone: 'Drone', fornecedor_minidrone: 'Minidrone', minidrone: 'Minidrone',
   fornecedor_dslr: 'DSLR', dslr: 'DSLR', fornecedor_grua: 'Grua', grua: 'Grua',
   fornecedor_goalcam: 'Goalcam', fornecedor_trilho: 'Trilho', fornecedor_carrinho: 'Carrinho',

@@ -23,6 +23,7 @@ const NOME_CAMPO = {
   supervisores_1: 'Supervisor 1', supervisores_2: 'Supervisor 2', supervisor_um_host: 'Supervisor 1',
   dtv: 'DTV', op_vmix: 'vMix', op_audio: 'Áudio', teleporto: 'Teleporto', satelite: 'Satélite',
   coordenador_um: 'Coordenador UM', produtor_um: 'Produtor UM', produtor_campo: 'Produtor Campo',
+  producao_executiva: 'Produção Executiva',
   monitoracao: 'Monitoração', escala_publicada: 'publicação da escala', credenciamento: 'Credenciamento',
   status: 'Status', obs: 'Observações', hub_jogo_id: 'vínculo com o Hub',
   categoria_id: 'o que a pessoa fez no dia', detalhe: 'descritivo do dia',
