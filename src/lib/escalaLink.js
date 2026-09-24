@@ -7,11 +7,11 @@ import { parseData } from './datas'
 
 export const FUNCOES_ESCALA = [
   // A ordem aqui é a ordem em que as funções aparecem na Visão Geral e no
-  // Escalar. Produção Executiva vem primeiro por ser quem responde pelo jogo.
-  { key: 'producao_executiva', label: 'Produção Executiva' },
+  // Escalar, e é a MESMA da planilha de origem (equipe, 24/09/2026).
   { key: 'coordenador_um', label: 'Coordenador UM' },
   { key: 'produtor_um',    label: 'Produtor UM' },
   { key: 'produtor_campo', label: 'Produtor Campo' },
+  { key: 'producao_executiva', label: 'Produção Executiva' },
   { key: 'monitoracao',    label: 'Monitoração' },
 ]
 

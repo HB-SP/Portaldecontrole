@@ -9,14 +9,23 @@
 // Uso: node scripts/importar_escala_geral.mjs <csv>            (dry-run)
 //      node scripts/importar_escala_geral.mjs --aplicar <csv>
 
-const URL = process.env.SUPABASE_URL || 'https://buubjnddzsadzcumrvdt.supabase.co'
-const KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1dWJqbmRkenNhZHpjdW1ydmR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MjQ3OTUsImV4cCI6MjA5MDIwMDc5NX0.mMEoVzmgdT1nHj1TLUWfhXzd4tcnzFad-HtF6TKPMw4'
-const H = { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' }
-
 import { readFileSync } from 'fs'
 
+const URL = process.env.SUPABASE_URL || 'https://buubjnddzsadzcumrvdt.supabase.co'
+// A chave vem do .env.local, como nos outros scripts. Antes ela vinha de uma
+// variavel de ambiente e, sem ela, caia na chave PUBLICA — que nao tem
+// permissao de ler a escala_geral. O script recebia uma lista vazia, concluia
+// que nenhum jogo existia e propunha reinserir os 300 (24/09/2026).
+const KEY = (readFileSync('.env.local', 'utf8').split(/\r?\n/)
+  .find(l => /^SUPABASE_SERVICE_KEY=/.test(l)) || '').split('=').slice(1).join('=').trim()
+if (!KEY) { console.error('Sem SUPABASE_SERVICE_KEY em .env.local'); process.exit(1) }
+const H = { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' }
+
+
 const APLICAR = process.argv.includes('--aplicar')
-const arquivo = process.argv.slice(2).find(a => a !== '--aplicar')
+// So preenche campo vazio; nao troca valor que ja existe.
+const SO_VAZIOS = process.argv.includes('--so-vazios')
+const arquivo = process.argv.slice(2).find(a => !a.startsWith('--'))
 if (!arquivo) { console.error('Passe o caminho do CSV.'); process.exit(1) }
 
 // Índices fixos da planilha (cabeçalhos se repetem, nome não é confiável)
@@ -25,9 +34,9 @@ const IDX = {
   estadio: 7, mandante: 8, visitante: 9, transmissao: 10,
   coordenador_um: 16, coordenador_um_valor: 17,
   produtor_um: 18, produtor_um_valor: 19,
-  produtor_campo: 20, monitoracao: 22,
+  produtor_campo: 20, producao_executiva: 21, monitoracao: 22,
 }
-const FUNCOES = ['coordenador_um', 'coordenador_um_valor', 'produtor_um', 'produtor_um_valor', 'produtor_campo', 'monitoracao']
+const FUNCOES = ['coordenador_um', 'coordenador_um_valor', 'produtor_um', 'produtor_um_valor', 'produtor_campo', 'producao_executiva', 'monitoracao']
 
 function parseCsv(texto) {
   const linhas = []
@@ -89,7 +98,17 @@ const updates = [], inserts = []
 for (const reg of finais) {
   const atual = existPorChave.get(chave(reg))
   if (atual) {
-    const difs = Object.entries(reg).filter(([k, v]) => FUNCOES.includes(k) && v !== '' && String(atual[k] ?? '') !== v)
+    // DUAS COISAS DIFERENTES, e o `--so-vazios` separa as duas:
+    //   preencher um campo que está VAZIO no banco é acrescentar
+    //   trocar um valor que já existe é sobrescrever — e pode atropelar quem
+    //   editou pela tela depois da última importação
+    // "Coloque somente o que não temos" (equipe, 24/09/2026) é a primeira.
+    const difs = Object.entries(reg).filter(([k, v]) => {
+      if (!FUNCOES.includes(k) || v === '') return false
+      const noBanco = String(atual[k] ?? '').trim()
+      if (noBanco === v) return false
+      return SO_VAZIOS ? noBanco === '' : true
+    })
     if (difs.length) updates.push({ id: atual.id, reg: Object.fromEntries(difs), nome: `${reg.campeonato} ${reg.data} ${reg.mandante} x ${reg.visitante}` })
   } else {
     inserts.push(reg)
