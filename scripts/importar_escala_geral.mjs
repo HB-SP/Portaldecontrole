@@ -65,6 +65,80 @@ const chave = r => [r.campeonato, r.data, r.mandante, r.visitante].map(norm).joi
 // A planilha usa etiquetas variadas para o mesmo campeonato; o banco foi
 // padronizado em 12/08/2026. Normaliza na entrada para casar com o existente
 // em vez de duplicar (chave de match inclui o campeonato).
+// ── APELIDO É A MESMA PESSOA ────────────────────────────────────────────────
+// A planilha é preenchida no dia a dia e usa o nome curto; o banco foi
+// carregado de uma versão com o nome inteiro. Daí 305 células em que os dois
+// lados "discordam" dizendo a mesma coisa:
+//
+//   banco "Douglas Santana / Gui Soria"   planilha "Douglas / Gui"
+//   banco "Leo Russo / Bruno Gatti"       planilha "Leo Russo / Gatti"
+//   banco "Léo Sarti / Galindo"           planilha "Leo / Galindo"
+//
+// Aplicar isso encurtaria 305 nomes e quebraria a ligação com a escala interna,
+// que casa pessoa POR NOME. Então o import passa a reconhecer: um nome curto é
+// a mesma pessoa quando todas as suas palavras estão no nome longo.
+//
+// O que NÃO casa continua sendo divergência de verdade — "Não" contra "XSports
+// e Record em campo" são coisas diferentes, e essa merece ser olhada.
+// Um nome pode chegar de muitos jeitos: "WJ" e "Wilson Junior", "Ana" e "Ana
+// Clara", "Radatz" e "Raddatz", "Marcello" e "Marcelo". Aqui NAO se trata de
+// identificar quem e a pessoa - e so de decidir se os dois lados dizem a mesma
+// coisa, para nao sobrescrever a toa. Por isso ser generoso e o lado SEGURO:
+// na duvida, o banco fica como esta.
+// O canal vem grudado no nome de dois jeitos — "Gatti (H)" e "WJ - Record" —
+// e nos dois ele diz ONDE, não QUEM. Sai da comparação; no banco continua.
+const semMarca = s => String(s || '')
+  .replace(/\([^)]*\)/g, ' ')
+  .replace(/\s+-\s+\S+/g, ' ')
+const palavras = s => norm(semMarca(s)).split(/[\s.]+/).filter(x => x.length > 1)
+
+// Duas palavras com uma letra de diferenca sao a mesma: Radatz/Raddatz.
+function pertinho(a, b) {
+  if (Math.abs(a.length - b.length) > 1) return false
+  if (a.length < 5) return false
+  let i = 0, j = 0, erros = 0
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { i++; j++; continue }
+    if (++erros > 1) return false
+    if (a.length > b.length) i++
+    else if (b.length > a.length) j++
+    else { i++; j++ }
+  }
+  return erros + (a.length - i) + (b.length - j) <= 1
+}
+
+const iniciais = ps => ps.map(x => x[0]).join('')
+
+function mesmaPessoa(a, b) {
+  const pa = palavras(a), pb = palavras(b)
+  if (!pa.length || !pb.length) return false
+  const [curto, longo] = pa.length <= pb.length ? [pa, pb] : [pb, pa]
+  // "WJ" contra "Wilson Junior"
+  if (curto.length === 1 && curto[0].length <= 3 && curto[0] === iniciais(longo)) return true
+  // cada palavra do curto tem de estar no longo: igual, como comeco, ou perto
+  return curto.every(x => longo.some(y =>
+    x === y || y.startsWith(x) || x.startsWith(y) || pertinho(x, y)))
+}
+
+// Uma celula pode ter varias pessoas, separadas por barra ou por mais. Ela e a
+// mesma quando tem a mesma quantidade e cada uma casa com a da outra lista, em
+// qualquer ordem - "A / B" e "B / A" sao a mesma dupla.
+function mesmaGente(a, b) {
+  const pedacos = v => String(v || '').split(/[/+]/).map(x => x.trim()).filter(Boolean)
+  const A = pedacos(a), B = pedacos(b)
+  if (!A.length || A.length !== B.length) return false
+  const livres = [...B]
+  return A.every(x => {
+    const i = livres.findIndex(y => mesmaPessoa(x, y))
+    if (i < 0) return false
+    livres.splice(i, 1)
+    return true
+  })
+}
+// Campeonato que já virou histórico não é mais reimportado: o que está lá é o
+// que aconteceu (equipe, 24/09/2026 — "não precisa mudar a escala da copinha").
+const CONGELADOS = new Set(['copinha 26'])
+
 const CAMP_PADRAO = {
   'br26': 'Brasileirão 26',
   'pfem 26': 'Paulistão F 26',
@@ -103,10 +177,12 @@ for (const reg of finais) {
     //   trocar um valor que já existe é sobrescrever — e pode atropelar quem
     //   editou pela tela depois da última importação
     // "Coloque somente o que não temos" (equipe, 24/09/2026) é a primeira.
-    const difs = Object.entries(reg).filter(([k, v]) => {
+    const difs = CONGELADOS.has(norm(reg.campeonato)) ? [] : Object.entries(reg).filter(([k, v]) => {
       if (!FUNCOES.includes(k) || v === '') return false
       const noBanco = String(atual[k] ?? '').trim()
       if (noBanco === v) return false
+      // Mesma gente escrita mais curto não é mudança.
+      if (noBanco && mesmaGente(noBanco, v)) return false
       return SO_VAZIOS ? noBanco === '' : true
     })
     if (difs.length) updates.push({ id: atual.id, reg: Object.fromEntries(difs), nome: `${reg.campeonato} ${reg.data} ${reg.mandante} x ${reg.visitante}` })
@@ -120,7 +196,7 @@ console.log(`→ ${inserts.length} inserts | ${updates.length} updates de funç�
 const porCamp = {}
 inserts.forEach(r => { porCamp[r.campeonato] = (porCamp[r.campeonato] || 0) + 1 })
 Object.entries(porCamp).forEach(([c, n]) => console.log(`   ${c}: ${n} jogos novos`))
-updates.slice(0, 10).forEach(u => console.log(`   upd: ${u.nome} → ${Object.keys(u.reg).join(', ')}`))
+updates.slice(0, Number((process.argv.find(a=>a.startsWith('--ver='))||'--ver=10').slice(6))).forEach(u => console.log(`   upd: ${u.nome} → ${Object.entries(u.reg).map(([k,v])=>k+': '+v).join(' | ')}`))
 
 if (APLICAR) {
   const agora = new Date().toISOString()
