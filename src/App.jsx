@@ -90,19 +90,31 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
+  // TODOS os campeonatos, inclusive os encerrados. Encerrado sai da tela
+  // inicial e do menu, mas continua abrindo por dentro: ele é histórico para
+  // CONSULTA, não campeonato apagado. Procurar o campeonato ativo só entre os
+  // em andamento fazia a tela cair de volta no primeiro da lista — clicar na
+  // Copinha abria o Brasileirão (equipe, 24/09/2026).
+  const todosCampeonatos = useMemo(
+    () => [...competitions, ...encerrados],
+    [competitions, encerrados]
+  )
+
   useEffect(() => {
-    if (competitions.length === 0) return
-    const stillExists = competitions.find(c => c.id === activeComp)
+    if (todosCampeonatos.length === 0) return
+    const stillExists = todosCampeonatos.find(c => c.id === activeComp)
     if (!activeComp || !stillExists) {
-      const first = competitions[0]
+      // A volta é sempre para um campeonato EM ANDAMENTO: cair no histórico
+      // por falta de opção seria abrir o passado sem ninguém ter pedido.
+      const first = competitions[0] || todosCampeonatos[0]
       setActiveComp(first.id)
       setActiveSection(first.sections[0]?.id || null)
     }
-  }, [competitions, activeComp])
+  }, [todosCampeonatos, competitions, activeComp])
 
   const competition = useMemo(
-    () => competitions.find(c => c.id === activeComp),
-    [competitions, activeComp]
+    () => todosCampeonatos.find(c => c.id === activeComp),
+    [todosCampeonatos, activeComp]
   )
   const section = competition?.sections.find(s => s.id === activeSection) || competition?.sections[0]
 
@@ -113,7 +125,7 @@ export default function App() {
 
   function handleCompSelect(compId, alvo = null) {
     setActiveComp(compId)
-    const comp = competitions.find(c => c.id === compId)
+    const comp = todosCampeonatos.find(c => c.id === compId)
     setActiveSection(comp?.sections[0]?.id || null)
     setJogoAlvo(alvo)
     setActiveView('comp')
