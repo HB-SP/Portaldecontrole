@@ -77,6 +77,9 @@ function configForRow(row, columnsByCompId) {
       isLegacy: true,
       sectionKind: row.section_kind || null,
       escalaCamps: row.escala_camps || null,
+      // Os campos que não mudam de jogo para jogo. Jogo novo nasce com eles
+      // preenchidos, em vez de alguém digitar 9Mhz e 16:9 toda vez.
+      padraoTecnico: row.padrao_tecnico || null,
       tableName: row.legacy_table || baseConfig.tableName,
     }
   }
@@ -111,6 +114,7 @@ function configForRow(row, columnsByCompId) {
     sectionKind: row.section_kind || null,
     // Com quais nomes este campeonato aparece na escala_geral (ver lib/escalaLink)
     escalaCamps: row.escala_camps || null,
+    padraoTecnico: row.padrao_tecnico || null,
     columns: cols,
   }
 }

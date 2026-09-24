@@ -183,7 +183,11 @@ function ControlePage({ config, novoJogoPedido, onNovoJogoConsumido }) {
   }, [data, filters])
 
   function openAddModal() {
-    setModal({ open: true, mode: 'add', row: null })
+    // Jogo novo NASCE com o padrão do campeonato: banda, aspecto, compressão,
+    // FEC e companhia são iguais em todos os jogos, e digitá-los de novo a
+    // cada cadastro era trabalho que a planilha nunca pediu (equipe,
+    // 24/09/2026). Quem fugir do padrão é só editar o campo.
+    setModal({ open: true, mode: 'add', row: config.padraoTecnico || null })
   }
 
   function openEditModal(row) {

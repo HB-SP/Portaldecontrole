@@ -230,7 +230,11 @@ export default function GameModal({ mode, row, config, onClose, onSave, accentCo
   const { fornecedores: hubFornecedores } = useHubFornecedores()
 
   useEffect(() => {
-    setFormData(mode === 'edit' && row ? { ...row } : {})
+    // No modo EDITAR, `row` é o jogo. No modo NOVO, é o padrão técnico do
+    // campeonato — banda, aspecto, compressão, FEC: campos iguais em todos os
+    // jogos, que antes eram digitados um a um a cada cadastro. Nos dois casos o
+    // formulário começa com o que veio; a diferença é só de onde veio.
+    setFormData(row ? { ...row } : {})
     setSaveError('')
   }, [row, mode])
 
