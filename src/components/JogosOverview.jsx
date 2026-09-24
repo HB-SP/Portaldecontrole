@@ -112,6 +112,26 @@ function EscalaCol({ escalaInfo, confirmacoes, accentColor }) {
 
 const HUB_FIELDS = new Set(['eu', 'rod', 'dia', 'data', 'hora_brt', 'mandante', 'visitante', 'cidade', 'padrao', 'detentor', 'estadio', 'hub_jogo_id'])
 
+// ── O PADRÃO TÉCNICO DO CAMPEONATO ───────────────────────────────────────────
+// Estes campos NÃO MUDAM de jogo para jogo. Medido no banco em 24/09/2026: nos
+// 60 jogos do Brasileirão, nos 20 do Feminino, nos 75 do Paulistão A1 e nos 93
+// da Copinha, cada um deles tem UM valor só, repetido em todas as linhas.
+//
+// No Brasileirão 26, por exemplo, os 60 jogos dizem a mesma coisa:
+//   teleporto LM Assunção · banda 9Mhz · aspecto 16:9 · compressão Mpeg-4
+//   transmissão DVB-S2 · modulação DVB-S2/8PSK · symbol rate 7500 · FEC 2/3
+//
+// Eles não somem: descem para um bloco fechado no fim do grupo, que abre no
+// clique. A ficha deixa de ter 26 campos para ter uns 10, e o que sobra é o que
+// é DAQUELE jogo — reserva, BISS, horários, transponder, uplink, downlink.
+//
+// Satélite e Total de horas ficaram FORA desta lista por decisão da equipe
+// (24/09/2026): são fixos hoje, mas são os dois que se consulta no dia a dia.
+const PADRAO_TECNICO = new Set([
+  'teleporto', 'banda', 'aspecto', 'compressao', 'transmissao', 'modulacao',
+  'sr', 'symbol_rate', 'fec', 'audio_1_2', 'audio_3_4',
+])
+
 function uniqueGroups(columns) {
   const seen = new Set()
   const result = []
@@ -176,6 +196,8 @@ function GameCard({ row, config, onEdit, accentColor, defaultOpen, cardRef, temE
   perifRow, perifColunas, temPeriferico }) {
   const [open, setOpen] = useState(!!defaultOpen)
   const [hiddenGroups, setHiddenGroups] = useState(() => new Set())
+  // Fechado por padrão: é informação de consulta, não de leitura diária.
+  const [padraoAberto, setPadraoAberto] = useState(false)
 
   const groups = useMemo(() => uniqueGroups(config.columns), [config.columns])
   // Com grupo 'Pessoal' na config, as funções da Escala Geral entram nele; sem
@@ -326,8 +348,11 @@ function GameCard({ row, config, onEdit, accentColor, defaultOpen, cardRef, temE
               <EscalaCol escalaInfo={escalaInfo} confirmacoes={confirmacoes} accentColor={accentColor} />
             )}
             {groups.map(group => {
-              const cols = config.columns.filter(c => c.group === group && !HUB_FIELDS.has(c.key))
-              if (!cols.length) return null
+              const todas = config.columns.filter(c => c.group === group && !HUB_FIELDS.has(c.key))
+              // O que é do jogo fica; o que é padrão do campeonato desce.
+              const cols = todas.filter(c => !PADRAO_TECNICO.has(c.key))
+              const fixas = todas.filter(c => PADRAO_TECNICO.has(c.key))
+              if (!todas.length) return null
               if (hiddenGroups.has(group)) return null
               let fill = fillByGroup[group] || { total: 0, filled: 0 }
               const comEscala = group === GRUPO_PESSOAL && escalaNoPessoal
@@ -345,11 +370,11 @@ function GameCard({ row, config, onEdit, accentColor, defaultOpen, cardRef, temE
                   </div>
                   <div className="overview-col-body">
                     {comEscala && <EscalaLinhas escalaInfo={escalaInfo} confirmacoes={confirmacoes} />}
-                    {cols.map(col => {
+                    {[...cols, ...(padraoAberto ? fixas : [])].map(col => {
                       const display = fieldDisplay(col, row[col.key])
                       const empty = !display
                       return (
-                        <div key={col.key} className={`overview-row${empty ? ' empty' : ''}`}>
+                        <div key={col.key} className={`overview-row${empty ? ' empty' : ''}${PADRAO_TECNICO.has(col.key) ? ' overview-row-padrao' : ''}`}>
                           <span className="overview-row-label">{col.label}</span>
                           <span className="overview-row-value">
                             {empty ? <span className="overview-field-empty">—</span> :
@@ -364,6 +389,19 @@ function GameCard({ row, config, onEdit, accentColor, defaultOpen, cardRef, temE
                         </div>
                       )
                     })}
+
+                    {/* O padrão do campeonato, fechado. Abre no clique, como
+                        agrupar linhas numa planilha. */}
+                    {fixas.length > 0 && (
+                      <button
+                        className="overview-padrao-btn"
+                        onClick={e => { e.stopPropagation(); setPadraoAberto(v => !v) }}
+                        title="São iguais em todos os jogos deste campeonato"
+                      >
+                        {padraoAberto ? '−' : '+'} padrão técnico
+                        <span className="overview-padrao-n">{fixas.length}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               )
