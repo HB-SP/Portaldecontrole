@@ -5003,34 +5003,48 @@ body {
 .cmp-secao-hist .cmp-card-nome { font-weight: 600; color: var(--text-muted); }
 .cmp-secao-hist .cmp-card:hover .cmp-card-nome { color: var(--text); }
 
-/* A contagem do mês, do tamanho que ela merece. Ela informa, não pede ação:
-   quem abre o Portal vem resolver um jogo, não conferir um placar de quantos
-   já passaram. Três números grandes ocupavam o topo dizendo isso. */
-.hv-contagem {
-  display: flex; align-items: baseline; justify-content: center; gap: 6px;
-  padding: 10px 12px 6px;
-  font-size: 12px; color: var(--text-muted);
-}
-.hv-contagem b { font-weight: 700; color: var(--text); text-transform: capitalize; }
-.hv-contagem span { color: var(--border-gray); }
-.hv-contagem em { font-style: normal; }
-.hv-contagem-fim { color: var(--lm-green-dim); font-weight: 600; }
 
-/* ─── TOPO: a rodada e o que vem depois ─────────────────────────────────────
-   As duas falam do mesmo assunto e estavam em pontas opostas da tela. Lado a
-   lado, uma completa a outra: os próximos jogos em detalhe, e a sequência
-   deles em lista. Abaixo de 1100px a lista desce, porque espremer os cards da
-   rodada para caber as duas colunas perde mais do que ganha. */
-.hv-topo { display: grid; grid-template-columns: 1fr; gap: 16px; }
-@media (min-width: 1100px) {
-  .hv-topo { grid-template-columns: minmax(0, 1fr) 300px; align-items: start; }
+
+/* ─── A SEQUENCIA DA RODADA ─────────────────────────────────────────────────
+   Nao e um bloco ao lado: e o DEGRAU ABAIXO dos cards da rodada. Os jogos que
+   vem agora aparecem em detalhe, com escala; o que vem depois fica numa lista
+   fina, sem moldura, na mesma largura. Lado a lado e com borda propria, os
+   dois viravam caixas disputando o mesmo espaco. */
+.hv-sequencia { margin-top: 10px; }
+.hv-seq-titulo {
+  display: flex; align-items: center; gap: 7px; width: 100%;
+  padding: 6px 2px; border: none; background: none; cursor: pointer;
+  color: var(--text-muted); font-family: inherit;
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase;
 }
-.hv-topo-rodada { min-width: 0; }
-.hv-topo-depois {
-  min-width: 0; padding: 14px 4px 10px;
-  border: 1px solid var(--border); border-radius: 12px;
-  background: var(--bg-card);
+.hv-seq-titulo:hover { color: var(--text); }
+.hv-seq-seta { display: inline-block; transition: transform 0.15s; font-size: 14px; line-height: 1; }
+.hv-seq-seta.aberta { transform: rotate(90deg); }
+.hv-seq-n {
+  padding: 0 6px; border-radius: 999px; background: var(--bg-surface2);
+  font-size: 9.5px; letter-spacing: 0; font-variant-numeric: tabular-nums;
 }
-.hv-topo-depois .hv-up-header { padding: 0 12px 8px; }
-/* Lista longa não empurra o calendário para fora da tela. */
-.hv-topo-depois .hv-upcoming-list { max-height: 340px; overflow-y: auto; }
+
+/* Os jogos em colunas que se ajustam: numa tela larga a lista ocupa a largura
+   dos cards em vez de virar uma coluna comprida de dez linhas. */
+.hv-seq-lista {
+  display: grid; gap: 1px 14px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+.hv-seq-jogo {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; border: none; border-radius: 6px;
+  background: none; cursor: pointer; text-align: left;
+  font-family: inherit; font-size: 12.5px; color: var(--text);
+}
+.hv-seq-jogo:hover { background: var(--bg-hover); }
+.hv-seq-data {
+  flex: 0 0 46px; color: var(--text-dim); font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.hv-seq-times { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hv-seq-cor { flex: 0 0 5px; height: 5px; border-radius: 50%; opacity: 0.8; }
+
+/* A contagem do mes, no cabecalho do calendario: ela fala do mes, e o mes e
+   este calendario. */
+.hv-cal-conta { margin-left: 8px; font-size: 11.5px; color: var(--text-dim); font-weight: 500; }

@@ -227,39 +227,15 @@ export default function HomeView({ competitions, onCompSelect }) {
     <div className={`hv-root${mounted ? ' hv-mounted' : ''}`}>
       <div className="hv-bg" />
 
-      {/* UMA LINHA, e miúda. O contador de "jogos sem escala" saiu inteiro
-          (equipe, 25/09/2026): ele mostrava zero quase sempre, e um número
-          grande que quase nunca muda vira ruído em vez de aviso — quem precisa
-          cobrar escala olha a Visão Geral do campeonato, que diz de QUAL jogo
-          se trata.
-          O que resta é contagem do mês, e contagem não pede ação: fica do
-          tamanho de uma legenda. Antes disto, três números grandes abriam a
-          tela sem que nenhum deles fizesse ninguém abrir o Portal. */}
+      {/* ── Próxima rodada, e logo abaixo a sequência dela ──
+          Uma coisa só, em dois níveis: os jogos que vêm agora em detalhe, com
+          escala, e a lista do que vem depois logo embaixo, fina e sem moldura.
+          Lado a lado e com borda própria, viravam dois blocos disputando o
+          mesmo espaço — "vários blocos colocados sem critério" (equipe,
+          25/09/2026). Em degrau, a leitura desce sozinha do maior para o
+          menor. */}
       {!loading && (
-        <div className="hv-contagem hv-enter" style={{ '--i': 0 }}>
-          <b>{MESES[viewMonth.month]}</b>
-          <span>·</span>
-          {kpi.total} {kpi.total === 1 ? 'jogo' : 'jogos'}
-          {kpi.total > 0 && (
-            <>
-              <span>·</span>
-              <em className={kpi.done === kpi.total ? 'hv-contagem-fim' : undefined}>
-                {kpi.done} {kpi.done === 1 ? 'realizado' : 'realizados'}
-              </em>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ── Próxima rodada, com a escala aberta, e ao lado o que vem depois ──
-          As duas coisas falam do MESMO assunto — o que está por vir — e ficavam
-          em pontas opostas da tela: os cards no topo, a lista lá embaixo ao
-          lado do calendário (equipe, 25/09/2026). Juntas, uma completa a
-          outra: os próximos jogos em detalhe, e a sequência deles em lista.
-          Embaixo fica só o calendário. */}
-      {!loading && (
-        <div className="hv-topo hv-enter" style={{ '--i': 1 }}>
-        <div className="hv-topo-rodada">
+        <div className="hv-enter" style={{ '--i': 1 }}>
           <ProximaRodada
             rodada={rodadaAtual}
             jogos={jogosDaRodada}
@@ -272,31 +248,33 @@ export default function HomeView({ competitions, onCompSelect }) {
             // Leva o jogo junto: o "Ficha →" cai no card dele, nao so no campeonato
             onAbrirFicha={j => onCompSelect(j.competitionId, { data: j.rawDate, mandante: j.mandante, visitante: j.visitante, padrao: j.padrao, rod: j.rod })}
           />
-        </div>
 
-        {restGames.length > 0 && (
-          <div className="hv-topo-depois">
-            <div className="hv-up-header">
-              <span className="hv-sec-label">Depois desta rodada</span>
-              <button className="hv-up-toggle" onClick={() => setShowUpcoming(v => !v)}>
-                {showUpcoming ? 'Ocultar' : `Ver ${restGames.length}`}
+          {restGames.length > 0 && (
+            <div className="hv-sequencia">
+              <button
+                className="hv-seq-titulo"
+                onClick={() => setShowUpcoming(v => !v)}
+                title={showUpcoming ? 'Esconder' : 'Mostrar'}
+              >
+                <span className={`hv-seq-seta${showUpcoming ? ' aberta' : ''}`}>›</span>
+                depois desta rodada
+                <span className="hv-seq-n">{restGames.length}</span>
               </button>
+              {showUpcoming && (
+                <div className="hv-seq-lista">
+                  {restGames.map((m, i) => (
+                    <button key={i} className="hv-seq-jogo" onClick={() => onCompSelect(m.competitionId)}>
+                      <span className="hv-seq-data">
+                        {new Date(m.ts).getDate()} {MESES[new Date(m.ts).getMonth()].slice(0, 3).toLowerCase()}
+                      </span>
+                      <span className="hv-seq-times">{m.mandante} × {m.visitante}</span>
+                      <span className="hv-seq-cor" style={{ background: m.accentColor }} />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            {showUpcoming && (
-              <div className="hv-upcoming-list">
-                {restGames.map((m, i) => (
-                  <div key={i} className="hv-up-row" onClick={() => onCompSelect(m.competitionId)}>
-                    <span className="hv-up-dot" style={{ background: m.accentColor }} />
-                    <span className="hv-up-teams">{m.mandante} × {m.visitante}</span>
-                    <span className="hv-up-date">
-                      {new Date(m.ts).getDate()} {MESES[new Date(m.ts).getMonth()].slice(0, 3)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+          )}
         </div>
       )}
 
@@ -368,6 +346,16 @@ export default function HomeView({ competitions, onCompSelect }) {
             <div className="hv-cal-title">
               <span className="hv-cal-mname">{MESES[viewMonth.month]}</span>
               <span className="hv-cal-year">{viewMonth.year}</span>
+              {/* A contagem do mês pertence AQUI, e não a uma faixa solta no
+                  topo: ela fala do mês, e o mês é este calendário. Ao lado do
+                  nome ela vira legenda do que está logo abaixo; sozinha lá em
+                  cima, era um bloco a mais sem dono (equipe, 25/09/2026). */}
+              {kpi.total > 0 && (
+                <span className="hv-cal-conta">
+                  {kpi.total} {kpi.total === 1 ? 'jogo' : 'jogos'}
+                  {kpi.done > 0 && `, ${kpi.done} realizado${kpi.done === 1 ? '' : 's'}`}
+                </span>
+              )}
             </div>
             <button className="hv-cal-nav" onClick={() => changeMonth(1)}>
               <svg viewBox="0 0 16 16" fill="none" width="14" height="14">
