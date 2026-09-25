@@ -5002,3 +5002,35 @@ body {
 .cmp-secao-hist .cmp-card { background: var(--bg-surface2); }
 .cmp-secao-hist .cmp-card-nome { font-weight: 600; color: var(--text-muted); }
 .cmp-secao-hist .cmp-card:hover .cmp-card-nome { color: var(--text); }
+
+/* A contagem do mês, do tamanho que ela merece. Ela informa, não pede ação:
+   quem abre o Portal vem resolver um jogo, não conferir um placar de quantos
+   já passaram. Três números grandes ocupavam o topo dizendo isso. */
+.hv-contagem {
+  display: flex; align-items: baseline; justify-content: center; gap: 6px;
+  padding: 10px 12px 6px;
+  font-size: 12px; color: var(--text-muted);
+}
+.hv-contagem b { font-weight: 700; color: var(--text); text-transform: capitalize; }
+.hv-contagem span { color: var(--border-gray); }
+.hv-contagem em { font-style: normal; }
+.hv-contagem-fim { color: var(--lm-green-dim); font-weight: 600; }
+
+/* ─── TOPO: a rodada e o que vem depois ─────────────────────────────────────
+   As duas falam do mesmo assunto e estavam em pontas opostas da tela. Lado a
+   lado, uma completa a outra: os próximos jogos em detalhe, e a sequência
+   deles em lista. Abaixo de 1100px a lista desce, porque espremer os cards da
+   rodada para caber as duas colunas perde mais do que ganha. */
+.hv-topo { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 1100px) {
+  .hv-topo { grid-template-columns: minmax(0, 1fr) 300px; align-items: start; }
+}
+.hv-topo-rodada { min-width: 0; }
+.hv-topo-depois {
+  min-width: 0; padding: 14px 4px 10px;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: var(--bg-card);
+}
+.hv-topo-depois .hv-up-header { padding: 0 12px 8px; }
+/* Lista longa não empurra o calendário para fora da tela. */
+.hv-topo-depois .hv-upcoming-list { max-height: 340px; overflow-y: auto; }

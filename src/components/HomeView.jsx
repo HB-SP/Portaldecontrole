@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useHomeData } from '../hooks/useHomeData'
 import { getEscudoUrl } from '../lib/escudos'
 import { listarRodadas, indiceDaProxima, jogosVisiveis } from '../lib/proximaRodada'
-import { resumoDoJogo } from '../lib/resumoJogo'
 import ProximaRodada from './ProximaRodada'
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
@@ -97,15 +96,6 @@ export default function HomeView({ competitions, onCompSelect }) {
     [rodadaAtual, ehDestaque],
   )
 
-  // Jogos por vir que não têm NADA escalado. Antes isto contava "escala
-  // incompleta", o que era enganoso: a maioria das colunas do grupo é
-  // opcional, então quase todo jogo parecia incompleto. "Nada escalado" é
-  // afirmação segura — e é o que realmente pede ação.
-  const aEscalar = useMemo(() => {
-    const h = new Date()
-    const hoje0 = new Date(h.getFullYear(), h.getMonth(), h.getDate())
-    return todosOsJogos.filter(j => j.d >= hoje0 && resumoDoJogo(j).semEscala).length
-  }, [todosOsJogos])
 
   useEffect(() => { const t = setTimeout(() => setMounted(true), 40); return () => clearTimeout(t) }, [])
 
@@ -237,36 +227,39 @@ export default function HomeView({ competitions, onCompSelect }) {
     <div className={`hv-root${mounted ? ' hv-mounted' : ''}`}>
       <div className="hv-bg" />
 
-      {/* Faixa fina de números. O título "Host Broadcast" e o relógio subiram
-          para o cabeçalho — ocupavam uma faixa inteira para dizer pouco. */}
+      {/* UMA LINHA, e miúda. O contador de "jogos sem escala" saiu inteiro
+          (equipe, 25/09/2026): ele mostrava zero quase sempre, e um número
+          grande que quase nunca muda vira ruído em vez de aviso — quem precisa
+          cobrar escala olha a Visão Geral do campeonato, que diz de QUAL jogo
+          se trata.
+          O que resta é contagem do mês, e contagem não pede ação: fica do
+          tamanho de uma legenda. Antes disto, três números grandes abriam a
+          tela sem que nenhum deles fizesse ninguém abrir o Portal. */}
       {!loading && (
-        <div className="hv-kpi hv-kpi-fina hv-enter" style={{ '--i': 0 }}>
-          {/* Primeiro o número que PEDE AÇÃO: "4 realizados" fala do passado,
-              "escala incompleta" é o que faz alguém abrir o Portal. */}
-          <div className="hv-kpi-item">
-            <span className={`hv-kpi-value${aEscalar > 0 ? ' hv-kpi-pend' : ' hv-kpi-done'}`}>{aEscalar}</span>
-            <span className="hv-kpi-label">{aEscalar === 1 ? 'jogo sem escala' : 'jogos sem escala'}</span>
-          </div>
-          <div className="hv-kpi-sep" />
-          <div className="hv-kpi-item">
-            <span className="hv-kpi-value">{kpi.total}</span>
-            <span className="hv-kpi-label">jogos em {MESES[viewMonth.month]}</span>
-          </div>
-          <div className="hv-kpi-sep" />
-          <div className="hv-kpi-item">
-            <span className="hv-kpi-value hv-kpi-done">{kpi.done}</span>
-            <span className="hv-kpi-label">realizados</span>
-          </div>
-          {/* O "Em 5 dias · próximo jogo" saiu: o card de Próxima Rodada logo
-              abaixo já traz a data do jogo, e dizer a mesma coisa em três
-              lugares (faixa, card e lateral) era o que deixava a tela
-              repetitiva. */}
+        <div className="hv-contagem hv-enter" style={{ '--i': 0 }}>
+          <b>{MESES[viewMonth.month]}</b>
+          <span>·</span>
+          {kpi.total} {kpi.total === 1 ? 'jogo' : 'jogos'}
+          {kpi.total > 0 && (
+            <>
+              <span>·</span>
+              <em className={kpi.done === kpi.total ? 'hv-contagem-fim' : undefined}>
+                {kpi.done} {kpi.done === 1 ? 'realizado' : 'realizados'}
+              </em>
+            </>
+          )}
         </div>
       )}
 
-      {/* ── Próxima rodada, com a escala aberta ── */}
+      {/* ── Próxima rodada, com a escala aberta, e ao lado o que vem depois ──
+          As duas coisas falam do MESMO assunto — o que está por vir — e ficavam
+          em pontas opostas da tela: os cards no topo, a lista lá embaixo ao
+          lado do calendário (equipe, 25/09/2026). Juntas, uma completa a
+          outra: os próximos jogos em detalhe, e a sequência deles em lista.
+          Embaixo fica só o calendário. */}
       {!loading && (
-        <div className="hv-enter" style={{ '--i': 1 }}>
+        <div className="hv-topo hv-enter" style={{ '--i': 1 }}>
+        <div className="hv-topo-rodada">
           <ProximaRodada
             rodada={rodadaAtual}
             jogos={jogosDaRodada}
@@ -279,6 +272,31 @@ export default function HomeView({ competitions, onCompSelect }) {
             // Leva o jogo junto: o "Ficha →" cai no card dele, nao so no campeonato
             onAbrirFicha={j => onCompSelect(j.competitionId, { data: j.rawDate, mandante: j.mandante, visitante: j.visitante, padrao: j.padrao, rod: j.rod })}
           />
+        </div>
+
+        {restGames.length > 0 && (
+          <div className="hv-topo-depois">
+            <div className="hv-up-header">
+              <span className="hv-sec-label">Depois desta rodada</span>
+              <button className="hv-up-toggle" onClick={() => setShowUpcoming(v => !v)}>
+                {showUpcoming ? 'Ocultar' : `Ver ${restGames.length}`}
+              </button>
+            </div>
+            {showUpcoming && (
+              <div className="hv-upcoming-list">
+                {restGames.map((m, i) => (
+                  <div key={i} className="hv-up-row" onClick={() => onCompSelect(m.competitionId)}>
+                    <span className="hv-up-dot" style={{ background: m.accentColor }} />
+                    <span className="hv-up-teams">{m.mandante} × {m.visitante}</span>
+                    <span className="hv-up-date">
+                      {new Date(m.ts).getDate()} {MESES[new Date(m.ts).getMonth()].slice(0, 3)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         </div>
       )}
 
@@ -523,47 +541,14 @@ export default function HomeView({ competitions, onCompSelect }) {
             </div>
           ) : (
             <div className="hv-panel-inner hv-panel-anim" key="default">
-              {/* O destaque do próximo jogo saiu daqui: virou os cards de
-                  Próxima Rodada no topo, que mostram o mesmo jogo COM a
-                  escala. Manter os dois era dizer a mesma coisa duas vezes,
-                  e a versão de cá era a pior. */}
-
-              {restGames.length === 0 && !loading && (
-                <div className="hv-empty">
-                  <div className="hv-empty-dot" />
-                  <div className="hv-empty-text">Nada além desta rodada</div>
-                </div>
-              )}
-
-              {restGames.length > 0 && (
-                <div className="hv-panel-upcoming">
-                  <div className="hv-up-header">
-                    <span className="hv-sec-label">Depois desta rodada</span>
-                    <button className="hv-up-toggle" onClick={() => setShowUpcoming(v => !v)}>
-                      {showUpcoming ? 'Ocultar' : `Ver ${restGames.length}`}
-                    </button>
-                  </div>
-                  {showUpcoming && (
-                    <div className="hv-upcoming-list">
-                      {restGames.map((m, i) => (
-                        <div
-                          key={i}
-                          className="hv-up-row"
-                          onClick={() => onCompSelect(m.competitionId)}
-                        >
-                          <span className="hv-up-dot" style={{ background: m.accentColor }} />
-                          <span className="hv-up-teams">
-                            {m.mandante} × {m.visitante}
-                          </span>
-                          <span className="hv-up-date">
-                            {new Date(m.ts).getDate()} {MESES[new Date(m.ts).getMonth()].slice(0,3)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Sem dia escolhido, o painel não tem o que dizer — e é melhor
+                  assim: a lista "Depois desta rodada" subiu para junto dos
+                  cards da rodada, onde ela conversa com o resto. Aqui embaixo
+                  ficou o calendário, e o painel só responde ao clique. */}
+              <div className="hv-empty">
+                <div className="hv-empty-dot" />
+                <div className="hv-empty-text">Clique num dia para ver os jogos</div>
+              </div>
             </div>
           )}
         </div>
