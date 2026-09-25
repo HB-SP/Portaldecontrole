@@ -7,6 +7,7 @@ import { getEscudoUrl } from '../lib/escudos'
 import { getStatusClass } from '../config/tables'
 import { FUNCOES_ESCALA, naoTemFuncao, semEscala, acharEscala } from '../lib/escalaLink'
 import { ehFeedB } from '../lib/parearPeriferico'
+import { parseData } from '../lib/datas'
 import GameModal from './GameModal'
 
 const GRUPO_ESCALA = 'Escala Geral'
@@ -447,6 +448,28 @@ export default function JogosOverview({ config, accentColor, jogoAlvo }) {
   const [filtroStatus, setFiltroStatus] = useState('')
   const [modal, setModal] = useState(null)
 
+  // ── O BALANÇO DO CAMPEONATO ──────────────────────────────────────────────
+  // Veio do card da tela inicial: lá era informação demais para um cartão, e
+  // aqui é onde a pessoa já está olhando o campeonato (equipe, 25/09/2026).
+  //
+  // Conta sobre `data`, não sobre `filtered`: a lista de baixo filtra e deixa
+  // de fora jogo sem os times definidos, que é justamente o que este balanço
+  // precisa contar. Num mata-mata como o Sub 20 são 10 dos 12.
+  const balanco = useMemo(() => {
+    const hoje = new Date()
+    hoje.setHours(0, 0, 0, 0)
+    let previstos = 0, definidos = 0, realizados = 0
+    for (const row of data) {
+      const d = parseData(row.data)
+      if (!d) continue
+      previstos++
+      if (!row.mandante || !row.visitante) continue
+      definidos++
+      if (d < hoje) realizados++
+    }
+    return { previstos, definidos, realizados, porVir: definidos - realizados, aDefinir: previstos - definidos }
+  }, [data])
+
   const filtered = useMemo(() => {
     let r = data.filter(row => row.mandante && row.visitante)
     if (search) {
@@ -515,6 +538,22 @@ export default function JogosOverview({ config, accentColor, jogoAlvo }) {
           {statusDisponiveis.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         <span className="overview-count">{filtered.length} {filtered.length === 1 ? 'jogo' : 'jogos'}</span>
+        {balanco.previstos > 0 && (
+          <span className="overview-balanco">
+            {balanco.realizados === balanco.previstos ? (
+              <b>temporada completa</b>
+            ) : (
+              <>
+                <b>{balanco.previstos}</b> no campeonato
+                {balanco.realizados > 0 && <> · {balanco.realizados} realizados</>}
+                {balanco.porVir   > 0 && <> · {balanco.porVir} por vir</>}
+                {/* "a definir" é o jogo que já tem data e satélite reservados e
+                    ainda não tem adversário. Só aparece em mata-mata. */}
+                {balanco.aDefinir > 0 && <> · <em>{balanco.aDefinir} a definir</em></>}
+              </>
+            )}
+          </span>
+        )}
       </div>
 
       {loading ? (

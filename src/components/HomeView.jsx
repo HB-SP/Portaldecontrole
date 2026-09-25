@@ -337,16 +337,14 @@ export default function HomeView({ competitions, onCompSelect }) {
                 {comp.logoUrl
                   ? <img src={comp.logoUrl} className="hv-camp-logo" alt="" />
                   : <span className="hv-camp-logo hv-camp-sigla" style={{ color: comp.accentColor, borderColor: comp.accentColor + '40' }}>{sigla}</span>}
+                {/* Só o nome. O "X por vir, Y a definir" saiu daqui: num
+                    cartão que já tem logo, selo, barra e botão, uma frase a
+                    mais é informação demais. Ela foi para dentro do
+                    campeonato, na Visão Geral, que é onde a pessoa vai
+                    justamente olhar o andamento (equipe, 25/09/2026).
+                    A barra fica — ela conta a mesma coisa sem texto. */}
                 <span className="hv-camp-nome">
                   <b>{nome}</b>
-                  {!loading && previstos > 0 && (
-                    <em>
-                      {done === previstos
-                        ? 'temporada completa'
-                        : `${previstos - done} ${previstos - done === 1 ? 'jogo por vir' : 'jogos por vir'}`}
-                      {aDefinir > 0 && `, ${aDefinir} a definir`}
-                    </em>
-                  )}
                 </span>
                 <span className="hv-camp-selo" style={{ color: comp.accentColor, background: comp.accentColor + '14' }}>
                   <i style={{ background: comp.accentColor }} />

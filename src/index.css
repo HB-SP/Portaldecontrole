@@ -1575,6 +1575,19 @@ body {
   color: var(--text-muted);
 }
 
+/* O balanço do campeonato, ao lado da contagem da lista. São duas coisas
+   diferentes de propósito: a contagem responde ao filtro, o balanço fala do
+   campeonato inteiro. Por isso fica mais miúdo e separado por uma barrinha. */
+.overview-balanco {
+  padding-left: 12px; margin-left: 12px;
+  border-left: 1px solid var(--border);
+  font-size: 11.5px; color: var(--text-dim);
+  white-space: nowrap;
+}
+.overview-balanco b { font-weight: 700; color: var(--text-muted); }
+/* "a definir" é o único que pede atenção: é trabalho que ainda vai chegar. */
+.overview-balanco em { font-style: normal; font-weight: 600; color: var(--amber); }
+
 .overview-list {
   display: flex;
   flex-direction: column;
