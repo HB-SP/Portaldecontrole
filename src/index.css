@@ -2594,6 +2594,10 @@ body {
 }
 
 .hv-root {
+  /* A régua da tela inicial. Uma medida só para a largura do conteúdo e uma
+     para o respiro lateral — o resto se alinha sozinho. */
+  --hv-larg: 1360px;
+  --hv-gutter: 32px;
   position: relative;
   min-height: calc(100vh - 56px);
   background: #FAFAFA;
@@ -2645,7 +2649,8 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 14px;
-  padding: 20px 40px 24px;
+  padding-top: 22px;
+  padding-bottom: 26px;
   border-bottom: 1px solid rgba(0,0,0,.08);
 }
 
@@ -2735,7 +2740,11 @@ body {
 
 /* ── Calendar wrapper (inside split) ── */
 .hv-cal-wrap {
-  padding: 24px 28px 32px;
+  padding-top: 26px;
+  padding-bottom: 34px;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .hv-cal-head {
@@ -3054,11 +3063,16 @@ body {
 }
 
 /* ── Split layout ── */
+/* O grid inteiro obedece a mesma regua: sao os DOIS juntos que formam uma
+   faixa, e centralizar cada filho por conta propria desalinhava os dois. */
 .hv-split {
   display: grid;
   grid-template-columns: 3fr 2fr;
   align-items: start;
   border-top: 1px solid rgba(0,0,0,.08);
+  max-width: var(--hv-larg);
+  margin: 0 auto;
+  width: 100%;
 }
 .hv-split--full { grid-template-columns: 1fr; }
 .hv-split--full .hv-panel { display: none; }
@@ -3076,8 +3090,11 @@ body {
 }
 .hv-panel::-webkit-scrollbar { display: none; }
 
+/* O painel fecha a faixa pela direita, entao o respiro dele daquele lado e o
+   da pagina - assim o conteudo dele termina na mesma linha que o dos blocos
+   de cima. */
 .hv-panel-inner {
-  padding: 24px 24px 32px;
+  padding: 26px var(--hv-gutter) 34px 22px;
 }
 
 @keyframes hv-panel-fade {
@@ -3995,7 +4012,7 @@ body {
 
 /* ─── TELA INICIAL · PRÓXIMA RODADA ───────────────────────────────────────── */
 /* A escala aparece aqui, sem clique. O clique abre a ficha completa. */
-.pr-wrap { margin: 0 0 22px; }
+.pr-wrap { padding-top: 22px; padding-bottom: 8px; }
 .pr-head {
   display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
   margin-bottom: 10px;
@@ -4157,10 +4174,18 @@ body {
 .hv-navgrid,
 .hv-cal-wrap,
 .pr-wrap {
-  max-width: 1360px;
+  max-width: var(--hv-larg);
   margin-left: auto;
   margin-right: auto;
   width: 100%;
+}
+/* A mesma sangria dos dois lados em TODAS as faixas: é isto que faz as bordas
+   esquerdas caírem na mesma linha vertical de cima a baixo. */
+.hv-navgrid,
+.hv-cal-wrap,
+.pr-wrap {
+  padding-left: var(--hv-gutter);
+  padding-right: var(--hv-gutter);
 }
 /* A faixa branca dos números continua sangrando; só o miolo centraliza */
 .hv-kpi { max-width: none; }
@@ -5108,3 +5133,9 @@ body {
 }
 .hv-camp:hover .hv-camp-ir svg { transform: translateX(2px); }
 .hv-camp-ir svg { transition: transform .15s; }
+
+/* Em tela estreita o respiro encolhe junto — 32px de cada lado num celular
+   comem metade da largura útil. */
+@media (max-width: 640px) {
+  .hv-root { --hv-gutter: 16px; }
+}
