@@ -84,6 +84,12 @@ export async function carregarCompeticao(comp) {
 export function useHomeData(competitions) {
   const [matchesByDate, setMatchesByDate] = useState(new Map())
   const [totalsByComp, setTotalsByComp]   = useState({})
+  // ── A PREMISSA DO CAMPEONATO ──
+  // Mata-mata reserva a data antes de saber quem joga: o Sub 20 tem as 12
+  // datas até a final com satélite e transponder marcados, e só duas sabem os
+  // times. Contar só quem tem time diria "2 jogos" de um campeonato de 12, e
+  // some justamente o planejamento (equipe, 25/09/2026).
+  const [previstosByComp, setPrevistos]   = useState({})
   const [loading, setLoading] = useState(false)
   // Guarda de ordem: loads concorrentes (competitions mudou no meio) não podem
   // deixar o calendário com o resultado do load mais antigo.
@@ -96,6 +102,7 @@ export function useHomeData(competitions) {
 
     const allMatches = []
     const totals = {}
+    const previstos = {}
 
     await Promise.all(competitions.map(async (comp) => {
       try {
@@ -112,6 +119,12 @@ export function useHomeData(competitions) {
           return true
         })
         totals[comp.id] = valid.length
+        // Jogo com data marcada e adversário ainda em aberto. Não entra em
+        // `valid` (sem times não vai para o calendário), mas É um jogo do
+        // campeonato. Sem desduplicar: duas semifinais no mesmo dia são duas,
+        // e sem os times não há como distingui-las de outra forma.
+        const aDefinir = jogos.filter(r => r.data && (!r.mandante || !r.visitante) && parseDate(r.data))
+        previstos[comp.id] = valid.length + aDefinir.length
 
         for (const row of valid) {
           const d = parseDate(row.data)
@@ -154,10 +167,11 @@ export function useHomeData(competitions) {
 
     setMatchesByDate(map)
     setTotalsByComp(totals)
+    setPrevistos(previstos)
     setLoading(false)
   }, [competitions])
 
   useEffect(() => { load() }, [load])
 
-  return { matchesByDate, totalsByComp, loading, reload: load }
+  return { matchesByDate, totalsByComp, previstosByComp, loading, reload: load }
 }

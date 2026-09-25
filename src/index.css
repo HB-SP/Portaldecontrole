@@ -5162,9 +5162,20 @@ body {
 
 .hv-camp-prog { display: flex; align-items: center; gap: 10px; }
 .hv-camp-trilho {
-  flex: 1; height: 5px; border-radius: 999px; background: var(--bg-surface2); overflow: hidden;
+  flex: 1; height: 5px; border-radius: 999px; background: var(--bg-surface2);
+  overflow: hidden; position: relative;
+}
+/* A camada de tras: ate onde ja se sabe QUEM joga. Fica na cor do campeonato
+   bem apagada — presente o bastante para se ver que o campeonato ja tem chave
+   definida ate ali, apagada o bastante para nao competir com o que de fato
+   aconteceu. */
+.hv-camp-sabido {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  border-radius: 999px; background: var(--acf, var(--ac)); opacity: .22;
+  transition: width .4s ease;
 }
 .hv-camp-fill {
+  position: relative;
   display: block; height: 100%; border-radius: 999px;
   background: var(--acf, var(--ac)); transition: width .4s ease;
 }

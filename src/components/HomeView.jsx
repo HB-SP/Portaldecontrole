@@ -67,7 +67,7 @@ export default function HomeView({ competitions, onCompSelect }) {
   const [viewMode,       setViewMode]       = useState('split')
   const [mounted,       setMounted]       = useState(false)
 
-  const { matchesByDate, totalsByComp, loading } = useHomeData(competitions)
+  const { matchesByDate, totalsByComp, previstosByComp, loading } = useHomeData(competitions)
 
   // Todos os jogos numa lista só, com a data já como Date — é o que a regra da
   // próxima rodada e a contagem de pendências precisam.
@@ -291,9 +291,23 @@ export default function HomeView({ competitions, onCompSelect }) {
           responde "como está o campeonato" de relance (equipe, 25/09/2026). */}
       <div className="hv-navgrid hv-enter" style={{ '--i': 2 }}>
         {competitions.map((comp, idx) => {
-          const total = totalsByComp[comp.id] ?? 0
-          const done  = doneByComp[comp.id]   ?? 0
-          const pct   = total > 0 ? Math.round((done / total) * 100) : 0
+          // TRÊS NÚMEROS, e cada um responde uma pergunta diferente:
+          //   previstos  quantos jogos o campeonato tem do começo ao fim
+          //   total      quantos já se sabe QUEM joga
+          //   done       quantos já aconteceram
+          // Num mata-mata os três são diferentes: o Sub 20 tem 12 datas
+          // reservadas, 2 com adversário definido, 2 realizados. Mostrar só
+          // "2/2" diria que o campeonato acabou (equipe, 25/09/2026).
+          const total     = totalsByComp[comp.id]     ?? 0
+          const previstos = previstosByComp[comp.id]  ?? total
+          const done      = doneByComp[comp.id]       ?? 0
+          const aDefinir  = Math.max(0, previstos - total)
+          // A barra mede contra o que o campeonato TEM, não contra o que já
+          // foi marcado — senão ela encheria antes da hora e voltaria atrás a
+          // cada novo confronto definido.
+          const base      = previstos || 1
+          const pctFeito  = Math.round((done / base) * 100)
+          const pctSabido = Math.round((total / base) * 100)
           const nome  = cleanComp(comp.label)
           // Sem logo, as iniciais na cor do campeonato. Um buraco no lugar da
           // imagem seria pior que não ter imagem nenhuma.
@@ -325,8 +339,13 @@ export default function HomeView({ competitions, onCompSelect }) {
                   : <span className="hv-camp-logo hv-camp-sigla" style={{ color: comp.accentColor, borderColor: comp.accentColor + '40' }}>{sigla}</span>}
                 <span className="hv-camp-nome">
                   <b>{nome}</b>
-                  {!loading && total > 0 && (
-                    <em>{done === total ? 'temporada completa' : `${total - done} ${total - done === 1 ? 'jogo por vir' : 'jogos por vir'}`}</em>
+                  {!loading && previstos > 0 && (
+                    <em>
+                      {done === previstos
+                        ? 'temporada completa'
+                        : `${previstos - done} ${previstos - done === 1 ? 'jogo por vir' : 'jogos por vir'}`}
+                      {aDefinir > 0 && `, ${aDefinir} a definir`}
+                    </em>
                   )}
                 </span>
                 <span className="hv-camp-selo" style={{ color: comp.accentColor, background: comp.accentColor + '14' }}>
@@ -335,12 +354,23 @@ export default function HomeView({ competitions, onCompSelect }) {
                 </span>
               </span>
 
-              {!loading && total > 0 && (
+              {!loading && previstos > 0 && (
                 <span className="hv-camp-prog">
-                  <span className="hv-camp-trilho">
-                    <span className="hv-camp-fill" style={{ width: `${pct}%` }} />
+                  {/* A barra tem DUAS camadas. A de trás, esmaecida, vai até
+                      onde já se sabe quem joga; a da frente, cheia, até o que
+                      já aconteceu. O que sobra do trilho é o que o campeonato
+                      ainda vai sortear. Assim uma barra só conta a história
+                      inteira sem virar três barras. */}
+                  <span
+                    className="hv-camp-trilho"
+                    title={aDefinir > 0
+                      ? `${previstos} jogos previstos · ${total} com os times definidos · ${done} realizados`
+                      : `${previstos} jogos · ${done} realizados`}
+                  >
+                    <span className="hv-camp-sabido" style={{ width: `${pctSabido}%` }} />
+                    <span className="hv-camp-fill" style={{ width: `${pctFeito}%` }} />
                   </span>
-                  <span className="hv-camp-n">{done}<i>/{total}</i></span>
+                  <span className="hv-camp-n">{done}<i>/{previstos}</i></span>
                 </span>
               )}
 
