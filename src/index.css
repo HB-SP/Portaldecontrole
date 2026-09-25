@@ -2965,7 +2965,10 @@ body {
   font-size: 11px; color: rgba(0,0,0,.4); margin-bottom: 7px;
 }
 .hv-card-time    { font-weight: 600; color: rgba(0,0,0,.6); font-variant-numeric: tabular-nums; }
-.hv-card-detentor { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Cabe "CazeTV/Record/Premiere" inteiro. Com 110px o nome do Brasileirao
+   saia cortado em "CazeTV/Record/..." — pior que antes de o Premiere entrar.
+   A linha toda quebra sozinha, entao o selo maior nao estoura o cartao. */
+.hv-card-detentor { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .hv-card-status {
   display: flex; align-items: center; gap: 5px;

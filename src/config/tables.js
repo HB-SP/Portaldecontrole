@@ -85,7 +85,11 @@ const ESTADIOS_BR = [
 
 const PADROES = ['B1', 'B2']
 
-const DETENTORES = ['CazeTV/Record', 'AmazonPrime', 'Globo', 'SporTV', 'Band', 'DAZN']
+// No Brasileirao, quando o jogo e da CazeTV e da Record, o Premiere tambem e
+// detentor. A opcao curta "CazeTV/Record" saiu da lista: era ela que fazia a
+// forma errada voltar a cada jogo novo, mesmo com a planilha escrevendo o
+// nome completo (equipe, 25/09/2026).
+const DETENTORES = ['CazeTV/Record/Premiere', 'AmazonPrime', 'Globo', 'SporTV', 'Band', 'DAZN']
 
 const SATELITE_OPTIONS = ['Amz3', 'SES-6', 'Star One C2', 'Intelsat']
 
