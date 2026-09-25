@@ -6,6 +6,7 @@ import HomeView from './components/HomeView'
 import FornecedoresPage from './components/FornecedoresPage'
 import EscalaGeralView from './components/EscalaGeralView'
 import EscalarView from './components/EscalarView'
+import TransmissaoView from './components/TransmissaoView'
 import FolgasView from './components/FolgasView'
 import CampeonatosView from './components/CampeonatosView'
 import NewCompetitionDialog from './components/NewCompetitionDialog'
@@ -441,8 +442,12 @@ export default function App() {
     )
   }
 
-  const secaoTemJogos = section && !section.isOverview && !section.isEscalar
-  const secaoJogosPadrao = competition.sections.find(s => !s.isOverview && !s.isEscalar)
+  // Só as abas de planilha cadastram jogo. A Transmissão entrou nesta conta
+  // quando foi criada: sem excluí-la, o "+ Novo Jogo" tentaria abrir o cadastro
+  // numa tela que não tem cadastro nenhum.
+  const ehPlanilha = s => s && !s.isOverview && !s.isEscalar && !s.isTransmissao
+  const secaoTemJogos = ehPlanilha(section)
+  const secaoJogosPadrao = competition.sections.find(ehPlanilha)
 
   // Botão do header em QUALQUER aba: se a aba atual não tem cadastro de jogo
   // (a Visão Geral), pula para a primeira que tem e abre o modal lá.
@@ -498,6 +503,8 @@ export default function App() {
             jogoAlvo={jogoAlvo} />
         ) : section.isEscalar ? (
           <EscalarView key={section.id} competitions={competitions} compFixa={competition.id} />
+        ) : section.isTransmissao ? (
+          <TransmissaoView key={section.id} config={section.config} accentColor={competition.accentColor} />
         ) : (
           <TablePage key={section.id} config={section.config}
             novoJogoPedido={novoJogoPedido} onNovoJogoConsumido={() => setNovoJogoPedido(false)} />

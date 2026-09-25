@@ -5172,3 +5172,74 @@ body {
 @media (max-width: 640px) {
   .hv-root { --hv-gutter: 16px; }
 }
+
+/* ─── TRANSMISSÃO ───────────────────────────────────────────────────────────
+   Quem está em cada jogo, o campeonato inteiro numa tabela só: a rodada na
+   vertical, as cinco funções na horizontal. Mesma linguagem visual da Escalar
+   — cabeçalho grudado, primeira coluna fixa, célula vazia em âmbar — porque é
+   a mesma informação, só que para ler em vez de preencher. */
+.tx-page { display: flex; flex-direction: column; gap: 12px; }
+
+.tx-barra {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.tx-check {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; color: var(--text-muted); cursor: pointer; user-select: none;
+}
+.tx-contagem { margin-left: auto; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+.tx-contagem strong { color: var(--amber); }
+
+.tx-carregando, .tx-vazia {
+  padding: 40px; text-align: center; font-size: 13px; color: var(--text-dim);
+}
+
+.tx-wrap {
+  overflow: auto; max-height: calc(100vh - 230px);
+  border: 1px solid var(--border); border-radius: 10px; background: var(--bg-card);
+}
+.tx-tab { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 12.5px; }
+
+.tx-tab thead th {
+  position: sticky; top: 0; z-index: 3;
+  padding: 9px 12px; text-align: left; white-space: nowrap;
+  background: var(--bg-surface); border-bottom: 1px solid var(--border);
+  font-size: 11px; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.tx-tab tbody td {
+  padding: 8px 12px; border-bottom: 1px solid var(--border-light);
+  vertical-align: top;
+}
+.tx-tab tbody tr:hover td { background: var(--bg-hover); }
+
+/* As três primeiras colunas acompanham a rolagem lateral: sem elas, rolar até
+   a Monitoração deixava a pessoa sem saber de que jogo era a linha. */
+.tx-fix { position: sticky; background: var(--bg-card); z-index: 2; }
+.tx-tab thead .tx-fix { z-index: 4; background: var(--bg-surface); }
+.tx-fix-1 { left: 0;     min-width: 56px; }
+.tx-fix-2 { left: 56px;  min-width: 92px; }
+.tx-fix-3 { left: 148px; min-width: 230px; box-shadow: 1px 0 0 var(--border); }
+.tx-tab tbody tr:hover .tx-fix { background: var(--bg-hover); }
+
+.tx-rod  { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.tx-data { color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tx-jogo { white-space: nowrap; }
+.tx-time { font-weight: 600; color: var(--text); }
+.tx-x    { color: var(--text-dim); font-size: 11px; margin: 0 5px; }
+
+.tx-cel { min-width: 150px; }
+/* Casa em branco é pendência, e é o que a pessoa vem procurar aqui. */
+.tx-cel-vazia { background: rgba(245, 158, 11, .06); }
+.tx-vazio { color: var(--amber); font-weight: 600; }
+/* "Não tem" é decisão tomada, não buraco — cinza, e não âmbar. */
+.tx-nao { color: var(--text-dim); font-style: italic; }
+.tx-sem { color: var(--text-dim); font-style: italic; background: var(--bg-surface2); }
+
+.tx-pessoa { display: inline-flex; align-items: center; gap: 4px; margin-right: 8px; white-space: nowrap; }
+.tx-tel { color: var(--text-dim); margin-right: 8px; }
+.tx-zap {
+  color: var(--lm-green); text-decoration: none; font-size: 12px;
+  opacity: .65; transition: opacity .15s;
+}
+.tx-zap:hover { opacity: 1; }

@@ -41,17 +41,27 @@ const HARDCODED_FALLBACK = [
   },
 ]
 
+// A ORDEM DAS ABAS SEGUE O DIA DE TRABALHO, não o desenho do banco:
+//
+//   Visão Geral   o que é o campeonato, de relance
+//   Escalar       onde se preenche — vem logo depois porque é o que mais se usa
+//   Controle      a planilha do jogo em si
+//   Periférico    a planilha dos equipamentos
+//   Transmissão   quem está no jogo: coordenador, produtor, monitoração
+//
+// A Escalar estava em último, "depois das telas de leitura". Na prática ela é
+// a primeira coisa que a equipe abre (equipe, 25/09/2026).
 function buildSectionsForCompetition(parent, children, columnsByCompId) {
   const sections = []
   const parentConfig = configForRow(parent, columnsByCompId)
   sections.push({ id: `${parent.slug}-overview`, label: 'Visão Geral', config: parentConfig, isOverview: true })
+  sections.push({ id: `${parent.slug}-escalar`, label: 'Escalar', config: parentConfig, isEscalar: true })
   sections.push({ id: `${parent.slug}-controle`, label: 'Controle', config: parentConfig })
   for (const child of children) {
     const childConfig = configForRow(child, columnsByCompId)
     sections.push({ id: `${child.slug}-${child.section_kind}`, label: capitalize(child.section_kind), config: childConfig })
   }
-  // Escalar por último: é onde se preenche, depois das telas de leitura.
-  sections.push({ id: `${parent.slug}-escalar`, label: 'Escalar', config: parentConfig, isEscalar: true })
+  sections.push({ id: `${parent.slug}-transmissao`, label: 'Transmissão', config: parentConfig, isTransmissao: true })
   return sections
 }
 
