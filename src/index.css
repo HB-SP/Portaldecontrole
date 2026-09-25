@@ -4177,6 +4177,7 @@ body {
 .hv-kpi,
 .hv-navgrid,
 .hv-cal-wrap,
+.hv-sequencia,
 .pr-wrap {
   max-width: var(--hv-larg);
   margin-left: auto;
@@ -4187,6 +4188,7 @@ body {
    esquerdas caírem na mesma linha vertical de cima a baixo. */
 .hv-navgrid,
 .hv-cal-wrap,
+.hv-sequencia,
 .pr-wrap {
   padding-left: var(--hv-gutter);
   padding-right: var(--hv-gutter);
@@ -4201,7 +4203,7 @@ body {
    vencia a regua: era ela que deixava a rodada desalinhada dos campeonatos e
    do calendario (25/09/2026). */
 .pr-wrap { padding-top: 22px; padding-bottom: 4px; }
-.pr-cards { justify-content: center; }
+.pr-cards { justify-content: start; }
 /* Com 1 ou 2 jogos os cards ficariam gigantes esticados; segura a largura */
 @media (min-width: 1100px) {
   .pr-cards { grid-template-columns: repeat(auto-fit, minmax(300px, 420px)); }
@@ -5045,7 +5047,7 @@ body {
 .hv-sequencia { margin-top: 10px; }
 .hv-seq-titulo {
   display: flex; align-items: center; gap: 7px; width: 100%;
-  padding: 6px 2px; border: none; background: none; cursor: pointer;
+  padding: 6px 0; border: none; background: none; cursor: pointer;
   color: var(--text-muted); font-family: inherit;
   font-size: 10.5px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase;
 }
@@ -5060,7 +5062,7 @@ body {
 /* Os jogos em colunas que se ajustam: numa tela larga a lista ocupa a largura
    dos cards em vez de virar uma coluna comprida de dez linhas. */
 .hv-seq-lista {
-  display: grid; gap: 1px 14px;
+  display: grid; gap: 1px 14px; margin: 0 -8px;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
 }
 .hv-seq-jogo {
