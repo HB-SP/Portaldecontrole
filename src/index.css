@@ -3344,8 +3344,12 @@ body {
   .hv-panel { border-left: none; border-top: 1px solid rgba(0,0,0,.08); position: static; max-height: none; }
   .hv-kpi { gap: 0; padding: 14px 20px; flex-wrap: wrap; }
   .hv-kpi-item { padding: 4px 12px; }
-  .hv-navgrid { padding: 16px 20px; }
-  .hv-cal-wrap { padding: 18px 16px 24px; }
+  /* So a altura muda em tela estreita: o respiro lateral continua vindo da
+     regua (--hv-gutter), que ja encolhe sozinho no celular. Antes estas duas
+     usavam  abreviado, que ZERA o lateral e desmanchava o
+     alinhamento inteiro. */
+  .hv-navgrid { padding-top: 16px; padding-bottom: 20px; }
+  .hv-cal-wrap { padding-top: 18px; padding-bottom: 24px; }
 }
 
 
