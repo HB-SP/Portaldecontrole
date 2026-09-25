@@ -4171,7 +4171,6 @@ body {
 .hv-kpi,
 .hv-navgrid,
 .hv-cal-wrap,
-.hv-sequencia,
 .pr-wrap {
   max-width: var(--hv-larg);
   margin-left: auto;
@@ -4182,7 +4181,6 @@ body {
    esquerdas caírem na mesma linha vertical de cima a baixo. */
 .hv-navgrid,
 .hv-cal-wrap,
-.hv-sequencia,
 .pr-wrap {
   padding-left: var(--hv-gutter);
   padding-right: var(--hv-gutter);
@@ -5070,45 +5068,9 @@ body {
 
 
 
-/* ─── A SEQUENCIA DA RODADA ─────────────────────────────────────────────────
-   Nao e um bloco ao lado: e o DEGRAU ABAIXO dos cards da rodada. Os jogos que
-   vem agora aparecem em detalhe, com escala; o que vem depois fica numa lista
-   fina, sem moldura, na mesma largura. Lado a lado e com borda propria, os
-   dois viravam caixas disputando o mesmo espaco. */
-.hv-sequencia { margin-top: 10px; }
-.hv-seq-titulo {
-  display: flex; align-items: center; gap: 7px; width: 100%;
-  padding: 6px 0; border: none; background: none; cursor: pointer;
-  color: var(--text-muted); font-family: inherit;
-  font-size: 10.5px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase;
-}
-.hv-seq-titulo:hover { color: var(--text); }
-.hv-seq-seta { display: inline-block; transition: transform 0.15s; font-size: 14px; line-height: 1; }
-.hv-seq-seta.aberta { transform: rotate(90deg); }
-.hv-seq-n {
-  padding: 0 6px; border-radius: 999px; background: var(--bg-surface2);
-  font-size: 9.5px; letter-spacing: 0; font-variant-numeric: tabular-nums;
-}
+/* O bloco "depois desta rodada" saiu da tela inicial, e o estilo dele junto:
+   .hv-sequencia e .hv-seq-* nao tem mais HTML nenhum. */
 
-/* Os jogos em colunas que se ajustam: numa tela larga a lista ocupa a largura
-   dos cards em vez de virar uma coluna comprida de dez linhas. */
-.hv-seq-lista {
-  display: grid; gap: 1px 14px; margin: 0 -8px;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-}
-.hv-seq-jogo {
-  display: flex; align-items: center; gap: 8px;
-  padding: 6px 8px; border: none; border-radius: 6px;
-  background: none; cursor: pointer; text-align: left;
-  font-family: inherit; font-size: 12.5px; color: var(--text);
-}
-.hv-seq-jogo:hover { background: var(--bg-hover); }
-.hv-seq-data {
-  flex: 0 0 46px; color: var(--text-dim); font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
-.hv-seq-times { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hv-seq-cor { flex: 0 0 5px; height: 5px; border-radius: 50%; opacity: 0.8; }
 
 /* A contagem do mes, no cabecalho do calendario: ela fala do mes, e o mes e
    este calendario. */

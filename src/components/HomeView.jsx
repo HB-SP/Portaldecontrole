@@ -63,7 +63,6 @@ export default function HomeView({ competitions, onCompSelect }) {
   const [selectedKey,    setSelectedKey]    = useState(null)
   const [calKey,         setCalKey]         = useState(0)
   const [calDir,         setCalDir]         = useState(null)
-  const [showUpcoming,   setShowUpcoming]   = useState(true)
   const [viewMode,       setViewMode]       = useState('split')
   const [mounted,       setMounted]       = useState(false)
 
@@ -187,56 +186,20 @@ export default function HomeView({ competitions, onCompSelect }) {
   // O painel da direita só tem o que dizer com um dia escolhido E jogo nele.
   const painelTemAlgo = !!selectedKey && selectedMatches.length > 0
 
-  const upcoming = useMemo(() => {
-    const list = []
-    for (const [key, matches] of matchesByDate.entries()) {
-      const [y, mo, d] = key.split('-').map(Number)
-      const ts = new Date(y, mo, d).getTime()
-      if (ts < todayTs) continue
-      list.push(...matches.filter(passFilter).map(m => ({ ...m, ts })))
-    }
-    return list
-      .sort((a, b) => a.ts !== b.ts ? a.ts - b.ts : (a.hora_brt || '').localeCompare(b.hora_brt || ''))
-  }, [matchesByDate, passFilter, todayTs])
-
-  // A lateral mostra o que vem DEPOIS da rodada em destaque: os jogos que já
-  // estão nos cards do topo saem daqui, senão a tela diria a mesma coisa duas
-  // vezes.
-  const idsNoDestaque = useMemo(
-    () => new Set(jogosDaRodada.map(j => `${j.dateKey}|${j.mandante}|${j.visitante}`)),
-    [jogosDaRodada],
-  )
-  const restGames = useMemo(
-    () => upcoming.filter(m => !idsNoDestaque.has(`${m.dateKey}|${m.mandante}|${m.visitante}`)).slice(0, 10),
-    [upcoming, idsNoDestaque],
-  )
-
-  const nextByComp = useMemo(() => {
-    const result = {}
-    for (const [key, matches] of matchesByDate.entries()) {
-      const [y, mo, d] = key.split('-').map(Number)
-      const ts = new Date(y, mo, d).getTime()
-      if (ts < todayTs) continue
-      for (const m of matches) {
-        if (!result[m.competitionId] || ts < result[m.competitionId].ts)
-          result[m.competitionId] = { ...m, ts }
-      }
-    }
-    return result
-  }, [matchesByDate, todayTs])
-
+  // upcoming, idsNoDestaque, restGames e nextByComp saíram com a lista "depois
+  // desta rodada". Eram quatro cálculos rodando a cada mudança de filtro para
+  // alimentar um bloco que não existe mais.
 
   return (
     <div className={`hv-root${mounted ? ' hv-mounted' : ''}`}>
       <div className="hv-bg" />
 
-      {/* ── Próxima rodada, e logo abaixo a sequência dela ──
-          Uma coisa só, em dois níveis: os jogos que vêm agora em detalhe, com
-          escala, e a lista do que vem depois logo embaixo, fina e sem moldura.
-          Lado a lado e com borda própria, viravam dois blocos disputando o
-          mesmo espaço — "vários blocos colocados sem critério" (equipe,
-          25/09/2026). Em degrau, a leitura desce sozinha do maior para o
-          menor. */}
+      {/* ── Próxima rodada ──
+          A lista "depois desta rodada" que ficava logo abaixo saiu. Com as
+          setas da Próxima Rodada levando até a 30, a 31 e adiante, ela repetia
+          em texto miúdo o que o bloco de cima já faz melhor — e enchia a tela
+          (equipe, 25/09/2026). O que vem depois continua a um clique na seta,
+          e por mês no calendário. */}
       {!loading && (
         <div className="hv-enter" style={{ '--i': 1 }}>
           <ProximaRodada
@@ -251,33 +214,6 @@ export default function HomeView({ competitions, onCompSelect }) {
             // Leva o jogo junto: o "Ficha →" cai no card dele, nao so no campeonato
             onAbrirFicha={j => onCompSelect(j.competitionId, { data: j.rawDate, mandante: j.mandante, visitante: j.visitante, padrao: j.padrao, rod: j.rod })}
           />
-
-          {restGames.length > 0 && (
-            <div className="hv-sequencia">
-              <button
-                className="hv-seq-titulo"
-                onClick={() => setShowUpcoming(v => !v)}
-                title={showUpcoming ? 'Esconder' : 'Mostrar'}
-              >
-                <span className={`hv-seq-seta${showUpcoming ? ' aberta' : ''}`}>›</span>
-                depois desta rodada
-                <span className="hv-seq-n">{restGames.length}</span>
-              </button>
-              {showUpcoming && (
-                <div className="hv-seq-lista">
-                  {restGames.map((m, i) => (
-                    <button key={i} className="hv-seq-jogo" onClick={() => onCompSelect(m.competitionId)}>
-                      <span className="hv-seq-data">
-                        {new Date(m.ts).getDate()} {MESES[new Date(m.ts).getMonth()].slice(0, 3).toLowerCase()}
-                      </span>
-                      <span className="hv-seq-times">{m.mandante} × {m.visitante}</span>
-                      <span className="hv-seq-cor" style={{ background: m.accentColor }} />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       )}
 
