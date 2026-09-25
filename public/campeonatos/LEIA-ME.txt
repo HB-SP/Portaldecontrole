@@ -1,0 +1,14 @@
+As logos dos campeonatos vão aqui.
+
+Ponha o arquivo nesta pasta — por exemplo brasileirao.png — e depois aponte
+para ele no banco:
+
+  UPDATE competitions SET logo_url = '/campeonatos/brasileirao.png'
+   WHERE slug = 'brasileirao';
+
+Ou rode:  node scripts/logo_campeonato.mjs <slug> <caminho>
+
+Funciona com PNG, SVG ou JPG. O card mostra a imagem num quadrado de 42px, com
+o fundo respeitado — então PNG com fundo transparente fica melhor.
+
+Sem logo, o card usa as iniciais do campeonato na cor dele. Nunca fica buraco.

@@ -80,6 +80,7 @@ function configForRow(row, columnsByCompId) {
       // Os campos que não mudam de jogo para jogo. Jogo novo nasce com eles
       // preenchidos, em vez de alguém digitar 9Mhz e 16:9 toda vez.
       padraoTecnico: row.padrao_tecnico || null,
+      logoUrl: row.logo_url || null,
       tableName: row.legacy_table || baseConfig.tableName,
     }
   }
@@ -115,6 +116,7 @@ function configForRow(row, columnsByCompId) {
     // Com quais nomes este campeonato aparece na escala_geral (ver lib/escalaLink)
     escalaCamps: row.escala_camps || null,
     padraoTecnico: row.padrao_tecnico || null,
+    logoUrl: row.logo_url || null,
     columns: cols,
   }
 }
@@ -169,6 +171,7 @@ export function useCompetitions() {
       accentColor: parent.accent_color,
       accentBg: parent.accent_bg,
       encerrado: !!parent.archived,
+      logoUrl: parent.logo_url || null,
       sections: buildSectionsForCompetition(parent, childrenByParent.get(parent.id) || [], columnsByCompId),
     })
 

@@ -279,54 +279,63 @@ export default function HomeView({ competitions, onCompSelect }) {
       )}
 
       {/* ── Competition cards ── */}
+      {/* ── Campeonatos ──
+          A faixa colorida com o nome dentro saiu. Ela pintava um bloco inteiro
+          para dizer o nome do campeonato, e a cor sozinha não identifica nada
+          para quem não decorou qual é qual.
+          Agora quem identifica é a LOGO, e o que a cor faz é um fio no alto —
+          presença sem peso. A barra de progresso ficou, porque é ela que
+          responde "como está o campeonato" de relance (equipe, 25/09/2026). */}
       <div className="hv-navgrid hv-enter" style={{ '--i': 2 }}>
         {competitions.map((comp, idx) => {
           const total = totalsByComp[comp.id] ?? 0
           const done  = doneByComp[comp.id]   ?? 0
           const pct   = total > 0 ? Math.round((done / total) * 100) : 0
-          const next  = nextByComp[comp.id]
+          const nome  = cleanComp(comp.label)
+          // Sem logo, as iniciais na cor do campeonato. Um buraco no lugar da
+          // imagem seria pior que não ter imagem nenhuma.
+          const sigla = nome.split(/\s+/).filter(x => /[A-Za-zÀ-ú]/.test(x))
+            .map(x => x[0]).join('').slice(0, 2).toUpperCase()
           return (
             <button
               key={comp.id}
-              className="hv-navcard hv-enter"
+              className="hv-camp hv-enter"
               style={{ '--ac': comp.accentColor, '--i': idx + 3 }}
               onClick={() => onCompSelect(comp.id)}
             >
-              {/* Cabeçalho colorido */}
-              <div
-                className="hv-navcard-header"
-                style={{
-                  backgroundColor: comp.accentColor,
-                  backgroundImage: 'linear-gradient(150deg, rgba(255,255,255,.22) 0%, transparent 55%, rgba(0,0,0,.18) 100%)'
-                }}
-              >
-                <span className="hv-navcard-htitle">{cleanComp(comp.label)}</span>
-                {!loading && total > 0 && (
-                  <span className="hv-navcard-hcount">{done}/{total}</span>
-                )}
-              </div>
+              <span className="hv-camp-fio" style={{ background: comp.accentColor }} />
 
-              {/* Corpo */}
-              <div className="hv-navcard-body">
-                {!loading && total > 0 && (
-                  <div className="hv-navcard-prog-wrap">
-                    <div className="hv-navcard-prog-track">
-                      <div className="hv-navcard-prog-fill" style={{ width: `${pct}%`, background: comp.accentColor }} />
-                    </div>
-                    <span className="hv-navcard-prog-label">{done} de {total} jogos realizados</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Rodapé CTA */}
-              <div className="hv-navcard-footer">
-                <span className="hv-navcard-footer-label" style={{ color: comp.accentColor }}>
-                  Acessar campeonato
+              <span className="hv-camp-topo">
+                {comp.logoUrl
+                  ? <img src={comp.logoUrl} className="hv-camp-logo" alt="" />
+                  : <span className="hv-camp-logo hv-camp-sigla" style={{ color: comp.accentColor, borderColor: comp.accentColor + '40' }}>{sigla}</span>}
+                <span className="hv-camp-nome">
+                  <b>{nome}</b>
+                  {!loading && total > 0 && (
+                    <em>{done === total ? 'temporada completa' : `${total - done} ${total - done === 1 ? 'jogo por vir' : 'jogos por vir'}`}</em>
+                  )}
                 </span>
-                <svg viewBox="0 0 16 16" fill="none" width="13" height="13" style={{ color: comp.accentColor }}>
-                  <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                <span className="hv-camp-selo" style={{ color: comp.accentColor, background: comp.accentColor + '14' }}>
+                  <i style={{ background: comp.accentColor }} />
+                  em andamento
+                </span>
+              </span>
+
+              {!loading && total > 0 && (
+                <span className="hv-camp-prog">
+                  <span className="hv-camp-trilho">
+                    <span className="hv-camp-fill" style={{ width: `${pct}%`, background: comp.accentColor }} />
+                  </span>
+                  <span className="hv-camp-n">{done}<i>/{total}</i></span>
+                </span>
+              )}
+
+              <span className="hv-camp-ir" style={{ color: comp.accentColor }}>
+                abrir
+                <svg viewBox="0 0 16 16" fill="none" width="12" height="12">
+                  <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-              </div>
+              </span>
             </button>
           )
         })}
