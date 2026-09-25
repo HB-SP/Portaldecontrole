@@ -103,7 +103,12 @@ export default function Header({ activeView, onHomeClick, onFornecedoresClick, o
   return (
     <header className="header">
       <div className="logo-area" onClick={onHomeClick} style={{ cursor: 'pointer' }} title="Início">
-        <div className="logo-icon" style={activeView === 'home' ? { background: '#65B32E' } : {}} />
+        {/* A marca de verdade, no lugar do quadrado preto com o ponto verde que
+            fazia as vezes dela. O destaque que o quadrado ganhava quando a tela
+            era a inicial saiu junto: pintar o fundo de verde por trás de uma
+            logo transparente viraria uma placa. Qual tela está aberta o menu já
+            diz (equipe, 25/09/2026). */}
+        <img className="logo-icon" src="/livemode.png" alt="Livemode" />
         <div className="logo-divider" />
         <div className="logo-text">
           <span className="logo-title">Livemode</span>

@@ -51,6 +51,9 @@ const MARGEM = parseFloat(opcao('margem', '8'))
 const LIMITE = parseInt(opcao('limite', '240'), 10)
 const PLACA = opcao('placa', null)
 const PINTAR = opcao('pintar', null)
+const FUNDO = opcao('fundo', null)      // cor de fundo a remover, quando não é branco
+const TOL = parseInt(opcao('tol', '40'), 10)
+const RECORTE = opcao('recorte', null)  // x,y,w,h antes de tudo
 
 // O decodificador de JPEG do Jimp tem um teto de memória baixo, e logo oficial
 // costuma passar dele com folga (a do Brasileirão tem 6250x6686). Decodificar à
@@ -69,6 +72,25 @@ async function abrir(caminho) {
 
 const img = await abrir(entrada)
 const orig = `${img.bitmap.width}x${img.bitmap.height}`
+
+// 0. recorte, quando o arquivo traz mais coisa que a logo — a da Livemode vem
+// com uma barrinha solta embaixo que não faz parte da marca.
+if (RECORTE) {
+  const [x, y, w, h] = RECORTE.split(',').map(n => parseInt(n, 10))
+  img.crop({ x, y, w, h })
+}
+
+// 0b. fundo de cor (não branco) vira transparente. Logo costuma vir assentada
+// numa placa da cor da marca; sem tirar, ela entra no portal como um bloco.
+if (FUNDO) {
+  const alvo = parseInt(FUNDO.replace('#', ''), 16)
+  const [fr, fg, fb] = [(alvo >> 16) & 255, (alvo >> 8) & 255, alvo & 255]
+  const d = img.bitmap.data
+  for (let i = 0; i < d.length; i += 4) {
+    const dist = Math.abs(d[i] - fr) + Math.abs(d[i + 1] - fg) + Math.abs(d[i + 2] - fb)
+    if (dist <= TOL) d[i + 3] = 0
+  }
+}
 
 // 1. fundo branco vira transparente
 if (tem('tirar-fundo')) {

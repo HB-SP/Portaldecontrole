@@ -300,10 +300,21 @@ export default function HomeView({ competitions, onCompSelect }) {
             <button
               key={comp.id}
               className="hv-camp hv-enter"
-              style={{ '--ac': comp.accentColor, '--i': idx + 3 }}
+              style={{
+                // Duas cores, dois papeis: --ac ESCREVE (o "abrir", a borda) e
+                // --acf PREENCHE (a barra, o fio). O verde-limao do
+                // Brasileirao e o amarelo da Copinha sao otimos preenchendo e
+                // ilegiveis escrevendo (equipe, 25/09/2026).
+                '--ac': comp.accentColor,
+                '--acf': comp.accentFill || comp.accentColor,
+                // A borda usa a cor do campeonato em 25%: presente o bastante
+                // para identificar, discreta o bastante para nao virar moldura.
+                '--ac-borda': comp.accentColor + '40',
+                '--i': idx + 3,
+              }}
               onClick={() => onCompSelect(comp.id)}
             >
-              <span className="hv-camp-fio" style={{ background: comp.accentColor }} />
+              <span className="hv-camp-fio" />
 
               <span className="hv-camp-topo">
                 {comp.logoUrl
@@ -324,7 +335,7 @@ export default function HomeView({ competitions, onCompSelect }) {
               {!loading && total > 0 && (
                 <span className="hv-camp-prog">
                   <span className="hv-camp-trilho">
-                    <span className="hv-camp-fill" style={{ width: `${pct}%`, background: comp.accentColor }} />
+                    <span className="hv-camp-fill" style={{ width: `${pct}%` }} />
                   </span>
                   <span className="hv-camp-n">{done}<i>/{total}</i></span>
                 </span>

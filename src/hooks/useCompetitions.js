@@ -73,6 +73,9 @@ function configForRow(row, columnsByCompId) {
       label: row.label,
       accentColor: row.accent_color,
       accentBg: row.accent_bg,
+      // A cor VIVA da marca, para barra e fios. Sem ela, usa a de escrever —
+      // e a maioria dos campeonatos nao precisa das duas.
+      accentFill: row.accent_fill || row.accent_color,
       competitionId: row.id,
       isLegacy: true,
       sectionKind: row.section_kind || null,
@@ -110,6 +113,9 @@ function configForRow(row, columnsByCompId) {
     label: row.label,
     accentColor: row.accent_color,
     accentBg: row.accent_bg,
+    // A cor VIVA da marca, para barra e fios. Sem ela, usa a de escrever —
+    // e a maioria dos campeonatos não precisa das duas.
+    accentFill: row.accent_fill || row.accent_color,
     competitionId: row.id,
     isLegacy: false,
     sectionKind: row.section_kind || null,
@@ -170,6 +176,7 @@ export function useCompetitions() {
       label: parent.label,
       accentColor: parent.accent_color,
       accentBg: parent.accent_bg,
+      accentFill: parent.accent_fill || parent.accent_color,
       encerrado: !!parent.archived,
       logoUrl: parent.logo_url || null,
       sections: buildSectionsForCompetition(parent, childrenByParent.get(parent.id) || [], columnsByCompId),

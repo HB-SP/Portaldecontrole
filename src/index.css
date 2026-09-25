@@ -297,19 +297,11 @@ body {
 
 .logo-area { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 
+/* A logo da Livemode. Ela e uma assinatura de duas linhas, mais larga que
+   alta, entao a medida que manda e a ALTURA — largura travada a espremeria. */
 .logo-icon {
-  font-size: 0;
-  width: 28px; height: 28px; border-radius: 6px;
-  background: #000000;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  position: relative;
-}
-.logo-icon::after {
-  content: '';
-  width: 8px; height: 8px;
-  background: var(--lm-green);
-  border-radius: 2px;
+  height: 28px; width: auto; flex-shrink: 0;
+  object-fit: contain; display: block;
 }
 
 .logo-divider {
@@ -5128,9 +5120,13 @@ body {
    dizer o nome, e a cor sozinha não identifica campeonato nenhum para quem não
    decorou qual é qual. Quem identifica agora é a logo; a cor virou um fio no
    alto — presença sem peso. */
+/* A BORDA E O FIO USAM A COR DO CAMPEONATO.
+   Antes a borda era cinza e a cor so aparecia no hover — o card nao dizia de
+   que campeonato era ate alguem passar o mouse. Agora ela ja nasce na cor, em
+   25%, e fecha por inteiro quando o mouse chega (equipe, 25/09/2026). */
 .hv-camp {
   position: relative; display: flex; flex-direction: column; gap: 12px;
-  padding: 16px 16px 14px; border: 1px solid var(--border); border-radius: 14px;
+  padding: 16px 16px 14px; border: 1px solid var(--ac-borda, var(--border)); border-radius: 14px;
   background: var(--bg-card); cursor: pointer; text-align: left; overflow: hidden;
   transition: border-color .15s, box-shadow .15s, transform .15s;
 }
@@ -5138,7 +5134,10 @@ body {
   border-color: var(--ac); transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(0,0,0,.07);
 }
-.hv-camp-fio { position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.hv-camp-fio {
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--acf, var(--ac));
+}
 
 .hv-camp-topo { display: flex; align-items: center; gap: 12px; }
 /* O espaco da logo tem ALTURA fixa e largura livre. Logo de entidade vem em
@@ -5177,7 +5176,10 @@ body {
 .hv-camp-trilho {
   flex: 1; height: 5px; border-radius: 999px; background: var(--bg-surface2); overflow: hidden;
 }
-.hv-camp-fill { display: block; height: 100%; border-radius: 999px; transition: width .4s ease; }
+.hv-camp-fill {
+  display: block; height: 100%; border-radius: 999px;
+  background: var(--acf, var(--ac)); transition: width .4s ease;
+}
 .hv-camp-n {
   flex: 0 0 auto; font-size: 12px; font-weight: 700; color: var(--text);
   font-variant-numeric: tabular-nums;
