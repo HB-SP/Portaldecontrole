@@ -18,6 +18,13 @@
 //   node scripts/preparar_logo.mjs entrada.png saida.png
 //   node scripts/preparar_logo.mjs entrada.jpg saida.png --tirar-fundo
 //   node scripts/preparar_logo.mjs entrada.png saida.png --placa 161616
+//   node scripts/preparar_logo.mjs entrada.png saida.png --pintar A104F0
+//
+// --pintar é a alternativa à placa, e quase sempre a melhor: em vez de pôr um
+// retângulo colorido ATRÁS da logo branca, pinta a própria logo. A placa vira
+// um tijolo no meio de marcas soltas; a logo pintada fica com o mesmo peso das
+// outras (equipe, 25/09/2026). Só o que é branco muda de cor — detalhe
+// colorido e antisserrilhado ficam como estão.
 //
 // Opções: --altura 128 (padrão) · --margem 8 (% de respiro) · --limite 240
 //         (a partir de que claridade o pixel conta como fundo branco)
@@ -43,6 +50,7 @@ const ALTURA = parseInt(opcao('altura', '128'), 10)
 const MARGEM = parseFloat(opcao('margem', '8'))
 const LIMITE = parseInt(opcao('limite', '240'), 10)
 const PLACA = opcao('placa', null)
+const PINTAR = opcao('pintar', null)
 
 // O decodificador de JPEG do Jimp tem um teto de memória baixo, e logo oficial
 // costuma passar dele com folga (a do Brasileirão tem 6250x6686). Decodificar à
@@ -67,6 +75,22 @@ if (tem('tirar-fundo')) {
   const d = img.bitmap.data
   for (let i = 0; i < d.length; i += 4) {
     if (d[i] >= LIMITE && d[i + 1] >= LIMITE && d[i + 2] >= LIMITE) d[i + 3] = 0
+  }
+}
+
+// 1b. o branco da logo vira a cor pedida
+//
+// Só o branco: o detalhe colorido da marca fica como é. E a transparência de
+// cada pixel é mantida, senão a borda antisserrilhada viraria uma serra.
+if (PINTAR) {
+  const alvo = parseInt(PINTAR.replace('#', ''), 16)
+  const [pr, pg, pb] = [(alvo >> 16) & 255, (alvo >> 8) & 255, alvo & 255]
+  const d = img.bitmap.data
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] === 0) continue
+    const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]
+    if (lum < 190) continue
+    d[i] = pr; d[i + 1] = pg; d[i + 2] = pb
   }
 }
 
