@@ -1,31 +1,45 @@
-As logos dos campeonatos vão aqui.
+As logos dos campeonatos.
 
 O QUE TEM HOJE
 --------------
-  ffu.png   Futebol Forte União  — no Brasileirão e no Periférico BR
-  fpf.png   Federação Paulista   — no Paulistão Fem., Paulistão A1 e Copinha
+  brasileirao.png    Brasileirão Betano  — e o Periférico BR
+  paulistao-a1.png   Paulistão Casas Bahia 2026 — e o Periférico A1
+  paulistao-fem.png  Paulistão Feminino Petrobras — e o Periférico PF
+  copinha.png        Copinha — e o Periférico COP
 
-São as logos das ENTIDADES que organizam, não os escudos dos campeonatos.
-Vieram do Hub Financeiro (public/assets/entities), que é onde elas existiam
-de verdade — no banco nunca houve imagem de campeonato, só o endereço dela.
-Se um dia aparecer o escudo do Brasileirão ou do Paulistão, é só trocar.
+Duas delas vieram na VERSÃO BRANCA, feita para fundo escuro: no card claro do
+portal sumiriam. Ganharam uma placa atrás — roxa no Feminino (a cor do próprio
+detalhe da logo, #A104F0) e preta na Copinha, cuja marca é amarela e não teria
+contraste no claro. Se aparecer a versão colorida delas, é só refazer sem a
+placa.
 
-COMO TROCAR
------------
-Ponha o arquivo nesta pasta e aponte para ele:
+COMO TROCAR OU ACRESCENTAR
+--------------------------
+1. Ponha o arquivo original em ../../logos-originais/ (fica na máquina, não vai
+   para o ar).
 
-  MSYS_NO_PATHCONV=1 node scripts/logo_campeonato.mjs brasileirao /campeonatos/brasileirao.png
+2. Prepare: logo oficial vem grande demais, com margem enorme e às vezes com
+   fundo branco chapado. O script resolve os três de uma vez:
 
-O MSYS_NO_PATHCONV=1 é por causa do Git Bash, que senão troca o "/" do começo
-por um caminho do Windows e grava um endereço quebrado. O script avisa quando
-isso acontece.
+     node scripts/preparar_logo.mjs logos-originais/X.jpg public/campeonatos/x.png --tirar-fundo
+     node scripts/preparar_logo.mjs logos-originais/X.png public/campeonatos/x.png --placa A104F0
+
+   --tirar-fundo é para JPG (que não tem transparência).
+   --placa RRGGBB é para logo em versão branca.
+
+3. Aponte no banco:
+
+     MSYS_NO_PATHCONV=1 node scripts/logo_campeonato.mjs brasileirao /campeonatos/brasileirao.png
+
+   O MSYS_NO_PATHCONV=1 é por causa do Git Bash, que senão troca o "/" do
+   começo por um caminho do Windows e grava um endereço quebrado. O script
+   avisa quando isso acontece.
 
 Para tirar:   node scripts/logo_campeonato.mjs brasileirao --tirar
 Para listar:  node scripts/logo_campeonato.mjs
 
-FORMATO
--------
-PNG com fundo transparente, SVG ou JPG. O card reserva 42px de ALTURA e deixa
-a largura livre até 108px: escudo quadrado fica quadrado, assinatura deitada
-(como a do FFU) ocupa a largura que precisa. Sem logo, o card mostra as
+COMO O CARD MOSTRA
+------------------
+Altura fixa de 42px, largura livre até 132px. Escudo quadrado fica quadrado;
+assinatura deitada ocupa a largura que precisa. Sem logo, o card usa as
 iniciais do campeonato na cor dele — nunca fica buraco.

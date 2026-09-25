@@ -7,3 +7,8 @@ dist
 .DS_Store
 .vercel
 .env*.local
+
+# As logos como a equipe mandou: JPG de 6000px, versão branca, margem enorme.
+# Ficam na máquina para dar para refazer o corte, mas não vão para o ar — o
+# que o site serve é o resultado de scripts/preparar_logo.mjs.
+logos-originais/

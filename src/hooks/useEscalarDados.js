@@ -14,6 +14,7 @@ import { supabase, isConfigured } from '../lib/supabase'
 import { carregarCompeticao } from './useHomeData'
 import { acharEscala, escalaCampeonatosDe } from '../lib/escalaLink'
 import { chaveDe } from '../config/colunasEscalar'
+import { alvosDePublicacao } from '../lib/publicacao'
 
 // Grava campos numa linha de seção (Controle ou Periférico), nos dois modelos:
 // tabela física (legado) ou JSONB de competition_events (dinâmico).
@@ -170,5 +171,30 @@ export function useEscalarDados(competitions) {
     }
   }, [jogos, aplicarLocal])
 
-  return { jogos, loading, erro, salvar, reload: load }
+  // Publica (ou devolve a rascunho) a escala de um jogo inteiro.
+  const publicar = useCallback(async (jogo, valor) => {
+    const alvos = alvosDePublicacao(jogo)
+    if (!alvos.length) return 'Este jogo ainda não tem escala para publicar'
+    if (!isConfigured) return null
+
+    const antes = jogos.find(j => j.uid === jogo.uid)
+    alvos.forEach(a => aplicarLocal(jogo.uid, a.onde, 'escala_publicada', valor))
+    try {
+      // Uma tabela de cada vez: são tabelas diferentes, não dá para um update
+      // só. Se uma falhar, desfaz TUDO na tela — meio publicado na tela e
+      // inteiro no banco (ou o contrário) é pior que não ter publicado.
+      for (const a of alvos) {
+        const { error } = await supabase.from(a.tabela)
+          .update({ escala_publicada: valor, updated_at: new Date().toISOString() })
+          .eq('id', a.id)
+        if (error) throw error
+      }
+      return null
+    } catch (e) {
+      if (antes) setJogos(prev => prev.map(j => (j.uid === jogo.uid ? antes : j)))
+      return e.message || 'Falha ao publicar'
+    }
+  }, [jogos, aplicarLocal])
+
+  return { jogos, loading, erro, salvar, publicar, reload: load }
 }

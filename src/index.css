@@ -4383,6 +4383,43 @@ body {
 .escalar-td-data { color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .escalar-td-jogo { overflow: hidden; text-overflow: ellipsis; }
 .escalar-td-rod  { width: 48px; text-align: center; color: var(--text-muted); }
+
+/* ── RASCUNHO OU PUBLICADA, NA TELA ESCALAR ─────────────────────────────────
+   Mesmo desenho do selo que já existe na Escala Geral e nos Periféricos
+   (.eg-pub): tracejado é rascunho, verde cheio é publicada. Duas aparências
+   diferentes para a mesma ideia fariam a pessoa ter de aprender duas vezes. */
+.escalar-th-pub { width: 92px; }
+.escalar-td-pub { width: 92px; text-align: center; }
+.escalar-pub {
+  padding: 3px 9px; border-radius: 6px; font-size: 10.5px; font-weight: 700;
+  border: 1.5px dashed var(--border); background: var(--bg-surface);
+  color: var(--text-dim); cursor: pointer; font-family: inherit;
+  letter-spacing: 0.03em; transition: all 0.15s; white-space: nowrap;
+}
+.escalar-pub:hover:not(:disabled) { border-color: var(--text-dim); }
+.escalar-pub.is-publicada {
+  border-style: solid; border-color: rgba(101,179,46,0.5);
+  background: var(--lm-green-bg, #EAF5E2); color: #3F7619;
+}
+/* Meio publicado é um estado a consertar, não um terceiro estado a manter:
+   âmbar porque pede ação, e a dica explica que só falta terminar. */
+.escalar-pub.is-parcial {
+  border-style: solid; border-color: var(--amber);
+  background: #FDF6E3; color: #7A5A0E;
+}
+/* Sem escala nenhuma não é rascunho — é um jogo que ninguém começou a
+   preencher. Some o botão, fica o traço. */
+.escalar-pub:disabled {
+  border: none; background: none; color: var(--text-dim);
+  cursor: default; font-weight: 400;
+}
+/* O botão de publicar em lote é o único verde cheio da barra: ele é a ação
+   que muda o que o mundo de fora enxerga. */
+.escalar-btn-pub {
+  border: none; background: #65B32E; color: #fff;
+}
+.escalar-btn-pub:hover:not(:disabled) { opacity: 0.9; border: none; }
+.escalar-btn-pub:disabled { opacity: 0.6; cursor: default; }
 .escalar-time { font-weight: 600; color: var(--text); }
 .escalar-x     { color: var(--text-dim); font-size: 11px; margin: 0 5px; }
 
@@ -5111,7 +5148,7 @@ body {
    o escudo continua quadrado e a assinatura ocupa a largura que precisa. */
 .hv-camp-logo {
   flex: 0 0 auto; width: auto; height: 42px;
-  min-width: 42px; max-width: 108px;
+  min-width: 42px; max-width: 132px;
   border-radius: 9px; object-fit: contain; background: var(--bg-surface2);
 }
 /* As iniciais, quando nao ha logo, continuam num quadrado. */

@@ -12,6 +12,7 @@ import { montarCatalogo, ehComumATodos, valorDe, ehDeFornecedor, pessoasDaColuna
 import { estaCadastrado, ehTelefone, acharCadastro, whatsappDe } from '../config/funcoesFornecedor'
 import { useHubFornecedores, cadastrarFornecedor } from '../hooks/useHubFornecedores'
 import { useEscalarDados } from '../hooks/useEscalarDados'
+import { estadoPublicacao } from '../lib/publicacao'
 import { BadgeCamp } from './campeonatoVisual'
 import { parseData, compararPorData } from '../lib/datas'
 
@@ -28,6 +29,48 @@ function rotuloData(bruta) {
 const rodadaDe = j => String(j.row.rod || j.row.eu || '').trim()
 
 const BASE_VAZIA = { deFornecedor: false, fornecedores: [], pessoas: [], funcao: '' }
+
+// ── RASCUNHO OU PUBLICADA ────────────────────────────────────────────────────
+// Escala em rascunho é planejamento: dá para escalar novembro inteiro sem que
+// ninguém de fora veja, porque planejar é testar (equipe, 25/09/2026). Quem
+// tem login continua vendo tudo, com esta marca dizendo o que ainda é ensaio.
+// Quem NÃO vê é o prestador: a função do banco que monta o link dele só
+// devolve linha publicada.
+const SELO = {
+  rascunho:  { texto: 'Rascunho',  dica: 'Só quem tem login do portal vê. Clique para publicar e liberar no link dos prestadores.' },
+  publicada: { texto: 'Publicada', dica: 'Visível no link dos prestadores. Clique para voltar a rascunho.' },
+  parcial:   { texto: 'Em parte',  dica: 'Parte da escala deste jogo está publicada e parte não — publicado por tela antiga, uma tabela de cada vez. Clique para publicar o resto.' },
+  sem:       { texto: '—',         dica: 'Este jogo ainda não tem nenhuma escala preenchida.' },
+}
+
+function SeloPub({ jogo, onPublicar }) {
+  const [indo, setIndo] = useState(false)
+  const estado = estadoPublicacao(jogo)
+  const { texto, dica } = SELO[estado]
+
+  async function clicar() {
+    if (estado === 'sem' || indo) return
+    setIndo(true)
+    // "Em parte" publica o que falta — nunca despublica. Quem está meio
+    // publicado quer terminar, não voltar atrás.
+    const erro = await onPublicar(jogo, estado !== 'publicada')
+    setIndo(false)
+    if (erro) alert('Não deu para publicar: ' + erro)
+  }
+
+  return (
+    <td className="escalar-td-pub">
+      <button
+        className={`escalar-pub is-${estado}`}
+        disabled={estado === 'sem' || indo}
+        title={dica}
+        onClick={clicar}
+      >
+        {indo ? '…' : texto}
+      </button>
+    </td>
+  )
+}
 
 // ── DUAS PESSOAS NA MESMA CÉLULA ─────────────────────────────────────────────
 // Há jogo com dois Produtores UM, dois de Campo, dois supervisores. A planilha
@@ -270,7 +313,7 @@ function PainelColunas({ catalogo, visiveis, setVisiveis, competitions, onFechar
 // `compFixa` = aberta de dentro de um campeonato: já entra filtrada nele e sem
 // o seletor de campeonato.
 export default function EscalarView({ competitions, compFixa = null }) {
-  const { jogos, loading, erro, salvar } = useEscalarDados(competitions)
+  const { jogos, loading, erro, salvar, publicar } = useEscalarDados(competitions)
   const { fornecedores } = useHubFornecedores()
 
   const catalogo = useMemo(() => montarCatalogo(competitions), [competitions])
@@ -316,6 +359,7 @@ export default function EscalarView({ competitions, compFixa = null }) {
   const [busca, setBusca] = useState('')
   const [soFalta, setSoFalta] = useState(false)
   const [soFora, setSoFora] = useState(false)
+  const [soRascunho, setSoRascunho] = useState(false)
 
   useEffect(() => { if (compFixa) setFCamp(compFixa) }, [compFixa])
 
@@ -357,15 +401,46 @@ export default function EscalarView({ competitions, compFixa = null }) {
           if (!temBuraco) return false
         }
         if (soFora && !colunasVisiveis.some(c => foraDaBase(j, c, basePorCol[c.id]))) return false
+        if (soRascunho && estadoPublicacao(j) === 'publicada') return false
         return true
       })
       .sort((a, b) => compararPorData(a.row, b.row))
-  }, [jogos, fCamp, fRodada, busca, soFalta, soFora, colunasVisiveis, basePorCol])
+  }, [jogos, fCamp, fRodada, busca, soFalta, soFora, soRascunho, colunasVisiveis, basePorCol])
 
   const quantasFaltam = useMemo(
     () => linhas.reduce((tot, j) => tot + colunasVisiveis.filter(c => valorDe(j, c) === '').length, 0),
     [linhas, colunasVisiveis]
   )
+
+  // Só o que está NA TELA agora. Publicar em lote respeita os filtros: é assim
+  // que dá para publicar "a rodada 29 inteira" sem tocar em novembro.
+  const porPublicar = useMemo(
+    () => linhas.filter(j => ['rascunho', 'parcial'].includes(estadoPublicacao(j))),
+    [linhas]
+  )
+  const [publicandoTudo, setPublicandoTudo] = useState(false)
+
+  async function publicarTudo() {
+    const n = porPublicar.length
+    if (!n || publicandoTudo) return
+    const ok = window.confirm([
+      `Publicar a escala de ${n} ${n === 1 ? 'jogo' : 'jogos'}?`,
+      '',
+      'A partir daí eles aparecem no link dos prestadores escalados.',
+      'Dá para voltar qualquer um a rascunho depois, um por um.',
+    ].join('\n'))
+    if (!ok) return
+    setPublicandoTudo(true)
+    const falhas = []
+    for (const j of porPublicar) {
+      const erro = await publicar(j, true)
+      if (erro) falhas.push(`${j.row.mandante} × ${j.row.visitante}: ${erro}`)
+    }
+    setPublicandoTudo(false)
+    if (falhas.length) {
+      alert([`${falhas.length} de ${n} não publicaram:`, '', ...falhas].join('\n'))
+    }
+  }
 
   const quantasFora = useMemo(
     () => linhas.reduce((tot, j) => tot + colunasVisiveis.filter(c => foraDaBase(j, c, basePorCol[c.id])).length, 0),
@@ -406,12 +481,29 @@ export default function EscalarView({ competitions, compFixa = null }) {
           <input type="checkbox" checked={soFora} onChange={e => setSoFora(e.target.checked)} />
           só fora da base
         </label>
+        <label className="escalar-check" title="Jogos cuja escala ainda não foi publicada — o prestador não vê nenhum deles">
+          <input type="checkbox" checked={soRascunho} onChange={e => setSoRascunho(e.target.checked)} />
+          só rascunho
+        </label>
         <div className="escalar-espaco" />
         <span className="escalar-contagem">
           {linhas.length} {linhas.length === 1 ? 'jogo' : 'jogos'}
           {quantasFaltam > 0 && <> · <strong>{quantasFaltam}</strong> em branco</>}
           {quantasFora > 0 && <> · <strong className="escalar-fora-num">{quantasFora}</strong> fora da base</>}
+          {porPublicar.length > 0 && <> · <strong>{porPublicar.length}</strong> em rascunho</>}
         </span>
+        {/* Publica o que está na tela, respeitando os filtros. O número no
+            botão é a promessa: ele diz quantos jogos vão mudar de estado. */}
+        {porPublicar.length > 0 && (
+          <button
+            className="escalar-btn escalar-btn-pub"
+            disabled={publicandoTudo}
+            title="Publica a escala de todos os jogos que estão nesta lista, do jeito que os filtros deixaram"
+            onClick={publicarTudo}
+          >
+            {publicandoTudo ? 'Publicando…' : `Publicar escala (${porPublicar.length})`}
+          </button>
+        )}
         <div className="escalar-painel-wrap">
           <button className="escalar-btn" onClick={() => setPainelAberto(a => !a)}>
             Colunas ({colunasVisiveis.length})
@@ -438,6 +530,7 @@ export default function EscalarView({ competitions, compFixa = null }) {
               <th className="escalar-fix escalar-fix-2" rowSpan={2}>Data</th>
               <th className="escalar-fix escalar-fix-3" rowSpan={2}>Jogo</th>
               <th rowSpan={2}>Rod.</th>
+              <th rowSpan={2} className="escalar-th-pub">Escala</th>
               {GRUPOS.map(g => {
                 const n = colunasVisiveis.filter(c => c.grupo === g).length
                 if (!n) return null
@@ -461,6 +554,7 @@ export default function EscalarView({ competitions, compFixa = null }) {
                   <span className="escalar-time">{j.row.visitante}</span>
                 </td>
                 <td className="escalar-td-rod">{rodadaDe(j) || '—'}</td>
+                <SeloPub jogo={j} onPublicar={publicar} />
                 {colunasVisiveis.map(c => (
                   <Celula
                     key={c.id} jogo={j} col={c}
