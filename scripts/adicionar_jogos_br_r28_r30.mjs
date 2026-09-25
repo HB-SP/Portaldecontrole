@@ -34,11 +34,11 @@ async function api(caminho, opcoes = {}) {
 // Domingo, Quarta) — o print traz "sábado", "domingo", "quarta-feira".
 const JOGOS = [
   { eu: '28', dia: 'Sábado',  data: '19/09', hora_brt: '17:00', mandante: 'Mirassol',      visitante: 'Botafogo',    estadio: 'Campos Maia',   cidade: 'Mirassol',       padrao: 'B2', detentor: 'CazeTV/Record' },
-  { eu: '28', dia: 'Sábado',  data: '19/09', hora_brt: '20:30', mandante: 'Vasco',         visitante: 'Coritiba',    estadio: 'São Januário',  cidade: 'Rio de Janeiro', padrao: 'B2', detentor: 'AmazonPrime' },
+  { eu: '28', dia: 'Sábado',  data: '19/09', hora_brt: '20:30', mandante: 'Vasco',         visitante: 'Coritiba',    estadio: 'São Januário',  cidade: 'Rio de Janeiro', padrao: 'B2', detentor: 'Amazon Prime' },
   { eu: '29', dia: 'Quarta',  data: '07/10', hora_brt: '19:30', mandante: 'Internacional', visitante: 'Corinthians', estadio: 'Beira Rio',     cidade: 'Porto Alegre',   padrao: 'B1', detentor: 'CazeTV/Record' },
-  { eu: '29', dia: 'Quarta',  data: '07/10', hora_brt: '20:30', mandante: 'Botafogo',      visitante: 'Vasco',       estadio: 'Nilton Santos', cidade: 'Rio de Janeiro', padrao: 'B2', detentor: 'AmazonPrime' },
+  { eu: '29', dia: 'Quarta',  data: '07/10', hora_brt: '20:30', mandante: 'Botafogo',      visitante: 'Vasco',       estadio: 'Nilton Santos', cidade: 'Rio de Janeiro', padrao: 'B2', detentor: 'Amazon Prime' },
   { eu: '30', dia: 'Sábado',  data: '10/10', hora_brt: '17:00', mandante: 'Vasco',         visitante: 'Remo',        estadio: 'São Januário',  cidade: 'Rio de Janeiro', padrao: 'B2', detentor: 'CazeTV/Record' },
-  { eu: '30', dia: 'Domingo', data: '11/10', hora_brt: '19:30', mandante: 'Coritiba',      visitante: 'Botafogo',    estadio: 'Couto Pereira', cidade: 'Curitiba',       padrao: 'B2', detentor: 'AmazonPrime' },
+  { eu: '30', dia: 'Domingo', data: '11/10', hora_brt: '19:30', mandante: 'Coritiba',      visitante: 'Botafogo',    estadio: 'Couto Pereira', cidade: 'Curitiba',       padrao: 'B2', detentor: 'Amazon Prime' },
 ]
 
 // Correções nos jogos que já existem (rodada 27)
