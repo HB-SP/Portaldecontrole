@@ -32,6 +32,21 @@ const TIME_ALIAS = {
   // escala — todos os que envolvem um destes times.
   ecnoroeste: 'noroeste',
   ecprimavera: 'primavera',
+  // A planilha de controle escreve o nome de registro do clube; o Portal usa o
+  // nome curto. Sem estes, "Vasco da Gama x Clube do Remo" entrou como um jogo
+  // diferente de "Vasco x Remo" e a rodada 30 apareceu duplicada (24/09/2026).
+  vascodagama: 'vasco',
+  clubedoremo: 'remo',
+  atleticomg: 'atletico',
+  atleticomineiro: 'atletico',
+  saopaulofc: 'saopaulo',
+  scinternacional: 'internacional',
+  ecbahia: 'bahia',
+  ecvitoria: 'vitoria',
+  cruzeiroec: 'cruzeiro',
+  gremiofbpa: 'gremio',
+  botafogorj: 'botafogo',
+  botafogosp: 'botafogosp',   // NÃO é o mesmo Botafogo: o de Ribeirão Preto
 }
 
 // Exportado para o pareamento Controle × Periférico (usePerifericoIrmao), que
