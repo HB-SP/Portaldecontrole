@@ -4192,8 +4192,11 @@ body {
 .hv-kpi-fina { justify-content: center; gap: 4px; }
 .hv-kpi-fina .hv-kpi-item { padding-left: 18px; padding-right: 18px; }
 
-/* Próxima rodada: respiro igual ao das outras faixas */
-.pr-wrap { padding: 22px 40px 4px; }
+/* O respiro lateral daqui vem da regua da pagina (--hv-gutter), como o das
+   outras faixas. Esta regra tinha 40px fixo e, por vir DEPOIS no arquivo,
+   vencia a regua: era ela que deixava a rodada desalinhada dos campeonatos e
+   do calendario (25/09/2026). */
+.pr-wrap { padding-top: 22px; padding-bottom: 4px; }
 .pr-cards { justify-content: center; }
 /* Com 1 ou 2 jogos os cards ficariam gigantes esticados; segura a largura */
 @media (min-width: 1100px) {
