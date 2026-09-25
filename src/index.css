@@ -2728,11 +2728,14 @@ body {
 .hv-cal-title {
   flex: 1; display: flex; align-items: baseline; justify-content: center; gap: 10px;
 }
+/* O mês é o título da tela de baixo, e estava do tamanho de um subtítulo. Com
+   o calendário ocupando a largura toda, ele tinha de crescer junto — senão
+   vira uma legenda perdida em cima de uma grade grande (equipe, 25/09/2026). */
 .hv-cal-mname {
-  font-size: 19px; font-weight: 700; color: #111111;
+  font-size: 25px; font-weight: 700; color: #111111;
   text-transform: uppercase; letter-spacing: .06em;
 }
-.hv-cal-year { font-size: 14px; font-weight: 300; color: rgba(0,0,0,.4); }
+.hv-cal-year { font-size: 17px; font-weight: 300; color: rgba(0,0,0,.4); }
 
 .hv-cal-nav {
   width: 34px; height: 34px; border-radius: 9px;
@@ -5096,7 +5099,9 @@ body {
 
 /* A contagem do mes, no cabecalho do calendario: ela fala do mes, e o mes e
    este calendario. */
-.hv-cal-conta { margin-left: 8px; font-size: 11.5px; color: var(--text-dim); font-weight: 500; }
+/* A contagem do mês acompanha o mês: em 11,5px ela sumia ao lado dele. Fica
+   um degrau abaixo, que é o papel dela — legenda, não título. */
+.hv-cal-conta { margin-left: 10px; font-size: 13.5px; color: var(--text-muted); font-weight: 500; }
 
 /* ─── CARD DO CAMPEONATO ────────────────────────────────────────────────────
    A faixa colorida com o nome dentro saiu: ela pintava um bloco inteiro para

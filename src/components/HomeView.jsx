@@ -184,6 +184,9 @@ export default function HomeView({ competitions, onCompSelect }) {
     return (matchesByDate.get(selectedKey) || []).filter(passFilter)
   }, [selectedKey, matchesByDate, passFilter])
 
+  // O painel da direita só tem o que dizer com um dia escolhido E jogo nele.
+  const painelTemAlgo = !!selectedKey && selectedMatches.length > 0
+
   const upcoming = useMemo(() => {
     const list = []
     for (const [key, matches] of matchesByDate.entries()) {
@@ -353,7 +356,17 @@ export default function HomeView({ competitions, onCompSelect }) {
       </div>
 
       {/* ── Split: Calendar (left) + Panel (right) ── */}
-      <div className={`hv-split hv-enter${viewMode === 'full' ? ' hv-split--full' : ''}`} style={{ '--i': 3 }}>
+      {/* A COLUNA DA DIREITA SO EXISTE SE TIVER O QUE MOSTRAR.
+          Sem dia escolhido — ou em dia sem jogo, como hoje — ela ficava ali
+          ocupando 40% da tela para dizer "clique num dia". O calendario, que e
+          o que a pessoa veio ver, ficava espremido em pouco mais da metade
+          (equipe, 25/09/2026).
+          O botao de largura continua valendo: ele diz o que acontece QUANDO um
+          dia e escolhido. */}
+      <div
+        className={`hv-split hv-enter${viewMode === 'full' || !painelTemAlgo ? ' hv-split--full' : ''}`}
+        style={{ '--i': 3 }}
+      >
 
         {/* Left: Calendar */}
         <div className="hv-cal-wrap">
@@ -549,13 +562,14 @@ export default function HomeView({ competitions, onCompSelect }) {
             </div>
           ) : (
             <div className="hv-panel-inner hv-panel-anim" key="default">
-              {/* Sem dia escolhido, o painel não tem o que dizer — e é melhor
-                  assim: a lista "Depois desta rodada" subiu para junto dos
-                  cards da rodada, onde ela conversa com o resto. Aqui embaixo
-                  ficou o calendário, e o painel só responde ao clique. */}
+              {/* Esta parte quase nunca aparece: quando o painel não tem o que
+                  dizer, a coluna inteira sai e o calendário ocupa a largura.
+                  Ela fica de rede de segurança para o instante entre clicar
+                  num dia e o painel ter conteúdo. O "clique num dia" que morava
+                  aqui saiu junto — ninguém precisa de aviso para clicar numa
+                  grade de dias. */}
               <div className="hv-empty">
                 <div className="hv-empty-dot" />
-                <div className="hv-empty-text">Clique num dia para ver os jogos</div>
               </div>
             </div>
           )}
