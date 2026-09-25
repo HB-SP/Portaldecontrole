@@ -108,12 +108,11 @@ export default function Header({ activeView, onHomeClick, onFornecedoresClick, o
             era a inicial saiu junto: pintar o fundo de verde por trás de uma
             logo transparente viraria uma placa. Qual tela está aberta o menu já
             diz (equipe, 25/09/2026). */}
+        {/* Só a logo. O "Livemode / Portal de Controle" escrito ao lado dela
+            saiu: a logo já diz Livemode, e "Portal de Controle" aparecia duas
+            vezes na mesma linha do cabeçalho — aqui e em cima de Host
+            Broadcast (equipe, 25/09/2026). */}
         <img className="logo-icon" src="/livemode.png" alt="Livemode" />
-        <div className="logo-divider" />
-        <div className="logo-text">
-          <span className="logo-title">Livemode</span>
-          <span className="logo-sub">Portal de Controle</span>
-        </div>
       </div>
 
       {titulo && (

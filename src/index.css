@@ -304,26 +304,9 @@ body {
   object-fit: contain; display: block;
 }
 
-.logo-divider {
-  width: 1px; height: 22px;
-  background: var(--border);
-}
-
-.logo-text { display: flex; flex-direction: column; gap: 0; line-height: 1.2; }
-
-.logo-title {
-  font-size: 14px; font-weight: 600;
-  color: #000000; white-space: nowrap;
-  letter-spacing: 0;
-}
-
-.logo-title::after { content: none; }
-
-.logo-sub {
-  font-size: 11px; font-weight: 400;
-  color: var(--text-muted); white-space: nowrap;
-  letter-spacing: 0;
-}
+/* .logo-divider, .logo-text, .logo-title e .logo-sub saíram junto com o texto
+   "Livemode / Portal de Controle" do cabeçalho: sem eles no HTML, ficariam
+   como regra que ninguém usa e que a próxima pessoa teria de investigar. */
 
 .header-actions {
   margin-left: auto; display: flex; align-items: center; gap: 8px;
