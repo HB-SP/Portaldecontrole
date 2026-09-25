@@ -1,14 +1,31 @@
 As logos dos campeonatos vão aqui.
 
-Ponha o arquivo nesta pasta — por exemplo brasileirao.png — e depois aponte
-para ele no banco:
+O QUE TEM HOJE
+--------------
+  ffu.png   Futebol Forte União  — no Brasileirão e no Periférico BR
+  fpf.png   Federação Paulista   — no Paulistão Fem., Paulistão A1 e Copinha
 
-  UPDATE competitions SET logo_url = '/campeonatos/brasileirao.png'
-   WHERE slug = 'brasileirao';
+São as logos das ENTIDADES que organizam, não os escudos dos campeonatos.
+Vieram do Hub Financeiro (public/assets/entities), que é onde elas existiam
+de verdade — no banco nunca houve imagem de campeonato, só o endereço dela.
+Se um dia aparecer o escudo do Brasileirão ou do Paulistão, é só trocar.
 
-Ou rode:  node scripts/logo_campeonato.mjs <slug> <caminho>
+COMO TROCAR
+-----------
+Ponha o arquivo nesta pasta e aponte para ele:
 
-Funciona com PNG, SVG ou JPG. O card mostra a imagem num quadrado de 42px, com
-o fundo respeitado — então PNG com fundo transparente fica melhor.
+  MSYS_NO_PATHCONV=1 node scripts/logo_campeonato.mjs brasileirao /campeonatos/brasileirao.png
 
-Sem logo, o card usa as iniciais do campeonato na cor dele. Nunca fica buraco.
+O MSYS_NO_PATHCONV=1 é por causa do Git Bash, que senão troca o "/" do começo
+por um caminho do Windows e grava um endereço quebrado. O script avisa quando
+isso acontece.
+
+Para tirar:   node scripts/logo_campeonato.mjs brasileirao --tirar
+Para listar:  node scripts/logo_campeonato.mjs
+
+FORMATO
+-------
+PNG com fundo transparente, SVG ou JPG. O card reserva 42px de ALTURA e deixa
+a largura livre até 108px: escudo quadrado fica quadrado, assinatura deitada
+(como a do FFU) ocupa a largura que precisa. Sem logo, o card mostra as
+iniciais do campeonato na cor dele — nunca fica buraco.

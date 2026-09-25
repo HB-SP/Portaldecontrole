@@ -5104,11 +5104,19 @@ body {
 .hv-camp-fio { position: absolute; top: 0; left: 0; right: 0; height: 3px; }
 
 .hv-camp-topo { display: flex; align-items: center; gap: 12px; }
+/* O espaco da logo tem ALTURA fixa e largura livre. Logo de entidade vem em
+   duas formas: escudo (quadrado, como o da FPF) e assinatura deitada (como a
+   do FFU, quase tres vezes mais larga que alta). Num quadrado de 42px a
+   assinatura encolhia para 17px de altura e virava um borrao ilegivel. Assim
+   o escudo continua quadrado e a assinatura ocupa a largura que precisa. */
 .hv-camp-logo {
-  flex: 0 0 42px; width: 42px; height: 42px; border-radius: 9px;
-  object-fit: contain; background: var(--bg-surface2);
+  flex: 0 0 auto; width: auto; height: 42px;
+  min-width: 42px; max-width: 108px;
+  border-radius: 9px; object-fit: contain; background: var(--bg-surface2);
 }
+/* As iniciais, quando nao ha logo, continuam num quadrado. */
 .hv-camp-sigla {
+  flex: 0 0 42px; width: 42px;
   display: flex; align-items: center; justify-content: center;
   border: 1.5px solid; font-size: 14px; font-weight: 800; letter-spacing: -0.02em;
 }

@@ -27,6 +27,18 @@ if (!slug) {
   process.exit(0)
 }
 
+// O Git Bash troca um caminho que comeca com "/" por um caminho do Windows
+// antes mesmo de o Node ver o argumento: "/campeonatos/ffu.png" chega aqui
+// como "C:/Users/.../campeonatos/ffu.png", e o banco guarda um endereco que
+// nenhum navegador consegue abrir. Gravou calado em 25/09/2026.
+if (/^[A-Za-z]:[\/]/.test(valor || '')) {
+  console.error(`O caminho chegou convertido: ${valor}
+
+  Isso e o Git Bash mexendo no argumento. Rode de novo assim:
+    MSYS_NO_PATHCONV=1 node scripts/logo_campeonato.mjs ${slug} /campeonatos/arquivo.png`)
+  process.exit(1)
+}
+
 const novo = (!valor || valor === '--tirar') ? null : valor
 const r = await c.query(
   'UPDATE competitions SET logo_url = $1 WHERE slug = $2 RETURNING label, logo_url', [novo, slug]
